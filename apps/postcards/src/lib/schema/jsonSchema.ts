@@ -16,7 +16,7 @@ export function portableFileJsonSchema(): Record<string, unknown> {
     unrepresentable: "any",
   }) as Record<string, unknown>;
   return {
-    $id: `https://github.com/davd-gzl/Postcards/blob/main/apps/postcards/src/lib/schema/portable-file.schema.json`,
+    $id: `https://github.com/offware-apps/Postcards/blob/main/apps/postcards/src/lib/schema/portable-file.schema.json`,
     title: `Postcards portable data file (schemaVersion ${SCHEMA_VERSION})`,
     ...schema,
   };
