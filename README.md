@@ -1,6 +1,6 @@
 (still in progress, I've a lot lot to upgrade on the interface / UX)
 
--> davd-gzl.github.io/Postcards/ 
+-> offware-apps.github.io/Postcards/ 
 
 <div align="center">
 
@@ -54,7 +54,7 @@ _Postcards remembers where you've been — it is **not** a trip planner._
 Requires [Node.js](https://nodejs.org) 20+ and [pnpm](https://pnpm.io).
 
 ```bash
-git clone https://github.com/davd-gzl/Postcards.git
+git clone https://github.com/offware-apps/Postcards.git
 cd Postcards
 pnpm install
 pnpm --filter postcards dev         # run the app at http://localhost:5173

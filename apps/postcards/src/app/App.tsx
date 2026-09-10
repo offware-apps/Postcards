@@ -291,7 +291,7 @@ export function App() {
               )}
               <a
                 className="topbar-about topbar-star"
-                href="https://github.com/davd-gzl/Postcards"
+                href="https://github.com/offware-apps/Postcards"
                 target="_blank"
                 rel="noopener noreferrer"
                 title={t("topbar.githubStar")}
