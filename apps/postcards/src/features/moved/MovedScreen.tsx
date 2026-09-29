@@ -71,10 +71,15 @@ export default function MovedScreen({
         if (sent) return;
         sent = true;
         // Compact: the file can carry megabytes of inline photos.
-        tab.postMessage(
-          { type: "postcards-handoff-file", text: JSON.stringify(await buildFile()) },
-          home.origin,
-        );
+        try {
+          tab.postMessage(
+            { type: "postcards-handoff-file", text: JSON.stringify(await buildFile()) },
+            home.origin,
+          );
+        } catch {
+          ctl.abort();
+          setStatus({ kind: "err", text: t("moved.failed") });
+        }
         return;
       }
       ctl.abort();
@@ -93,8 +98,16 @@ export default function MovedScreen({
   }
 
   async function downloadBackup() {
-    const { EXPORT_FILENAME } = await import("../backup/exportJson");
-    await deliver(EXPORT_FILENAME, JSON.stringify(await buildFile(), null, 2), "application/json");
+    try {
+      const { EXPORT_FILENAME } = await import("../backup/exportJson");
+      await deliver(
+        EXPORT_FILENAME,
+        JSON.stringify(await buildFile(), null, 2),
+        "application/json",
+      );
+    } catch {
+      setStatus({ kind: "err", text: t("backup.msg.exportJsonErr") });
+    }
   }
 
   if (!loaded || leave) return null;
