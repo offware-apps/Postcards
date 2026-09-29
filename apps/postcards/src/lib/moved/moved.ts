@@ -49,7 +49,9 @@ export function movedTarget(
   const target = new URL(canonical);
   if (target.origin === loc.origin) return null;
   const rest = loc.pathname.startsWith(base) ? loc.pathname.slice(base.length) : "";
-  return new URL(rest + loc.search + loc.hash, target).href;
+  // A path starting `//` would resolve to another host: forward only within the app.
+  const next = new URL(rest + loc.search + loc.hash, target);
+  return next.origin === target.origin ? next.href : target.href;
 }
 
 /**
