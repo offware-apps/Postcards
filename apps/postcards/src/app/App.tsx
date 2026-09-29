@@ -1,7 +1,4 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type JSX } from "react";
-import { useVisits } from "../lib/store/useVisits";
-import { useTrips } from "../lib/store/useTrips";
-import { useStories } from "../lib/store/useStories";
 import { useUi, type Tab } from "../lib/store/useUi";
 import { runEscapeInterceptors } from "../lib/store/escapeStack";
 import { StatsView } from "../features/stats/StatsView";
@@ -18,6 +15,8 @@ import { AboutModal } from "../ui/AboutModal";
 import { IntroScreen } from "../ui/IntroScreen";
 import { Toast } from "../ui/Toast";
 import { UpdateBanner } from "../ui/UpdateBanner";
+import { handoffRequested } from "../lib/moved/moved";
+import { loadPortable } from "../lib/store/portable";
 import { ConnectionStatus } from "../ui/ConnectionStatus";
 import { MapIcon, ChartIcon, ListIcon, RouteIcon, BookIcon, GearIcon, InfoIcon } from "../ui/icons";
 import { useState } from "react";
@@ -29,6 +28,8 @@ import { useT, type MessageKey } from "../lib/i18n";
 const MapScreen = lazy(() =>
   import("../features/map/MapScreen").then((m) => ({ default: m.MapScreen })),
 );
+// The new address's half of a move (lib/moved), needed only on a handoff load.
+const HandoffReceiver = lazy(() => import("../features/moved/HandoffReceiver"));
 
 // Five sections, all visible — no overflow menu. Passport and Moments are views
 // inside Places now (they're collections of places, not destinations of their own).
@@ -118,9 +119,7 @@ export function App() {
   }, [viewKey, forceTop]);
 
   useEffect(() => {
-    void useVisits.getState().load();
-    void useTrips.getState().load();
-    void useStories.getState().load();
+    loadPortable();
   }, []);
 
   // Opt-in background device sync (spec 013). No-op unless the user turned it on.
@@ -405,6 +404,11 @@ export function App() {
 
       <Toast />
       <UpdateBanner />
+      {handoffRequested && (
+        <Suspense fallback={null}>
+          <HandoffReceiver />
+        </Suspense>
+      )}
 
       {showHelp && <ShortcutsHelp onClose={() => setShowHelp(false)} />}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}

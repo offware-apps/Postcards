@@ -4,10 +4,10 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
-import { sortStories, useStories } from "../../lib/store/useStories";
+import { useStories } from "../../lib/store/useStories";
 import { getReferenceData } from "../../lib/reference/referenceData";
-import { backfillUpdatedAt } from "../../lib/schema/helpers";
 import { replaceAllPortable } from "../../lib/db/visitsDb";
+import { restoreFromJson as restoreJson } from "./restore";
 import { toMarkdown } from "./exportMarkdown";
 import { download, downloadBlob } from "../../lib/download";
 import { DurabilityNote } from "../../ui/DurabilityNote";
@@ -28,7 +28,7 @@ import { useT } from "../../lib/i18n";
  * SDK: the OS routes the file to the destination the user picks (zero lock-in).
  * Still strictly explicit — this only ever runs from an Export button.
  */
-async function deliver(filename: string, text: string, type: string): Promise<void> {
+export async function deliver(filename: string, text: string, type: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     const { uri } = await Filesystem.writeFile({
       path: filename,
@@ -188,50 +188,14 @@ export function Backup() {
     }
   }
 
-  /** Full restore from a Postcards JSON backup — this REPLACES all of your data,
-   *  so it asks first (the one destructive path). */
+  /** Full restore from a Postcards JSON backup (replaces everything; asks first). */
   async function restoreFromJson(text: string) {
-    const { importFile } = await import("./importJson");
-    const result = importFile(text);
-    if (!result.ok) {
-      setMessage({ kind: "err", text: result.error });
-      return;
-    }
-    if (hasData) {
-      const ok = window.confirm(
-        t("backup.confirm.replace", {
-          curPlaces: visits.length,
-          curTrips: trips.length,
-          curStories: stories.length,
-          newPlaces: result.visits.length,
-          newTrips: result.trips.length,
-          newStories: result.stories.length,
-        }),
-      );
-      if (!ok) return;
-    }
-    try {
-      // Persist all stores in one transaction, then reflect in memory — so the
-      // device is never left with places from the new file and trips or stories
-      // from the old.
-      await replaceAllPortable(result.visits, result.trips, result.stories);
-    } catch {
-      setMessage({ kind: "err", text: t("backup.msg.saveErr") });
-      return;
-    }
-    // Backfill `updatedAt` from `addedAt` for records that predate the field, so a
-    // freshly restored session can immediately take part in device sync (spec 013).
-    useVisits.setState({ visits: result.visits.map(backfillUpdatedAt) });
-    useTrips.setState({ trips: result.trips.map(backfillUpdatedAt) });
-    useStories.setState({ stories: sortStories(result.stories.map(backfillUpdatedAt)) });
-    setMessage({
-      kind: "ok",
-      text: t("backup.msg.restored", {
-        places: result.visits.length,
-        trips: result.trips.length,
-        stories: result.stories.length,
-      }),
-    });
+    const outcome = await restoreJson(text, t);
+    if (outcome.ok) {
+      const { places, trips, stories } = outcome;
+      setMessage({ kind: "ok", text: t("backup.msg.restored", { places, trips, stories }) });
+    } else if (outcome.reason === "invalid") setMessage({ kind: "err", text: outcome.error });
+    else if (outcome.reason === "save") setMessage({ kind: "err", text: t("backup.msg.saveErr") });
   }
 
   /** Merge a places CSV/TSV — NON-destructive: it adds places and updates ones

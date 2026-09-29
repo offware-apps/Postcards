@@ -31,7 +31,11 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "pnpm build && pnpm preview --port 4173",
+    // Built as the deployed app is: localhost is the canonical address and
+    // 127.0.0.1 an old one it moved from, so moved.spec.ts drives the real
+    // cross-origin handoff. Every other spec runs on localhost, the normal app.
+    command:
+      "VITE_CANONICAL_URL=http://localhost:4173/ VITE_HANDOFF_FROM=http://127.0.0.1:4173 pnpm build && pnpm preview --port 4173 --host 127.0.0.1",
     url: "http://localhost:4173",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
