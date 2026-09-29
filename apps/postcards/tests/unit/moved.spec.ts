@@ -24,6 +24,16 @@ describe("movedTarget", () => {
     );
   });
 
+  it("never forwards to another host through a `//` path", () => {
+    expect(
+      movedTarget(
+        at("https://davd-gzl.github.io/Postcards///evil.example/x"),
+        "/Postcards/",
+        CANONICAL,
+      ),
+    ).toBe(CANONICAL);
+  });
+
   it("stays put on the canonical origin, or with none configured", () => {
     expect(
       movedTarget(at("https://offware-apps.github.io/Postcards/"), "/Postcards/", CANONICAL),
