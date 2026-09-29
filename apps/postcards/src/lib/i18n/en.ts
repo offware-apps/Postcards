@@ -1122,6 +1122,17 @@ export const en = {
   "common.retry": "Retry",
   "map.canvasAria": "Map of visited places",
   "map.dataFailed": "Map data didn't load.",
+  "moved.title": "Postcards has moved",
+  "moved.lede": "Postcards now lives at {url}. Your places are saved in this browser under the old address, which the new one cannot read, so move them across once.",
+  "moved.move": "Move my places",
+  "moved.download": "Download a backup",
+  "moved.moving": "Finish in the tab that just opened.",
+  "moved.done": "Done: your places are at the new address.",
+  "moved.open": "Open Postcards",
+  "moved.blocked": "The new address could not open here. Download a backup, then import it there under Your data.",
+  "moved.cancelled": "The move was cancelled at the new address; nothing changed there.",
+  "moved.failed": "The move did not finish. Download a backup, then import it at the new address under Your data.",
+  "moved.received": "Moved {places} places, {trips} trips and {stories} stories from the old address.",
   "toast.dismiss": "Dismiss",
 } as const;
 

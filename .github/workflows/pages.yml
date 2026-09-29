@@ -46,6 +46,10 @@ jobs:
         run: pnpm --filter postcards build
         env:
           VITE_BASE: /Postcards/
+          # The repository moved from davd-gzl; this same build is also served at
+          # the old address, where it shows the move screen (src/lib/moved).
+          VITE_CANONICAL_URL: https://offware-apps.github.io/Postcards/
+          VITE_HANDOFF_FROM: https://davd-gzl.github.io
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
