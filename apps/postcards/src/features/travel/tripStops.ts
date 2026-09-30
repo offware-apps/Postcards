@@ -10,17 +10,6 @@ export function tripChain(trip: Pick<Trip, "from" | "to" | "stops">): PlaceRef[]
   return trip.stops && trip.stops.length >= 2 ? trip.stops : [trip.from, trip.to];
 }
 
-/** Append a stop to the end of the chain. */
-export function addStop(stops: PlaceRef[], place: PlaceRef): PlaceRef[] {
-  return [...stops, place];
-}
-
-/** Remove the stop at `index` (out-of-range index is a no-op copy). */
-export function removeStop(stops: PlaceRef[], index: number): PlaceRef[] {
-  if (index < 0 || index >= stops.length) return [...stops];
-  return stops.filter((_, i) => i !== index);
-}
-
 /** Move a stop from one position to another; indices are clamped, so a drag past
  *  the ends just parks it at the end. A no-op move returns an equal-length copy. */
 export function moveStop(stops: PlaceRef[], from: number, to: number): PlaceRef[] {
@@ -34,13 +23,6 @@ export function moveStop(stops: PlaceRef[], from: number, to: number): PlaceRef[
   const [moved] = next.splice(src, 1);
   next.splice(dst, 0, moved!);
   return next;
-}
-
-/** The journey's endpoints (first/last stop), or null when there are fewer than two
- *  stops — a reconstructed trip needs at least two to have a `from → to`. */
-export function endpoints(stops: PlaceRef[]): { from: PlaceRef; to: PlaceRef } | null {
-  if (stops.length < 2) return null;
-  return { from: stops[0]!, to: stops[stops.length - 1]! };
 }
 
 // ── Per-leg transport (spec 019) ────────────────────────────────────────────────
@@ -95,13 +77,4 @@ export function setLegMode(chain: StopChain, legIndex: number, mode: TravelMode)
   const legModes = [...chain.legModes];
   legModes[legIndex] = mode;
   return { ...chain, legModes };
-}
-
-/** The mode of leg `i`: its per-leg override if present, else the fallback default. */
-export function legModeAt(
-  legModes: TravelMode[] | undefined,
-  i: number,
-  fallback: TravelMode,
-): TravelMode {
-  return legModes?.[i] ?? fallback;
 }

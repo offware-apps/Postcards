@@ -3,8 +3,8 @@ import { daysInMonth, isCalendarDate } from "../../lib/schema/helpers";
 
 // Approximate ("vague") trip dates (spec 019). A trip date is deliberately coarse:
 // a full day `YYYY-MM-DD`, a month `YYYY-MM`, a year `YYYY`, or nothing. These pure
-// helpers parse/format/compare that one string consistently so partial and full
-// dates sort and display sensibly side by side. No I/O.
+// helpers parse/format/span that one string consistently so partial and full
+// dates filter and display sensibly side by side. No I/O.
 
 /** The stored form: full day, month, year, or null (undated). */
 export type TripDate = string | null;
@@ -32,11 +32,6 @@ export function parseTripDate(s: TripDate): ParsedTripDate | null {
   return { year, month, day };
 }
 
-/** True when `s` is a valid trip date (year, month, or full day). */
-export function isValidTripDate(s: string): boolean {
-  return parseTripDate(s) != null;
-}
-
 /** Human label for the granularity present: a year "2024", a month "Aug 2024", or a
  *  full day, all via the app-wide `formatDate` so trip rows match visits/journal,
  *  and "" for undated or malformed. */
@@ -56,17 +51,4 @@ export function tripDateSpan(s: TripDate): { first: string; last: string } | nul
   const ym = s!.slice(0, 7);
   if (p.day == null) return { first: `${ym}-01`, last: `${ym}-${daysInMonth(p.year, p.month)}` };
   return { first: s!, last: s! };
-}
-
-/** A single sortable number for a trip date; undated sorts LAST. Year-only counts
- *  as its January (start of the year) so it orders before that year's dated trips. */
-function sortKey(s: TripDate): number {
-  const p = parseTripDate(s);
-  if (!p) return Number.POSITIVE_INFINITY;
-  return p.year * 10000 + (p.month ?? 1) * 100 + (p.day ?? 1);
-}
-
-/** Compare two trip dates ascending; undated sorts last. */
-export function compareTripDate(a: TripDate, b: TripDate): number {
-  return sortKey(a) - sortKey(b);
 }

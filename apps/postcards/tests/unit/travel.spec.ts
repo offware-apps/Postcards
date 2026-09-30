@@ -254,7 +254,7 @@ describe("multi-stop trips (spec 019)", () => {
       expect(parsed.success, `date ${date}`).toBe(true);
     }
     // A date that doesn't match the year/month/day digit shape is rejected by the
-    // schema (range-checking of month/day is the UI's job via isValidTripDate; the
+    // schema (range-checking of month/day is the UI's job via parseTripDate; the
     // portable schema stays as lenient as it was for full-day dates).
     const bad = PostcardsFileSchema.safeParse({
       format: "postcards",
