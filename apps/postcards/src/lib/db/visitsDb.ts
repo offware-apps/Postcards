@@ -1,5 +1,8 @@
 import { openDB, type IDBPDatabase } from "idb";
+import { translate } from "../i18n/core";
 import type { Story, Trip, Visit } from "../schema/models";
+import { useSettings } from "../store/useSettings";
+import { useToast } from "../store/useToast";
 import {
   dehydrateVisit,
   hydrateVisit,
@@ -120,6 +123,20 @@ export function getDb(): Promise<IDBPDatabase> {
         if (!database.objectStoreNames.contains(PHOTOS)) {
           database.createObjectStore(PHOTOS, { keyPath: "id" });
         }
+      },
+      // Another tab opens a newer version: this tab's build is stale, and the
+      // upgrade waits until every connection closes. Let go, and reload into the
+      // new build rather than keep writing with the old one.
+      blocking() {
+        const open = dbPromise;
+        dbPromise = null;
+        void open?.then((d) => d.close());
+        location.reload();
+      },
+      // This tab opens a newer version and a tab on an older build holds on: the
+      // open waits for that tab to close, so say so rather than load forever.
+      blocked() {
+        useToast.getState().show(translate(useSettings.getState().locale, "storage.blocked"));
       },
     }).then(async (database) => {
       if (created) await migrateLegacyDb(database);
