@@ -173,6 +173,35 @@ describe("migration of pre-split records", () => {
     expect((back as { photo?: string }).photo).toBeUndefined();
     expect(back.photos).toEqual([{ src: DATA_URL, caption: null }]);
   });
+
+  it("keeps the same image stored twice under two captions", async () => {
+    const kv = memKv();
+    const stored = await dehydrateVisit(
+      visit({
+        photos: [
+          { src: DATA_URL, caption: "front" },
+          { src: DATA_URL, caption: "back" },
+        ],
+      }),
+      kv,
+    );
+    const { visit: back } = await hydrateVisit(stored, kv);
+    expect(back.photos).toEqual([
+      { src: DATA_URL, caption: "front" },
+      { src: DATA_URL, caption: "back" },
+    ]);
+  });
+
+  it("keeps a gallery photo's caption when the legacy `photo` is the same image", async () => {
+    const kv = memKv();
+    const legacy = {
+      ...visit(),
+      photo: DATA_URL,
+      photos: [{ src: DATA_URL, caption: "the Louvre" }],
+    } as unknown as StoredVisit;
+    const { visit: back } = await hydrateVisit(legacy, kv);
+    expect(back.photos).toEqual([{ src: DATA_URL, caption: "the Louvre" }]);
+  });
 });
 
 describe("resilience", () => {

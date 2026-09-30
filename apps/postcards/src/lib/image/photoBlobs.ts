@@ -122,29 +122,29 @@ export async function hydrateVisit(
   }
   let needsMigrate = false;
   const out: Photo[] = [];
+  // A blob id appears once; the same image under two ids is two photos, each with
+  // its own caption, so bytes alone never merge them.
   const seen = new Set<string>();
-  const push = (src: string, caption: string | null, id?: string) => {
-    if (seen.has(src)) return;
-    seen.add(src);
-    const po: Photo = { src, caption: caption ?? null };
-    if (id) idOf.set(po, id);
-    out.push(po);
-  };
-  // Legacy single photo folds in first (matches normalizeVisitPhotos ordering).
-  if (legacy) {
-    needsMigrate = true;
-    push(legacy, null);
-  }
   for (const p of rawPhotos) {
     if ("id" in p && typeof (p as PhotoRef).id === "string" && !("src" in p)) {
       const ref = p as PhotoRef;
+      if (seen.has(ref.id)) continue;
+      seen.add(ref.id);
       const blob = await kv.get(ref.id);
       if (!blob) continue; // blob gone — drop the ref rather than surface a broken image
-      push(await blobToDataUrl(blob), ref.caption ?? null, ref.id);
+      const po: Photo = { src: await blobToDataUrl(blob), caption: ref.caption ?? null };
+      idOf.set(po, ref.id);
+      out.push(po);
     } else if (typeof (p as Photo).src === "string") {
       needsMigrate = true; // inline photo from before the split — re-persist as a blob
-      push((p as Photo).src, (p as Photo).caption ?? null);
+      out.push({ src: (p as Photo).src, caption: (p as Photo).caption ?? null });
     }
+  }
+  // Legacy single photo folds in first unless the gallery already holds it, as
+  // normalizeVisitPhotos does, so the gallery copy keeps its caption.
+  if (legacy) {
+    needsMigrate = true;
+    if (!out.some((p) => p.src === legacy)) out.unshift({ src: legacy, caption: null });
   }
   const { photo: _p, photos: _ph, ...base } = any;
   const visit = (out.length ? { ...base, photos: out } : base) as Visit;
