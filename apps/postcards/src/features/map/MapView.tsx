@@ -1369,6 +1369,9 @@ export function MapView({
         });
       } catch {
         setFailed(true);
+        // No map will report a view, so hand the list the whole world: the
+        // fallback below promises the cities list still works.
+        onBoundsRef.current?.({ west: -180, south: -90, east: 180, north: 90 });
         return;
       }
       mapRef.current = map;
@@ -1418,6 +1421,9 @@ export function MapView({
         // The globe effect skips a change made before load: catch it up here.
         if (globeRef.current !== builtGlobe)
           map.setProjection({ type: globeRef.current ? "globe" : "mercator" });
+        // MapLibre ignores its first resize observation, so a panel that changed
+        // size while the map booted would keep the boot-time canvas without this.
+        map.resize();
         applyTheme(map, darkRef.current);
         applyVisited(map);
         if (map.getLayer("countries-visited-fill")) {

@@ -620,6 +620,11 @@ h1.brand {
 .search-input.has-clear {
   padding-right: 40px;
 }
+/* These fields draw their own ✕; Chromium and Safari would add a second. */
+.search-input.has-clear::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  display: none;
+}
 /* Leading 🔍 + trailing ✕, positioned inside the relative .search wrapper so the
    field reads as a search at a glance and clears in one tap. The input's side
    padding (set per-context below) keeps text clear of both. */

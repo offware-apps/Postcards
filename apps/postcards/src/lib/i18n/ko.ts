@@ -168,7 +168,7 @@ export const ko: Messages = {
   "stats.hero.aria": "{total}개국 중 {visited}개국 방문, {pct} — 국가 체크리스트 열기",
   "stats.bars.countries": "국가",
   "stats.bars.cities": "도시",
-  "stats.bars.citiesTitle": "전 세계 인구 15,000명 이상 도시 중",
+  "stats.bars.citiesTitle": "목록에 있는 도시 중: 가장 큰 10,000곳, 전체 목록을 내려받으면 모든 도시",
   "stats.bars.countriesAria": "{total}개국 중 {visited}개국 방문, {pct} — 국가 체크리스트 열기",
   "stats.bars.citiesAria": "{total}개 도시 중 {visited}개 방문, {pct} — 방문한 장소 열기",
   "stats.hero.ofCount": "{count} {label} 중",
@@ -206,7 +206,7 @@ export const ko: Messages = {
   "stats.travel.trips_other": "여행",
   "stats.travel.travelled": "이동",
   "stats.travel.modeTitle": "{mode} {count}회",
-  "stats.datasetsNote": "불러온 참조 데이터셋을 기준으로 계산합니다: 모든 국가와 영토(ISO 3166-1), 인구 15,000명 이상 도시의 GeoNames 지명 사전, 전 세계 1차 행정구역(주·도).",
+  "stats.datasetsNote": "불러온 참조 데이터셋을 기준으로 계산합니다: 모든 국가와 영토(ISO 3166-1), GeoNames의 최대 도시 10,000곳(전체 목록을 내려받으면 모든 도시), 전 세계 1차 행정구역(주·도).",
   "stats.byCountry.title": "국가별",
   "stats.byCountry.sortAria": "국가 정렬",
   "stats.byCountry.sortCities": "도시 많은 순",
@@ -534,7 +534,7 @@ export const ko: Messages = {
   "journal.saveChanges": "변경 저장",
   "journal.saveStory": "기록 저장",
   "journal.exportNote":
-    "Markdown 내보내기는 날짜, 장소, 제목, 텍스트를 공유합니다 — 사진은 제외됩니다. 공유 가능한 웹사이트 내보내기가 예정되어 있습니다.",
+    "Markdown 내보내기는 날짜, 장소, 제목, 텍스트를 공유합니다 — 사진은 제외됩니다. ‘사이트 게시’를 누르면 사진이 포함된 웹사이트가 만들어집니다.",
   "journal.empty":
     "여행 일지가 여기서 시작됩니다. 다녀온 장소를 고르고, 그날에 제목을 붙이고, 이야기를 들려주세요 — 사진도 환영합니다.",
   "journal.show": "표시",

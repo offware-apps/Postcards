@@ -168,7 +168,7 @@ export const fr: Messages = {
   "stats.hero.aria": "{visited} pays sur {total} visités, {pct} — ouvrir votre liste de pays",
   "stats.bars.countries": "Pays",
   "stats.bars.cities": "Villes",
-  "stats.bars.citiesTitle": "Parmi toutes les villes de 15 000+ habitants dans le monde",
+  "stats.bars.citiesTitle": "Parmi les villes de votre liste : les 10 000 plus grandes, ou toutes une fois la liste complète téléchargée",
   "stats.bars.countriesAria": "{visited} pays sur {total} visités, {pct} — ouvrir votre liste de pays",
   "stats.bars.citiesAria": "{visited} villes sur {total} visitées, {pct} — ouvrir vos lieux visités",
   "stats.hero.ofCount": "sur {count} {label}",
@@ -206,7 +206,7 @@ export const fr: Messages = {
   "stats.travel.trips_other": "voyages",
   "stats.travel.travelled": "parcourus",
   "stats.travel.modeTitle": "{count} en {mode}",
-  "stats.datasetsNote": "Calculé à partir des jeux de données de référence chargés : tous les pays et territoires (ISO 3166-1), un répertoire GeoNames des villes de plus de 15 000 habitants et les régions de premier niveau (États, provinces) du monde entier.",
+  "stats.datasetsNote": "Calculé à partir des jeux de données de référence chargés : tous les pays et territoires (ISO 3166-1), les 10 000 plus grandes villes de GeoNames, ou toutes les localités une fois la liste complète téléchargée, et les régions de premier niveau (États, provinces) du monde entier.",
   "stats.byCountry.title": "Par pays",
   "stats.byCountry.sortAria": "Trier les pays",
   "stats.byCountry.sortCities": "Plus de villes",
@@ -536,7 +536,7 @@ export const fr: Messages = {
   "journal.saveChanges": "Enregistrer",
   "journal.saveStory": "Enregistrer le récit",
   "journal.exportNote":
-    "L'export Markdown partage les dates, lieux, titres et textes — pas les photos. Un export de site web partageable est prévu.",
+    "L'export Markdown partage les dates, lieux, titres et textes — pas les photos. « Publier le site » crée un site web avec les photos.",
   "journal.empty":
     "Votre journal de voyage commence ici. Choisissez un lieu où vous êtes allé, donnez un titre à la journée et racontez — les photos sont les bienvenues.",
   "journal.show": "Afficher",
