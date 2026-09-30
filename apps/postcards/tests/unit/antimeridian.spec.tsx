@@ -8,7 +8,9 @@ import type { FeatureCollection, MultiPolygon, Polygon, Position } from "geojson
 import { unwrapAntimeridian } from "../../src/features/map/antimeridian";
 import { getLand } from "../../src/features/travel/landGeometry";
 import { CountryCoverageMap } from "../../src/features/stats/CountryCoverageMap";
+import { renderPoster } from "../../src/features/passport/poster";
 import { LAND_OUTLINE } from "../../src/lib/publish/landOutline";
+import type { ReferenceData } from "../../src/lib/reference/types";
 import type { Visit } from "../../src/lib/schema/models";
 import { useVisits } from "../../src/lib/store/useVisits";
 
@@ -157,5 +159,45 @@ describe("published reader: the embedded land outline", () => {
     const rs = LAND_OUTLINE as Position[][];
     expect(widestEdge(rs)).toBeLessThan(180);
     expect(seams(rs)).toBe(0);
+  });
+});
+
+describe("world poster", () => {
+  it("fills Antarctica down to the pole", async () => {
+    // A 2D context that records every filled path.
+    const filled: [number, number][][][] = [];
+    let path: [number, number][][] = [];
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get(t, k) {
+        if (k in t) return t[k as string];
+        if (k === "beginPath") return () => (path = []);
+        if (k === "moveTo") return (x: number, y: number) => path.push([[x, y]]);
+        if (k === "lineTo") return (x: number, y: number) => path[path.length - 1]!.push([x, y]);
+        if (k === "fill") return () => filled.push(path);
+        return () => {};
+      },
+      set(t, k, v) {
+        t[k as string] = v;
+        return true;
+      },
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx as never);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((cb) => cb(new Blob()));
+    const ref = { countryByNumeric: () => undefined } as unknown as ReferenceData;
+    await renderPoster(new Set(), ref, { countries: 0, cities: 0 });
+
+    // Longitude 0, latitude -87 on the 2000 x 1000 equirectangular map.
+    const [px, py] = [1000, ((90 + 87) / 180) * 1000];
+    const inside = (subs: [number, number][][]) => {
+      let odd = false;
+      for (const s of subs)
+        for (let i = 0, j = s.length - 1; i < s.length; j = i++) {
+          const [xi, yi] = s[i]!;
+          const [xj, yj] = s[j]!;
+          if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) odd = !odd;
+        }
+      return odd;
+    };
+    expect(filled.some(inside)).toBe(true);
   });
 });
