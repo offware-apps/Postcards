@@ -345,7 +345,7 @@ export function App() {
 
   return (
     <div className="app">
-      <a className="skip-link" href="#main">
+      <a className="skip-link" href="#main" title={t("app.skipToContent")}>
         {t("app.skipToContent")}
       </a>
 

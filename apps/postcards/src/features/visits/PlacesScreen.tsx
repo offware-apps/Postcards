@@ -246,6 +246,7 @@ function RowMenu({
           <input
             type="date"
             className="select"
+            title={t("places.rowMenu.date")}
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
@@ -255,6 +256,7 @@ function RowMenu({
         <span>{t("places.rowMenu.folder")}</span>
         <input
           className="select"
+          title={t("places.rowMenu.folder")}
           list={listId}
           value={folder}
           maxLength={80}
@@ -271,6 +273,7 @@ function RowMenu({
         <textarea
           className="select"
           rows={3}
+          title={t("places.rowMenu.note")}
           value={note}
           maxLength={2000}
           placeholder={t("places.rowMenu.notePlaceholder")}
@@ -278,10 +281,10 @@ function RowMenu({
         />
       </label>
       <div className="row-menu-actions">
-        <button className="btn" type="button" onClick={save}>
+        <button className="btn" type="button" title={t("common.save")} onClick={save}>
           {t("common.save")}
         </button>
-        <button className="btn-ghost" type="button" onClick={onClose}>
+        <button className="btn-ghost" type="button" title={t("common.cancel")} onClick={onClose}>
           {t("common.cancel")}
         </button>
         {/* Remove lives here now (not inline) so the row itself stays uncluttered
@@ -289,6 +292,7 @@ function RowMenu({
         <button
           className="link-danger row-menu-remove"
           type="button"
+          title={t("places.row.removeAria", { name: v.place.name })}
           aria-label={t("places.row.removeAria", { name: v.place.name })}
           onClick={() => {
             void removeVisit(v.visitId);
@@ -338,6 +342,7 @@ const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: 
             ? useUi.getState().openCountry(v.place.countryId)
             : useUi.getState().openCity(v.place.id)
         }
+        title={t("places.row.openAria", { name: v.place.name })}
         aria-label={t("places.row.openAria", { name: v.place.name })}
       >
         <CityLine
@@ -364,6 +369,7 @@ const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: 
           className={"star-btn" + (v.favorite ? " star-on" : "")}
           type="button"
           aria-pressed={!!v.favorite}
+          title={v.favorite ? t("states.favoriteTitle") : t("states.markFavoriteTitle")}
           aria-label={
             v.favorite
               ? t("places.row.unfavoriteAria", { name: v.place.name })
@@ -378,6 +384,7 @@ const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: 
         <button
           className="mini-btn"
           type="button"
+          title={t("places.row.markVisitedAria", { name: v.place.name })}
           aria-label={t("places.row.markVisitedAria", { name: v.place.name })}
           onClick={() => void toggleVisit(v.place)}
         >
@@ -392,6 +399,7 @@ const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: 
         className="mini-btn row-more"
         type="button"
         aria-expanded={menuOpen}
+        title={t("places.row.moreAria", { name: v.place.name })}
         aria-label={t("places.row.moreAria", { name: v.place.name })}
         onClick={() => setMenuOpen((o) => !o)}
       >
@@ -433,6 +441,7 @@ const BrowseRowItem = memo(function BrowseRowItem({ r }: { r: BrowseRow }) {
         className="city-focus"
         type="button"
         onClick={() => useUi.getState().openCity(r.id)}
+        title={t("places.row.openAria", { name: r.name })}
         aria-label={t("places.row.openAria", { name: r.name })}
       >
         <CityLine
@@ -463,7 +472,7 @@ function NoMatch({ q, onClear }: { q: string; onClear: () => void }) {
     <p className="muted empty">
       {t("places.noMatch")}{" "}
       {q && (
-        <button className="link" type="button" onClick={onClear}>
+        <button className="link" type="button" title={t("search.clear")} onClick={onClear}>
           {t("search.clear")}
         </button>
       )}
@@ -873,6 +882,7 @@ export function PlacesScreen() {
               type="button"
               aria-pressed={collection === c}
               className={collection === c ? "seg-on" : ""}
+              title={t(`places.collection.${c}` as const)}
               onClick={() => selectCollection(c)}
             >
               <span aria-hidden>{c === "moments" ? "✨" : c === "photos" ? "📷" : "🛂"}</span>{" "}
@@ -898,6 +908,7 @@ export function PlacesScreen() {
                 type="button"
                 aria-pressed={!collection && kind === k}
                 className={!collection && kind === k ? "seg-on" : ""}
+                title={kindLabel(k)}
                 onClick={() => selectKind(k)}
               >
                 {kindLabel(k)}
@@ -916,6 +927,7 @@ export function PlacesScreen() {
                 type="button"
                 aria-pressed={!collection && status === s}
                 className={!collection && status === s ? "seg-on" : ""}
+                title={t(`places.status.${s}` as const)}
                 onClick={() => selectStatus(s)}
               >
                 {t(`places.status.${s}` as const)}
@@ -931,6 +943,7 @@ export function PlacesScreen() {
             type="search"
             className="search-input places-filter has-clear"
             placeholder={searchPlaceholder}
+            title={searchAria}
             aria-label={searchAria}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -959,6 +972,7 @@ export function PlacesScreen() {
             className={"chip filter-open-chip" + (placesFilterActive ? " chip-on" : "")}
             aria-haspopup="dialog"
             aria-expanded={filterOpen}
+            title={t("filter.open")}
             aria-label={
               placesFilterActive
                 ? `${t("filter.open")} · ${t("filter.activeAria", { count: placesFilterChips.length })}`
@@ -979,6 +993,7 @@ export function PlacesScreen() {
                   type="button"
                   className={"mini-btn" + (groupBy === g ? " mini-on" : "")}
                   aria-pressed={groupBy === g}
+                  title={t(`places.groupBy.${g}` as const)}
                   onClick={() => setGroupBy(g)}
                 >
                   {t(`places.groupBy.${g}` as const)}
@@ -1000,6 +1015,7 @@ export function PlacesScreen() {
                   type="button"
                   aria-pressed={filters.category === cat}
                   className={filters.category === cat ? "seg-on" : ""}
+                  title={t(`filter.category.${cat || "all"}` as const)}
                   onClick={() => filters.set({ category: cat })}
                 >
                   {t(`filter.category.${cat || "all"}` as const)}
@@ -1020,7 +1036,12 @@ export function PlacesScreen() {
                 🧭
               </span>
               {t("places.all.notVisitedHint")}{" "}
-              <button className="link" type="button" onClick={() => selectKind("cities")}>
+              <button
+                className="link"
+                type="button"
+                title={t("places.all.discoverBtn")}
+                onClick={() => selectKind("cities")}
+              >
                 {t("places.all.discoverBtn")}
               </button>
             </p>
@@ -1041,7 +1062,7 @@ export function PlacesScreen() {
                   className="journal-place-group"
                   open={personalGroups.length <= 6}
                 >
-                  <summary className="journal-place-summary">
+                  <summary className="journal-place-summary" title={grp.label}>
                     <span className="journal-place-name">
                       {grp.flag ? `${grp.flag} ` : ""}
                       {grp.label}
@@ -1097,7 +1118,12 @@ export function PlacesScreen() {
               <p className="muted empty">
                 {t("places.browse.emptyStatus")}{" "}
                 {status !== "all" && (
-                  <button className="link" type="button" onClick={() => selectStatus("all")}>
+                  <button
+                    className="link"
+                    type="button"
+                    title={t("places.browse.widen")}
+                    onClick={() => selectStatus("all")}
+                  >
                     {t("places.browse.widen")}
                   </button>
                 )}
@@ -1139,6 +1165,7 @@ export function PlacesScreen() {
               type="search"
               className="search-input has-clear"
               placeholder={t("places.countries.filterPlaceholder")}
+              title={t("places.countries.filterAria")}
               aria-label={t("places.countries.filterAria")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}

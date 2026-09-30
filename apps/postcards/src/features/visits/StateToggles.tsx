@@ -74,6 +74,9 @@ export function StateToggles({
   // record) suppresses all three buttons — don't render an empty, labelled group
   // (a dead screen-reader stop + a gap next to its "✓ Visited" chip).
   if (!showBeen && !showWant && !showFav) return null;
+  const beenLabel = been
+    ? t("states.removeFromVisited", { name: place.name })
+    : t("places.row.markVisitedAria", { name: place.name });
 
   return (
     <div className="states" role="group" aria-label={t("states.statusAria", { name: place.name })}>
@@ -82,11 +85,8 @@ export function StateToggles({
           className={"state been" + (been ? " on" : "")}
           type="button"
           aria-pressed={been}
-          aria-label={
-            been
-              ? t("states.removeFromVisited", { name: place.name })
-              : t("places.row.markVisitedAria", { name: place.name })
-          }
+          aria-label={beenLabel}
+          title={beenLabel}
           onClick={onBeen}
         >
           ✓

@@ -9,15 +9,6 @@ const ROOT = process.cwd();
 // Roles that make any element a control someone operates.
 const CONTROL_ROLES = new Set(["button", "tab", "switch", "checkbox", "menuitem", "radio"]);
 
-// Files whose controls get their titles with the rewrite in flight there,
-// pending the ux-flags-map merge.
-const PENDING = [
-  "src/app/App.tsx",
-  "src/features/map/",
-  "src/features/visits/",
-  "src/features/travel/PlacePicker.tsx",
-];
-
 function tsxFiles(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
@@ -76,9 +67,7 @@ describe("interactive controls", () => {
   // Repo rule: every control a pointer or keyboard reaches carries a title, the
   // tooltip that names it for a mouse user. A spread may carry one, so it passes.
   it("each carry a title", () => {
-    const missing = tsxFiles(join(ROOT, "src"))
-      .flatMap(untitled)
-      .filter((hit) => !PENDING.some((p) => hit.startsWith(p)));
+    const missing = tsxFiles(join(ROOT, "src")).flatMap(untitled);
     expect(missing).toEqual([]);
   });
 });

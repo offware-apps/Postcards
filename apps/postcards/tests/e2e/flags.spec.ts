@@ -39,9 +39,9 @@ test("search results and the map's place card lead with the country's flag", asy
   await page.goto("/");
   await expect(page.getByText("Cities in view")).toBeVisible();
   await page.getByLabel("Search a city or country").fill("Istanbul");
-  const first = page.locator("#search-results [role=option]").first();
+  const first = page.locator("#search-results [role=row]").first();
   await expect(first.locator(".result-flag")).toHaveText("🇹🇷");
-  // The flag is decoration: the option's name stays the place's name.
+  // The flag is decoration: the result's name stays the place's name.
   await expect(first.locator(".result-open")).toHaveAccessibleName(/^Istanbul/);
 
   await first.locator(".result-open").click();

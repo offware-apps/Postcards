@@ -703,7 +703,9 @@ h1.brand {
   max-height: 320px;
   overflow-y: auto;
 }
-.results li button {
+.results li button,
+.results div button,
+.results li[role="option"] {
   width: 100%;
   display: flex;
   align-items: center;
@@ -715,24 +717,29 @@ h1.brand {
   border-radius: var(--radius-sm);
   text-align: left;
   color: var(--text);
+  cursor: pointer;
 }
 .results li button:hover,
-.results li button:focus-visible {
+.results li button:focus-visible,
+.results div button:hover,
+.results div button:focus-visible,
+.results li[role="option"]:hover {
   background: var(--bg-sub);
 }
-/* The global search splits each option into TWO buttons — the row shows the
+/* The global search splits each row into TWO cells — the first shows the
    place, the trailing chip logs it — so browsing can never accidentally mark
-   something visited. (The Trips PlacePicker keeps single-button rows.) */
-.results-split li {
+   something visited. (The Trips PlacePicker keeps one-action rows.) */
+.results-split [role="row"] {
   display: flex;
   align-items: center;
   gap: 6px;
   padding-right: 6px;
 }
-.results-split li .result-open {
+.results-split [role="gridcell"]:first-child {
   flex: 1;
   min-width: 0;
-  width: auto;
+}
+.results-split .result-open {
   justify-content: flex-start;
 }
 /* The country's flag leads each option, as in every other place list. */
@@ -2427,6 +2434,8 @@ a.btn-ghost {
 /* Fit-to-my-places button over the map */
 /* Active (keyboard) search option (never the trailing Add chip) */
 .results li button.opt-active,
+.results div button.opt-active,
+.results li.opt-active,
 .results li[aria-selected="true"] button:not(.result-add) {
   background: var(--bg-sub);
   outline: 2px solid var(--accent);

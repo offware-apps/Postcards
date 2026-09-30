@@ -154,6 +154,7 @@ export function PhotoGallery({
           type="button"
           className="postcard-thumb"
           onClick={() => setOpen(true)}
+          title={t.plural("photo.viewAria", count, { place: placeName })}
           aria-label={t.plural("photo.viewAria", count, { place: placeName })}
         >
           {/* Row thumbnails decode the full downscaled data URL — lazy + async
@@ -168,6 +169,7 @@ export function PhotoGallery({
           className="mini-btn"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
+          title={t("photo.addAria", { place: placeName })}
           aria-label={t("photo.addAria", { place: placeName })}
         >
           {busy ? "…" : <>📷 <span className="row-btn-label">{t("photo.photos")}</span></>}
@@ -214,6 +216,7 @@ export function PhotoGallery({
               <button
                 type="button"
                 className="lightbox-nav prev"
+                title={t("journal.prevPhoto")}
                 aria-label={t("journal.prevPhoto")}
                 onClick={() => page(-1)}
               >
@@ -225,6 +228,7 @@ export function PhotoGallery({
               <button
                 type="button"
                 className="lightbox-nav next"
+                title={t("journal.nextPhoto")}
                 aria-label={t("journal.nextPhoto")}
                 onClick={() => page(1)}
               >
@@ -241,6 +245,7 @@ export function PhotoGallery({
                 value={captionValue}
                 maxLength={300}
                 placeholder={t("photo.captionPlaceholder")}
+                title={t("photo.captionAria", { n: safeIndex + 1, place: placeName })}
                 aria-label={t("photo.captionAria", { n: safeIndex + 1, place: placeName })}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={commitCaption}
@@ -262,7 +267,11 @@ export function PhotoGallery({
                 type="button"
                 className="mini-btn"
                 disabled={busy || atCap}
-                title={atCap ? t("photo.fullTitle", { max: MAX_PHOTOS_PER_VISIT }) : undefined}
+                title={
+                  atCap
+                    ? t("photo.fullTitle", { max: MAX_PHOTOS_PER_VISIT })
+                    : t("photo.addAria", { place: placeName })
+                }
                 onClick={() => inputRef.current?.click()}
               >
                 ＋ {t("photo.add")}
@@ -271,6 +280,7 @@ export function PhotoGallery({
                 type="button"
                 className="link-danger"
                 disabled={busy}
+                title={t("common.remove")}
                 onClick={async () => {
                   // Photos exist nowhere but in-app — snapshot this record first
                   // so the toast can undo what would otherwise be an
@@ -283,7 +293,13 @@ export function PhotoGallery({
               >
                 {t("common.remove")}
               </button>
-              <button ref={closeRef} type="button" className="btn-ghost" onClick={() => setOpen(false)}>
+              <button
+                ref={closeRef}
+                type="button"
+                className="btn-ghost"
+                title={t("common.close")}
+                onClick={() => setOpen(false)}
+              >
                 {t("common.close")}
               </button>
             </div>

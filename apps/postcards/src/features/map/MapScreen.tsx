@@ -729,6 +729,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
             <button
               type="button"
               className="mini-btn"
+              title={t("map.reconnect.button")}
               onClick={() => {
                 setBasemap("osm");
                 savePref(BASEMAP_KEY, "osm");
@@ -795,6 +796,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                   className="link"
                   type="button"
                   onClick={() => setAddPlaceOpen(false)}
+                  title={t("common.close")}
                   aria-label={t("common.close")}
                 >
                   {t("common.close")}
@@ -854,6 +856,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                 className={"map-btn" + (globe ? " on" : "")}
                 type="button"
                 aria-pressed={globe}
+                title={t("map.layer.globe")}
                 onClick={toggleGlobe}
               >
                 🌐 {t("map.layer.globe")}
@@ -869,7 +872,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                       return !s;
                     })
                   }
-                  title={periodTag ? t("map.layer.tripsTitle", { period: periodTag }) : undefined}
+                  title={
+                    periodTag ? t("map.layer.tripsTitle", { period: periodTag }) : t("map.layer.trips")
+                  }
                 >
                   🧵 {t("map.layer.trips")}{showTrips && periodTag ? ` · ${periodTag}` : ""}
                 </button>
@@ -903,7 +908,12 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                 🗺 {t("map.layer.myCountries")}
               </button>
               {onlineMap && basemapCycle.length > 1 && (
-                <button className="map-btn" type="button" onClick={switchBasemap}>
+                <button
+                  className="map-btn"
+                  type="button"
+                  title={t(BASEMAP_LABEL_KEY[nextBasemap])}
+                  onClick={switchBasemap}
+                >
                   ⤳ {t(BASEMAP_LABEL_KEY[nextBasemap])}
                 </button>
               )}

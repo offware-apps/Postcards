@@ -90,7 +90,7 @@ export async function markVisited(page: Page, query: string, name = query): Prom
   await page.getByRole("button", { name: `Mark ${name} visited` }).first().click();
   await expect(page.getByRole("button", { name: `Remove ${name} from visited` }).first()).toBeVisible();
   await search.fill("");
-  await expect(page.getByRole("listbox", { name: "Search results" })).toHaveCount(0);
+  await expect(page.getByRole("grid", { name: "Search results" })).toHaveCount(0);
 }
 
 /** Log a single-leg trip with the Trips screen's quick form, from IATA codes. */
