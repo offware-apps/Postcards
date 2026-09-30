@@ -344,17 +344,16 @@ const isStored = (v: Visit | StoredVisit): v is StoredVisit =>
   (v.photos ?? []).some((p) => !("src" in p));
 
 /**
- * Replace visits, trips (and, when provided, stories) in a single transaction —
- * used on import so the portable file lands atomically. If any write fails the
- * whole transaction aborts and the previous data is preserved, so the device can
- * never be left with one store from the new file and another from the old
- * (single-portable-file guarantee). `stories` is optional so older 2-argument
- * callers keep working; omitting it leaves the stories store untouched.
+ * Replace visits, trips and stories in a single transaction — used on import so
+ * the portable file lands atomically. If any write fails the whole transaction
+ * aborts and the previous data is preserved, so the device can never be left with
+ * one store from the new file and another from the old (single-portable-file
+ * guarantee).
  */
 export async function replaceAllPortable(
   visits: Visit[],
   trips: Trip[],
-  stories?: Story[],
+  stories: Story[],
   tombstones?: TombstoneRecord[],
 ): Promise<void> {
   if (!hasIndexedDB()) return;
@@ -364,14 +363,13 @@ export async function replaceAllPortable(
 async function rewritePortable(
   visits: Visit[],
   trips: Trip[],
-  stories?: Story[],
+  stories: Story[],
   tombstones?: TombstoneRecord[],
 ): Promise<void> {
   const database = await db();
   // PHOTOS rides along in the same transaction so a restore/sync lands the visit
   // refs and their blobs atomically (never refs pointing at absent images).
-  const stores = [STORE, PHOTOS, "trips"];
-  if (stories) stores.push("stories");
+  const stores = [STORE, PHOTOS, "trips", "stories"];
   // Device sync lands records AND tombstones in ONE transaction, so a merged pull
   // can never leave the device with the new records but the old tombstones.
   if (tombstones) stores.push(TOMBSTONES);
@@ -380,11 +378,9 @@ async function rewritePortable(
   await rewriteVisits(tx.objectStore(STORE), tx.objectStore(PHOTOS), visits);
   await tripStore.clear();
   for (const t of trips) await tripStore.put(t);
-  if (stories) {
-    const storyStore = tx.objectStore("stories");
-    await storyStore.clear();
-    for (const s of stories) await storyStore.put(s);
-  }
+  const storyStore = tx.objectStore("stories");
+  await storyStore.clear();
+  for (const s of stories) await storyStore.put(s);
   if (tombstones) {
     const tombStore = tx.objectStore(TOMBSTONES);
     await tombStore.clear();
