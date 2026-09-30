@@ -1082,6 +1082,11 @@ export const en = {
   "update.available": "A new version is available.",
   "update.reload": "Reload",
 
+  // ── Code that failed to download ──────────────────────────────────────────
+  "loadFailure.text": "Part of Postcards did not load, often because the connection dropped. Your places are safe on this device.",
+  "loadFailure.reload": "Reload",
+  "loadFailure.reloadTitle": "Reload Postcards and try again",
+
   // ── Misc shared ──────────────────────────────────────────────────────────
   "common.undo": "Undo",
   "common.retry": "Retry",

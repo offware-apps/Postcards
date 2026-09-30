@@ -14,6 +14,7 @@ import { Attribution } from "../../ui/Attribution";
 import { formatInt } from "../../lib/format/format";
 import { downloadFullCities, fullCitiesEnabled } from "../../lib/reference/referenceData";
 import { useT } from "../../lib/i18n";
+import { LoadBoundary } from "../../ui/LoadFailure";
 
 // Publish mode is loaded on demand (it pulls in the site renderer + crypto).
 const PublishScreen = lazy(() =>
@@ -398,9 +399,11 @@ export function SettingsScreen() {
       <Attribution />
 
       {publishOpen && (
-        <Suspense fallback={null}>
-          <PublishScreen onClose={() => setPublishOpen(false)} />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <PublishScreen onClose={() => setPublishOpen(false)} />
+          </Suspense>
+        </LoadBoundary>
       )}
     </section>
   );

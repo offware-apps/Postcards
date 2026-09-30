@@ -1082,6 +1082,9 @@ export const fr: Messages = {
   // ── Misc shared ──────────────────────────────────────────────────────────
   "update.available": "Une nouvelle version est disponible.",
   "update.reload": "Recharger",
+  "loadFailure.text": "Une partie de Postcards ne s'est pas chargée, souvent parce que la connexion a été coupée. Vos lieux sont en sécurité sur cet appareil.",
+  "loadFailure.reload": "Recharger",
+  "loadFailure.reloadTitle": "Recharger Postcards et réessayer",
   "common.undo": "Annuler",
   "common.retry": "Réessayer",
   "map.canvasAria": "Carte des lieux visités",

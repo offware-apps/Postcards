@@ -1075,6 +1075,9 @@ export const ko: Messages = {
   // ── Misc shared ──────────────────────────────────────────────────────────
   "update.available": "새 버전이 있습니다.",
   "update.reload": "새로고침",
+  "loadFailure.text": "Postcards의 일부를 불러오지 못했습니다. 대개 연결이 끊겼기 때문입니다. 장소는 이 기기에 안전하게 저장되어 있습니다.",
+  "loadFailure.reload": "새로고침",
+  "loadFailure.reloadTitle": "Postcards를 새로고침하고 다시 시도",
   "common.undo": "실행 취소",
   "common.retry": "다시 시도",
   "map.canvasAria": "방문한 장소 지도",

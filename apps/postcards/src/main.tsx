@@ -1,11 +1,11 @@
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./app/App";
 import { CANONICAL_URL, MOVED_FLAG, movedTarget } from "./lib/moved/moved";
 import { initReferenceData } from "./lib/reference/referenceData";
 import { useUpdate } from "./lib/store/useUpdate";
 import { useSettings } from "./lib/store/useSettings";
 import { initDurability } from "./lib/db/initDurability";
+import { LoadBoundary, LoadFailure } from "./ui/LoadFailure";
 import "@fontsource-variable/inter"; // self-hosted (OFL) — no font CDN
 import "@fontsource-variable/space-grotesk"; // display face for the wordmark, headings & figures (OFL)
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -71,9 +71,11 @@ if (redirect && CANONICAL_URL && movedBefore) {
   const MovedScreen = lazy(() => import("./features/moved/MovedScreen"));
   createRoot(el).render(
     <StrictMode>
-      <Suspense fallback={null}>
-        <MovedScreen canonical={CANONICAL_URL} redirect={redirect} />
-      </Suspense>
+      <LoadBoundary>
+        <Suspense fallback={null}>
+          <MovedScreen canonical={CANONICAL_URL} redirect={redirect} />
+        </Suspense>
+      </LoadBoundary>
     </StrictMode>,
   );
 } else {
@@ -85,18 +87,29 @@ function bootApp(el: HTMLElement) {
   // we can request persistent storage on first real data and track backup freshness.
   initDurability();
 
-  // Load the bundled reference gazetteer (local, SW-cached) before first render
-  // so every screen can read it synchronously.
-  void initReferenceData().then(() => {
-    createRoot(el).render(
-      <StrictMode>
-        <App />
-      </StrictMode>,
-    );
-    // Merge any installed community data packs into the reference set (off the
-    // critical path; fires the gazetteer event so screens refresh when it lands).
-    void import("./lib/packs/store").then((m) => m.useDataPacks.getState().load());
-  });
+  // Load the app's code and the bundled reference gazetteer (local, SW-cached)
+  // before first render so every screen can read it synchronously. The app is
+  // imported here, not statically, so a chunk that fails to download shows a
+  // reload screen rather than a blank page.
+  const root = createRoot(el);
+  Promise.all([import("./app/App"), initReferenceData()])
+    .then(([{ App }]) => {
+      root.render(
+        <StrictMode>
+          <App />
+        </StrictMode>,
+      );
+      // Merge any installed community data packs into the reference set (off the
+      // critical path; fires the gazetteer event so screens refresh when it lands).
+      void import("./lib/packs/store").then((m) => m.useDataPacks.getState().load());
+    })
+    .catch(() => {
+      root.render(
+        <StrictMode>
+          <LoadFailure />
+        </StrictMode>,
+      );
+    });
 
   // Warm the code-split MapScreen chunk (~1 MB, mostly MapLibre) — the map is the
   // default tab, so it's needed next. Deferred to idle so its ~1 MB fetch+parse

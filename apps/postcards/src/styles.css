@@ -2059,6 +2059,13 @@ h1.brand {
   border-color: var(--notice-ok-border);
   background: var(--visited-soft);
 }
+/* In place of app code that failed to download (ui/LoadFailure). */
+.load-failure {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 32px 16px;
+  text-align: center;
+}
 /* Backup reminder: a gentle, dismissible nudge at the top of Your data. */
 .backup-reminder {
   display: flex;
