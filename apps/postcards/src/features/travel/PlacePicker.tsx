@@ -63,8 +63,11 @@ export function PlacePicker({
       if (r) choose(r.place);
       e.preventDefault();
     } else if (e.key === "Escape") {
+      // Closing the list spends this Escape: the trip form around the picker
+      // must not also take it as "discard the form".
       setQ("");
       setActive(-1);
+      e.stopPropagation();
     }
   }
 
