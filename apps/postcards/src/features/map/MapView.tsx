@@ -25,6 +25,7 @@ import {
 } from "./visitedLayers";
 import { prefetchAroundBounds, prefetchAroundPoint, OSM_TILE_TEMPLATE } from "../../lib/offline/tiles";
 import { markerCitiesInView, type Bounds } from "./viewport";
+import { unwrapAntimeridian } from "./antimeridian";
 import { statusShows, type FilterStatus } from "../../lib/store/useFilters";
 import type { City } from "../../lib/reference/types";
 import type { PlaceRef, Visit } from "../../lib/schema/models";
@@ -70,7 +71,7 @@ async function fetchCountries(): Promise<FeatureCollection<Polygon | MultiPolygo
     for (const f of fc.features) {
       f.properties = { ...(f.properties ?? {}), numeric: String(f.id ?? "") };
     }
-    return fc;
+    return unwrapAntimeridian(fc);
   } catch {
     return null;
   }

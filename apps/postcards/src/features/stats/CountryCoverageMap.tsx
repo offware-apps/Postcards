@@ -118,11 +118,14 @@ export function CountryCoverageMap({ iso2, name }: { iso2: string; name: string 
       }
     }
     if (!frameLons.length) return null;
-    // Unwrap across the antimeridian: when the frame spans > 180° of raw longitude
-    // the land wraps the date line (Russia, Fiji…), so shift western lons by +360
-    // and project EVERYTHING (rings, dots, blobs) in that continuous space — else
-    // the silhouette collapses to a distorted, off-centre sliver.
-    const unwrap = Math.max(...frameLons) - Math.min(...frameLons) > 180;
+    // Unwrap across the antimeridian: when the frame runs past 180° (the land
+    // arrives unwrapped, so Russia's mainland reaches 191°) or spans > 180° of
+    // raw longitude, the country wraps the date line (Russia, Fiji…), so shift
+    // western lons by +360 and project EVERYTHING (rings, dots, blobs) in that
+    // continuous space — else the silhouette collapses to a distorted, off-centre
+    // sliver and Chukotka's towns fall off the map.
+    const unwrap =
+      Math.max(...frameLons) > 180 || Math.max(...frameLons) - Math.min(...frameLons) > 180;
     const wrapLon = (lon: number) => (unwrap && lon < 0 ? lon + 360 : lon);
 
     const xs = frameLons.map((lon) => (wrapLon(lon) * Math.PI) / 180);
