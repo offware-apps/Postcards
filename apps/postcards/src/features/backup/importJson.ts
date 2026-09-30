@@ -119,7 +119,11 @@ export function importFile(text: string): ImportResult {
     }
     byPlace.set(key, { ...v, visitId: existing.visitId, addedAt: existing.addedAt, photos });
   }
-  const visits = [...byPlace.values()];
+  // And one per visitId: the "visits" store is keyed on it, so two places sharing
+  // an id would be two in memory and one on disk. Last-wins, like trips below.
+  const visitById = new Map<string, Visit>();
+  for (const v of byPlace.values()) visitById.set(v.visitId, v);
+  const visits = [...visitById.values()];
   // Enforce one-record-per-tripId too — the "trips" store is keyed on tripId, so a
   // hand-edited file with a duplicate id would silently drop rows on persist and
   // diverge from the in-memory count. Keep last-wins to match the IndexedDB put order.
