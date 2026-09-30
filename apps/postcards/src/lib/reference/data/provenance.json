@@ -12,10 +12,10 @@
     "url": "https://github.com/topojson/world-atlas"
   },
   {
-    "dataset": "First-level regions (GeoNames admin-1, named via dr5hn countries-states-cities)",
+    "dataset": "First-level regions (GeoNames admin-1 codes and names; French names for France)",
     "license": "CC-BY-4.0 (GeoNames) / ODbL (dr5hn)",
-    "version": "all-the-cities 3.1.0 + country-state-city",
-    "url": "https://github.com/dr5hn/countries-states-cities-database"
+    "version": "all-the-cities 3.1.0 + GeoNames 2026-09-30",
+    "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt"
   },
   {
     "dataset": "GeoNames city gazetteer (population ≥ 15,000, via all-the-cities)",

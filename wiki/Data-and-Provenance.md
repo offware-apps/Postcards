@@ -100,7 +100,7 @@ Cities and first-level regions come from **GeoNames**, packaged via
 |------|-----------|--------|---------|---------|
 | `cities.json` | Core gazetteer, population ≥ 15,000 — loads first so the map appears immediately | [GeoNames](https://www.geonames.org) via `all-the-cities` 3.1.0 | CC BY 4.0 | 24,323 |
 | `cities-all.json` | Full world gazetteer — streams in behind first paint in a Web Worker | GeoNames via `all-the-cities` 3.1.0 | CC BY 4.0 | 135,233 |
-| `subdivisions.json` | First-level regions (states/provinces), the denominator for per-country region coverage | GeoNames admin-1, named via [dr5hn `countries-states-cities`](https://github.com/dr5hn/countries-states-cities-database) | CC BY 4.0 (GeoNames) / ODbL 1.0 (dr5hn) | 3,865 |
+| `subdivisions.json` | First-level regions (states/provinces), the denominator for per-country region coverage | GeoNames admin-1: each city's code and each code's name from one GeoNames day; [dr5hn `countries-states-cities`](https://github.com/dr5hn/countries-states-cities-database) only for a code GeoNames does not name | CC BY 4.0 (GeoNames) / ODbL 1.0 (dr5hn) | 3,751 |
 
 ### Airports — OpenFlights / OurAirports (ODbL 1.0 / Public Domain)
 
