@@ -7,8 +7,10 @@ android {
         applicationId "coop.samourai.postcards"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // CI passes -PversionCode (the run number, so each build installs as an
+        // update over the last) and -PversionName (app version + commit).
+        versionCode((project.findProperty("versionCode") ?: "1") as Integer)
+        versionName(project.findProperty("versionName") ?: "1.0")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +18,26 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // One stable key signs every release build, so Android accepts each new APK
+    // as an update and keeps the app's data. CI writes the keystore from
+    // repository secrets (docs/NATIVE-BUILDS.md); without them there is no
+    // release signing and CI builds the debug APK instead.
+    def keystoreFile = System.getenv("POSTCARDS_KEYSTORE_FILE")
+    signingConfigs {
+        if (keystoreFile) {
+            release {
+                storeFile file(keystoreFile)
+                storePassword System.getenv("POSTCARDS_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("POSTCARDS_KEY_ALIAS")
+                keyPassword System.getenv("POSTCARDS_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystoreFile) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -2042,6 +2042,11 @@ h1.brand {
 .btn-ghost:active {
   transform: translateY(1px);
 }
+/* A link styled as a ghost button (Settings → Android app). */
+a.btn-ghost {
+  display: inline-block;
+  text-decoration: none;
+}
 .notice {
   background: var(--bg-sub);
   border: 1px solid var(--border);

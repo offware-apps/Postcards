@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
 import { useToast } from "../../lib/store/useToast";
 import { useSettings, MARKER_CAP_CHOICES } from "../../lib/store/useSettings";
@@ -15,6 +16,11 @@ import { Attribution } from "../../ui/Attribution";
 import { formatInt } from "../../lib/format/format";
 import { downloadFullCities, fullCitiesEnabled } from "../../lib/reference/referenceData";
 import { useT } from "../../lib/i18n";
+
+// The newest Android build of main, republished by .github/workflows/android-apk.yml
+// under a tag that never moves away from this URL.
+const ANDROID_APK_URL =
+  "https://github.com/offware-apps/Postcards/releases/download/android-latest/postcards.apk";
 
 // Publish mode is loaded on demand (it pulls in the site renderer + crypto).
 const PublishScreen = lazy(() =>
@@ -154,6 +160,17 @@ export function SettingsScreen() {
         <ThemeToggle />
         <LanguageToggle />
       </section>
+
+      {/* The Android app — offered on the web only; inside the app it is moot. */}
+      {!Capacitor.isNativePlatform() && (
+        <section className="settings-section">
+          <h3>📱 {t("settings.android.title")}</h3>
+          <p className="muted small">{t("settings.android.desc")}</p>
+          <a className="btn-ghost" href={ANDROID_APK_URL} title={t("settings.android.linkTitle")}>
+            ⬇ {t("settings.android.link")}
+          </a>
+        </section>
+      )}
 
       {/* Offline mode — the master "self-contained" switch. One flip guarantees
           zero optional egress across the whole app (map, guides, everything). */}
