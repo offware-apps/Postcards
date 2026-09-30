@@ -2018,7 +2018,9 @@ export function MapView({
     lastCitiesKey.current = "<init>";
     lastWishKey.current = "<init>";
     lastAirKey.current = "<init>";
-    lastPoiKey.current = "<init>"; // heritage sites and airports arrive after first paint
+    // Heritage sites, airports and stations arrive after first paint.
+    lastStaKey.current = "<init>";
+    lastPoiKey.current = "<init>";
     applyVisited(map);
     applyInViewCities(map); // the full set changes which cities fall in view
     // eslint-disable-next-line react-hooks/exhaustive-deps

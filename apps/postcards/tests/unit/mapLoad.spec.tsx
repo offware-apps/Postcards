@@ -77,6 +77,8 @@ import { MapView } from "../../src/features/map/MapView";
 import { useSettings } from "../../src/lib/store/useSettings";
 import { RouteMap } from "../../src/features/travel/RouteMap";
 import type { MyPlace } from "../../src/features/travel/myPlaces";
+import { useVisits } from "../../src/lib/store/useVisits";
+import { setStationData } from "../../src/lib/reference/referenceData";
 
 beforeEach(() => {
   maps.length = 0;
@@ -153,5 +155,37 @@ describe("the map's place card photo", () => {
       () => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("wikipedia.org"))).toBe(true),
       { timeout: 5000 },
     );
+  });
+});
+
+describe("late reference data", () => {
+  it("draws a logged station once the stations land after the map loaded", async () => {
+    const lyon = { kind: "station", id: "tl-4676", name: "Lyon Part-Dieu", countryId: "FR" } as const;
+    useVisits.setState({
+      visits: [
+        {
+          visitId: "v1",
+          place: lyon,
+          date: null,
+          note: null,
+          status: "visited",
+          favorite: false,
+          addedAt: new Date().toISOString(),
+        },
+      ],
+    });
+    render(<MapView basemap="osm" mode="all" dark={false} />);
+    await act(async () => {});
+    const map = maps[0]! as FakeMap;
+    await act(async () => map.fire("load"));
+    const drawn = () =>
+      (map.calls.filter((c) => c[0] === "setData" && c[1] === "stations").at(-1)?.[2] as
+        | { features: unknown[] }
+        | undefined)?.features.length ?? 0;
+    expect(drawn()).toBe(0);
+    await act(async () =>
+      setStationData([{ id: lyon.id, name: lyon.name, countryIso2: "FR", subdivisionId: null, lat: 45.76, lon: 4.86 }]),
+    );
+    expect(drawn()).toBe(1);
   });
 });
