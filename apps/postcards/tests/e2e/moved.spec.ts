@@ -37,13 +37,19 @@ test("the old address hands its places to the new one", async ({ page, context }
       }),
   );
 
+  // Each of the next two waits spans an app boot, the move screen's here and the
+  // whole app's in the new tab, so they take openApp's boot budget.
   await page.goto(`${OLD}/`);
-  await expect(page.getByRole("heading", { name: "Postcards has moved" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Postcards has moved" })).toBeVisible({
+    timeout: 15_000,
+  });
   const [tab] = await Promise.all([
     context.waitForEvent("page"),
     page.getByRole("button", { name: "Move my places" }).click(),
   ]);
-  await expect(page.getByText("Done: your places are at the new address.")).toBeVisible();
+  await expect(page.getByText("Done: your places are at the new address.")).toBeVisible({
+    timeout: 15_000,
+  });
 
   // The new tab took the file, dropped the handoff parameter, and shows the place.
   await expect(tab).toHaveURL(`${NEW}/`);
