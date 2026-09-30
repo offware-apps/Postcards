@@ -5,6 +5,7 @@ import {
   visitedCityPoints,
   wishlistCityPoints,
   optimizeVisitedPoints,
+  stackSameCountry,
   tripArcs,
 } from "../../src/features/map/visitedLayers";
 import type { PlaceRef, Trip, Visit } from "../../src/lib/schema/models";
@@ -144,8 +145,57 @@ describe("declutter priority (symbol-sort-key)", () => {
     // Lower symbol-sort-key wins the collision, so pinned marks must sort below.
     expect(fav.sortKey).toBeLessThan(nonFav.sortKey);
     expect(cust.sortKey).toBeLessThan(nonFav.sortKey);
-    // A plain visited city is unchanged: -population.
-    expect(nonFav.sortKey).toBe(-(parisCity.population ?? 0));
+    // A plain visited city: -population, less the bias its country's main city gets.
+    expect(nonFav.sortKey).toBe(-100_000_000 - (parisCity.population ?? 0));
+  });
+});
+
+describe("flags at world zoom: one per country before any second one", () => {
+  const city = (q: string, cc: string) => ref.searchCities(q).find((c) => c.countryIso2 === cc)!;
+  const lyon = city("Lyon", "FR");
+  const brussels = city("Brussels", "BE");
+  const antwerp = city("Antwerp", "BE");
+  const visits = [
+    cityVisit(paris.id, paris.name, "FR"),
+    cityVisit(lyon.id, lyon.name, "FR"),
+    cityVisit(brussels.id, brussels.name, "BE"),
+    cityVisit(antwerp.id, antwerp.name, "BE"),
+  ];
+  const names = (fc: FeatureCollection<Point>) => fc.features.map((f) => f.properties?.name).sort();
+
+  it("ranks every country's main city ahead of any country's second city", () => {
+    const marseille = city("Marseille", "FR");
+    const set = [
+      cityVisit(paris.id, paris.name, "FR"),
+      cityVisit(marseille.id, marseille.name, "FR"),
+      cityVisit(antwerp.id, antwerp.name, "BE"),
+    ];
+    const key = (name: string) =>
+      visitedCityPoints(set, ref).features.find((f) => f.properties?.name === name)!.properties!
+        .sortKey as number;
+    // Marseille outnumbers Antwerp, yet Belgium keeps its one flag first.
+    expect(marseille.population!).toBeGreaterThan(antwerp.population!);
+    expect(key(antwerp.name)).toBeLessThan(key(marseille.name));
+    expect(key(paris.name)).toBeLessThan(key(antwerp.name));
+  });
+
+  it("stacks a country's own flags where they would overlap, never another country's", () => {
+    const fc = visitedCityPoints(visits, ref);
+    expect(names(stackSameCountry(fc, 1))).toEqual([brussels.name, paris.name].sort());
+    // Close enough in and every city has its own flag again.
+    expect(names(stackSameCountry(fc, 6))).toEqual(
+      [antwerp.name, brussels.name, lyon.name, paris.name].sort(),
+    );
+  });
+
+  it("never stacks a favourite away, and a favourite heads its country's pile", () => {
+    const fav = (c: typeof paris) => ({ ...cityVisit(c.id, c.name, "FR"), favorite: true });
+    expect(names(stackSameCountry(visitedCityPoints([fav(paris), fav(lyon)], ref), 1))).toEqual(
+      [lyon.name, paris.name].sort(),
+    );
+    expect(names(stackSameCountry(visitedCityPoints([visits[0]!, fav(lyon)], ref), 1))).toEqual([
+      lyon.name,
+    ]);
   });
 });
 
@@ -167,8 +217,8 @@ describe("wishlist points share the visited shape (unified marker + optimise)", 
     expect(p.cc).toBe("FR");
     expect(p.custom).toBe(0);
     expect(p.fav).toBe(0);
-    // Same collision key as a visited city: -population.
-    expect(p.sortKey).toBe(-(parisCity.population ?? 0));
+    // Same collision key as a visited city (the only one of its country).
+    expect(p.sortKey).toBe(-100_000_000 - (parisCity.population ?? 0));
   });
 
   it("carries the favourite star and pins a favourite want-list city (kept in a collision)", () => {

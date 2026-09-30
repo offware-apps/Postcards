@@ -20,6 +20,7 @@ import { mapDateMatches, type MapDate } from "../travel/period";
 import {
   airportPoints,
   optimizeVisitedPoints,
+  stackSameCountry,
   visitedCityPoints,
   wishlistCityPoints,
 } from "./visitedLayers";
@@ -157,8 +158,10 @@ function makeCityPill(iso2: string, favorite: boolean, wish: boolean): ImageData
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
   } else {
-    ctx.font = `27px ${FLAG_FONT}`;
-    ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 1);
+    // The bundled flag glyph fills less of its em box than a colour-emoji flag
+    // and sits above the middle baseline: a larger size, set lower, centres it.
+    ctx.font = `32px ${FLAG_FONT}`;
+    ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 5);
   }
   if (favorite) {
     ctx.font = `14px ${FLAG_FONT}`;
@@ -701,25 +704,8 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
         "icon-allow-overlap": true,
       },
     },
-    {
-      id: "cities-visited",
-      type: "symbol",
-      source: "cities",
-      layout: {
-        "icon-image": ["concat", "pill-", ["get", "cc"], "-", ["to-string", ["get", "fav"]], "-", ["to-string", ["get", "wish"]]],
-        // Grow with zoom so markers stay obvious on big screens & close views.
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.9, 5, 1.1, 10, 1.35],
-        "icon-padding": 1,
-        // Your flags are ALWAYS drawn (overlap allowed) — never hidden by collision
-        // or by browse monuments/airports — because seeing everywhere you've been
-        // is the whole point. Density is managed by "Show one city per area"
-        // (region-optimize), not by dropping flags. symbol-sort-key = -(population)
-        // keeps the biggest city on top where they stack; favourites are pinned.
-        // (Runtime-flipped by "Show every place at once": OFF re-enables thinning.)
-        "icon-allow-overlap": true,
-        "symbol-sort-key": ["get", "sortKey"],
-      },
-    },
+    // Your logged airports sit UNDER your flags: at world zoom an airport's
+    // pill lands right on its city and hid that country's only flag.
     {
       id: "airports",
       type: "symbol",
@@ -734,9 +720,31 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
           "-",
           ["to-string", ["get", "fav"]],
         ],
-        "icon-size": 1,
+        // Smaller at world zoom, where a pill covers a small country outright.
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.75, 5, 1],
         "icon-padding": 1,
         "icon-allow-overlap": true,
+      },
+    },
+    {
+      id: "cities-visited",
+      type: "symbol",
+      source: "cities",
+      layout: {
+        "icon-image": ["concat", "pill-", ["get", "cc"], "-", ["to-string", ["get", "fav"]], "-", ["to-string", ["get", "wish"]]],
+        // Grow with zoom so markers stay obvious on big screens & close views.
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.9, 5, 1.1, 10, 1.35],
+        "icon-padding": 1,
+        // Your flags are ALWAYS drawn (overlap allowed) — never hidden by collision
+        // or by browse monuments/airports — because seeing everywhere you've been
+        // is the whole point. Density is managed by "Show one city per area"
+        // (region-optimize) and by stacking a country's own flags into one at
+        // low zoom (stackSameCountry), not by dropping countries. The sort key
+        // (favourites, then each country's main city, then population) is set
+        // for the mode by applyMarkerOverlap, with "Show every place at once":
+        // OFF re-enables thinning.
+        "icon-allow-overlap": true,
+        "symbol-sort-key": ["get", "sortKey"],
       },
     },
   ];
@@ -1051,7 +1059,12 @@ export function MapView({
     // rebuilds the source; toggling the setting does too. `undefined` = setting
     // off (show all); a null granularity = on but zoomed in enough to show all.
     const gran = optimizeMarkersRef.current ? optimizeGranularity(map.getZoom()) : undefined;
-    const optTag = optimizeMarkersRef.current ? `opt:${gran ?? "all"}|` : "all|";
+    // Same-country flags that would sit on each other collapse into one
+    // (stackSameCountry), measured at the zoom rounded down to a half step so
+    // a pan or a small zoom does not rebuild the sources.
+    const stackZoom = Math.floor(map.getZoom() * 2) / 2;
+    const optTag =
+      (optimizeMarkersRef.current ? `opt:${gran ?? "all"}|` : "all|") + `z${stackZoom}|`;
     const citiesKey =
       optTag +
       vis
@@ -1064,7 +1077,7 @@ export function MapView({
     if (citiesKey !== lastCitiesKey.current) {
       lastCitiesKey.current = citiesKey;
       const base = visitedCityPoints(vis, ref);
-      const fc = gran ? optimizeVisitedPoints(base, gran) : base;
+      const fc = stackSameCountry(gran ? optimizeVisitedPoints(base, gran) : base, stackZoom);
       (map.getSource("cities") as GeoJSONSource | undefined)?.setData(fc);
       // Warm the flag images up front — a later zoom-out must not have to fetch
       // any visited flag's image before it can paint (the "load in late" bug).
@@ -1081,7 +1094,7 @@ export function MapView({
       lastWishKey.current = wishKey;
       // Want-list cities get the SAME zoom-aware region optimisation as visited.
       const wbase = wishlistCityPoints(vis, ref);
-      const wfc = gran ? optimizeVisitedPoints(wbase, gran) : wbase;
+      const wfc = stackSameCountry(gran ? optimizeVisitedPoints(wbase, gran) : wbase, stackZoom);
       (map.getSource("wishlist") as GeoJSONSource | undefined)?.setData(wfc);
       ensurePillImages(map, wfc);
     }
@@ -1175,7 +1188,16 @@ export function MapView({
   function applyMarkerOverlap(map: MlMap) {
     const all = showAllRef.current;
     for (const id of ["cities-visited", "cities-wishlist"]) {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "icon-allow-overlap", all);
+      if (!map.getLayer(id)) continue;
+      map.setLayoutProperty(id, "icon-allow-overlap", all);
+      // A low sort key wins placement when markers collide, but when they
+      // overlap the HIGHEST key draws on top: negate it there, so favourites and
+      // each country's main city stay on top of a pile instead of under it.
+      map.setLayoutProperty(
+        id,
+        "symbol-sort-key",
+        all ? ["*", -1, ["get", "sortKey"]] : ["get", "sortKey"],
+      );
     }
   }
 
@@ -1495,9 +1517,9 @@ export function MapView({
         // without waiting on a React render.
         applyViewportPoi(map);
         applyInViewCities(map);
-        // Zoom-aware "one city per area": rebuild your flags when the zoom crosses
-        // a granularity bucket (key-guarded, so a same-bucket pan is a no-op).
-        if (optimizeMarkersRef.current) applyVisited(map);
+        // Zoom-aware flags: rebuild them when the zoom crosses a stacking step
+        // or a "one city per area" bucket (key-guarded, so a pan is a no-op).
+        applyVisited(map);
         const wasProgrammatic = suppressBoundsRef.current;
         if (wasProgrammatic) {
           suppressBoundsRef.current = false; // programmatic fly — keep the list still
