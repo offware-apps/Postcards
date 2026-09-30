@@ -10,6 +10,7 @@ import type { PlaceRef, Story, TravelMode, Trip, Visit } from "../schema/models"
 import { placeKey } from "../schema/helpers";
 import { haversineKm } from "../../features/travel/distance";
 import { tripDateSpan } from "../../features/travel/tripDate";
+import { tripChain } from "../../features/travel/tripStops";
 
 export interface JourneyStep {
   place: PlaceRef;
@@ -121,9 +122,11 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
 
   if (legs.length > 0) {
     for (const t of legs) {
+      // Every stop of a multi-stop trip, each arrived at by its own leg's mode.
+      const chain = tripChain(t);
       const last = steps[steps.length - 1];
-      if (!last || placeKey(last.place) !== placeKey(t.from)) makeStep(t.from, t.date, null);
-      makeStep(t.to, t.date, t.mode);
+      if (!last || placeKey(last.place) !== placeKey(chain[0]!)) makeStep(chain[0]!, t.date, null);
+      for (let i = 1; i < chain.length; i++) makeStep(chain[i]!, t.date, t.legModes?.[i - 1] ?? t.mode);
     }
   } else {
     // No trips selected — publish the stories in date order as the steps.

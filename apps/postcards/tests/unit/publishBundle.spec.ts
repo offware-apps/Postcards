@@ -206,5 +206,21 @@ describe("buildJourney (visit photos)", () => {
     expect(sel("2026-01-01", "2026-12-31")).toEqual(["Paris", "Rome", "Cairo"]);
     expect(sel("2026-03-10", "2026-03-31")).toEqual([]); // the range covers part of March only
   });
+
+  it("publishes every stop of a multi-stop trip with each leg's mode", () => {
+    const athens = city("ath", "Athens", "GR", 37.98, 23.73);
+    const hop: Trip = {
+      ...trip("t1", paris, cairo, "flight", "2026-05-02"),
+      stops: [paris, rome, athens, cairo],
+      legModes: ["flight", "train", "ferry"],
+    };
+    const j = buildJourney({ visits: [], trips: [hop], stories: [], resolveCoords }, { title: "T" });
+    expect(j.steps.map((s) => `${s.place.name}/${s.arriveBy}`)).toEqual([
+      "Paris/null",
+      "Rome/flight",
+      "Athens/train",
+      "Cairo/ferry",
+    ]);
+  });
 });
 
