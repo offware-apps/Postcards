@@ -7,7 +7,7 @@ import type { PlaceRef, Trip } from "../../src/lib/schema/models";
 
 const P = (id: string, countryId: string): PlaceRef => ({ kind: "country", id, name: id, countryId });
 
-function editTrip(date: string, stopDates?: (string | null)[]) {
+function editTrip(date: string, stopDates?: (string | null)[], before?: () => void) {
   const trip: Trip = {
     tripId: "t1",
     from: P("FR", "FR"),
@@ -24,6 +24,7 @@ function editTrip(date: string, stopDates?: (string | null)[]) {
   useTrips.setState({ trips: [trip], updateTrip });
   useVisits.setState({ visits: [] });
   render(<TripComposer tripId="t1" onClose={() => {}} />);
+  before?.();
   fireEvent.click(screen.getByRole("button", { name: "Save trip" }));
   return updateTrip;
 }
@@ -46,6 +47,19 @@ describe("TripComposer editing a dated trip", () => {
     expect(updateTrip).toHaveBeenCalledWith(
       "t1",
       expect.objectContaining({ date: "2024-03-16", stopDates: [null, "2024-03-16", "2024-03-20"] }),
+    );
+  });
+
+  it("moves a stop's date with the stop", () => {
+    const updateTrip = editTrip("2024-03-10", ["2024-03-10", "2024-03-16", "2024-03-20"], () =>
+      fireEvent.click(screen.getByRole("button", { name: "Move KR up" })),
+    );
+    expect(updateTrip).toHaveBeenCalledWith(
+      "t1",
+      expect.objectContaining({
+        stops: [P("KR", "KR"), P("FR", "FR"), P("JP", "JP")],
+        stopDates: ["2024-03-16", "2024-03-10", "2024-03-20"],
+      }),
     );
   });
 });
