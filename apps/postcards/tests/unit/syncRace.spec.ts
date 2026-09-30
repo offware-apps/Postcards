@@ -66,3 +66,23 @@ describe("edits made while a sync is in flight", () => {
     expect(useTrips.getState().trips[0]!.note).toBe("window seat");
   });
 });
+
+describe("a sync started before the stores have loaded", () => {
+  it("keeps the places on the device that were never synced", async () => {
+    clearDatabases();
+    await db.putVisit({
+      visitId: "fr",
+      place: place("FR"),
+      status: "visited",
+      favorite: false,
+      date: null,
+      note: null,
+      addedAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-01T00:00:00.000Z",
+    });
+    useVisits.setState({ visits: [], loaded: false }); // "Sync now" while load() is in flight
+    expect((await runDeviceSync(cfg)).ok).toBe(true);
+    expect(ids(await db.getAllVisits())).toEqual(["FR"]);
+    expect(ids(useVisits.getState().visits)).toEqual(["FR"]);
+  });
+});

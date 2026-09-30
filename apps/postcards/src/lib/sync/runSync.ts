@@ -130,6 +130,13 @@ export async function runDeviceSync(
       import("./engine"),
     ]);
 
+    // A store still loading reads as empty, and persist would write that over the
+    // device: "Sync now" can be pressed before the startup read is done (auto-sync
+    // waits for it), so finish loading first.
+    await Promise.all(
+      [useVisits, useTrips, useStories].map((s) => !s.getState().loaded && s.getState().load()),
+    );
+
     const localTombs = await getAllTombstones();
     const pickTombs = (kind: TombstoneKind) => partitionTombs(localTombs, kind);
 
