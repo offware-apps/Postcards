@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import {
   useFilters,
   POP_CHOICES,
+  type FilterState,
   type FilterStatus,
   type SortOrder,
 } from "../lib/store/useFilters";
@@ -22,6 +23,7 @@ export function FilterPanel({
   showStatus = true,
   showGrowth = false,
   continents = [],
+  hidden = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -36,6 +38,8 @@ export function FilterPanel({
   showGrowth?: boolean;
   /** Continents present in the user's data, for the continent picker ("" = all). */
   continents?: string[];
+  /** Dimensions the host's list cannot act on, left out of the panel. */
+  hidden?: (keyof FilterState)[];
 }) {
   const t = useT();
   const f = useFilters();
@@ -91,6 +95,13 @@ export function FilterPanel({
 
   const STATUS: FilterStatus[] = ["visited", "wishlist", "unvisited"];
   const SORTS: SortOrder[] = ["pop", "az"];
+  const growth = (
+    [
+      ["favoritesOnly", "♥", "filter.favoritesOnly"],
+      ["hasPhoto", "📷", "filter.hasPhoto"],
+      ["hasNote", "📝", "filter.hasNote"],
+    ] as const
+  ).filter(([k]) => !hidden.includes(k));
 
   return (
     <div className="filter-scrim" onClick={onClose}>
@@ -186,7 +197,7 @@ export function FilterPanel({
         </div>
 
         {/* Date */}
-        {(years.list.length > 0 || years.undated) && (
+        {!hidden.includes("date") && (years.list.length > 0 || years.undated) && (
           <div className="filter-section">
             <span className="filter-section-title">{t("filter.date.title")}</span>
             <div className="segmented wrap" role="group" aria-label={t("filter.date.title")}>
@@ -235,7 +246,7 @@ export function FilterPanel({
         )}
 
         {/* Folder / trip */}
-        {folders.length > 0 && (
+        {!hidden.includes("folder") && folders.length > 0 && (
           <div className="filter-section">
             <label className="picker-label" htmlFor="filter-folder">
               <span className="filter-section-title">{t("filter.folder.title")}</span>
@@ -257,53 +268,44 @@ export function FilterPanel({
         )}
 
         {/* Sort */}
-        <div className="filter-section">
-          <span className="filter-section-title">{t("filter.sort.title")}</span>
-          <div className="segmented wrap" role="group" aria-label={t("filter.sort.title")}>
-            {SORTS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={f.sort === s}
-                className={f.sort === s ? "seg-on" : ""}
-                onClick={() => f.set({ sort: s })}
-              >
-                {s === "pop" ? t("filter.sort.pop") : t("filter.sort.az")}
-              </button>
-            ))}
+        {!hidden.includes("sort") && (
+          <div className="filter-section">
+            <span className="filter-section-title">{t("filter.sort.title")}</span>
+            <div className="segmented wrap" role="group" aria-label={t("filter.sort.title")}>
+              {SORTS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={f.sort === s}
+                  className={f.sort === s ? "seg-on" : ""}
+                  onClick={() => f.set({ sort: s })}
+                >
+                  {s === "pop" ? t("filter.sort.pop") : t("filter.sort.az")}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* More (growth dimensions) — record-based screens only */}
         {showGrowth && (
           <div className="filter-section">
             <span className="filter-section-title">{t("filter.more.title")}</span>
-            <div className="segmented wrap" role="group" aria-label={t("filter.more.title")}>
-              <button
-                type="button"
-                aria-pressed={f.favoritesOnly}
-                className={f.favoritesOnly ? "seg-on" : ""}
-                onClick={() => f.set({ favoritesOnly: !f.favoritesOnly })}
-              >
-                ♥ {t("filter.favoritesOnly")}
-              </button>
-              <button
-                type="button"
-                aria-pressed={f.hasPhoto}
-                className={f.hasPhoto ? "seg-on" : ""}
-                onClick={() => f.set({ hasPhoto: !f.hasPhoto })}
-              >
-                📷 {t("filter.hasPhoto")}
-              </button>
-              <button
-                type="button"
-                aria-pressed={f.hasNote}
-                className={f.hasNote ? "seg-on" : ""}
-                onClick={() => f.set({ hasNote: !f.hasNote })}
-              >
-                📝 {t("filter.hasNote")}
-              </button>
-            </div>
+            {growth.length > 0 && (
+              <div className="segmented wrap" role="group" aria-label={t("filter.more.title")}>
+                {growth.map(([k, icon, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={f[k]}
+                    className={f[k] ? "seg-on" : ""}
+                    onClick={() => f.set({ [k]: !f[k] })}
+                  >
+                    {icon} {t(label)}
+                  </button>
+                ))}
+              </div>
+            )}
             {continents.length > 0 && (
               <label className="picker-label filter-continent" htmlFor="filter-continent">
                 <span className="filter-section-title">{t("filter.continent.title")}</span>

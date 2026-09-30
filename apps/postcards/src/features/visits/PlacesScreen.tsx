@@ -32,6 +32,7 @@ import { browseList, type BrowseRow } from "./browseList";
 import {
   useFilters,
   currentFilters,
+  type FilterState,
   type FilterStatus,
   type FilterMode,
 } from "../../lib/store/useFilters";
@@ -48,6 +49,15 @@ import { useT, type TFunction } from "../../lib/i18n";
 type Kind = "all" | "cities" | "monuments" | "airports" | "countries";
 type Status = "all" | "visited" | "wishlist" | "favorites" | "notVisited";
 type Collection = "moments" | "photos" | "passport";
+
+// Places owns status via its axis, and mode is the map's; neither is a filter here.
+const LIST_EXCLUDE: (keyof FilterState)[] = ["status", "mode"];
+// A world browse (Cities / Monuments / Airports) lists reference places, not your
+// records: date, folder and the favourite / photo / note toggles describe a saved
+// record, and each kind keeps its own order. The panel leaves them out there and no
+// chip counts them, rather than offering controls that do nothing.
+const BROWSE_IGNORED: (keyof FilterState)[] = ["date", "folder", "sort", "favoritesOnly", "hasPhoto", "hasNote"];
+const BROWSE_EXCLUDE: (keyof FilterState)[] = [...LIST_EXCLUDE, ...BROWSE_IGNORED];
 
 const KINDS: readonly Kind[] = ["all", "cities", "monuments", "airports", "countries"];
 const STATUSES: readonly Status[] = ["all", "visited", "wishlist", "favorites", "notVisited"];
@@ -693,9 +703,12 @@ export function PlacesScreen() {
   }, [visits, ref]);
 
   // The active dimensions Places actually acts on (status + map mode are excluded —
-  // status is the axis, mode is map-only). Drives the Filter button's badge.
+  // status is the axis, mode is map-only — and so is what a world browse ignores).
+  // Drives the Filter button's badge.
+  const isBrowseKind = kind === "cities" || kind === "monuments" || kind === "airports";
+  const summaryExclude = isBrowseKind ? BROWSE_EXCLUDE : LIST_EXCLUDE;
   const placesFilterChips = useMemo(
-    () => activeChips(currentFilters(filters), t, ref).filter((c) => c.field !== "status" && c.field !== "mode"),
+    () => activeChips(currentFilters(filters), t, ref).filter((c) => !summaryExclude.includes(c.field)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       filters.date,
@@ -708,6 +721,7 @@ export function PlacesScreen() {
       filters.hasNote,
       filters.continent,
       filters.country,
+      summaryExclude,
       ref,
       t,
     ],
@@ -770,7 +784,6 @@ export function PlacesScreen() {
           ? t("places.collection.photos")
           : t("places.title");
 
-  const isBrowseKind = kind === "cities" || kind === "monuments" || kind === "airports";
   // The search box (and its filter row) belong to the browse; countries has its
   // own inline search, collections have none, and an empty personal list / the
   // "pick a kind" hint have nothing to filter.
@@ -947,7 +960,7 @@ export function PlacesScreen() {
               ))}
             </div>
           )}
-          <FilterSummary exclude={["status", "mode"]} />
+          <FilterSummary exclude={summaryExclude} />
         </div>
       )}
 
@@ -1153,6 +1166,7 @@ export function PlacesScreen() {
         showStatus={false}
         showGrowth
         continents={continentOptions}
+        hidden={isBrowseKind ? BROWSE_IGNORED : undefined}
       />
     </section>
   );

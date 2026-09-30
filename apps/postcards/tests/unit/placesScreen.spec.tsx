@@ -55,3 +55,43 @@ describe("PlacesScreen monument category", () => {
     expect(document.body.textContent).toContain(cultural.name);
   });
 });
+
+const cityVisit = (): Visit => ({
+  visitId: "v-paris",
+  place: { kind: "city", id: "2988507", name: "Paris", countryId: "FR" },
+  date: "2024-05-01",
+  note: null,
+  status: "visited",
+  favorite: false,
+  addedAt: new Date().toISOString(),
+});
+
+describe("PlacesScreen filters on a world browse", () => {
+  it("offers and counts only what the browse acts on", () => {
+    localStorage.setItem("postcards-places-kind", "cities");
+    useVisits.setState({ visits: [cityVisit()] });
+    act(() => useFilters.getState().set({ hasPhoto: true, sort: "az" }));
+    render(<PlacesScreen />);
+    // Neither dimension narrows or orders the gazetteer, so neither lights the badge
+    // nor shows a chip.
+    const open = screen.getByRole("button", { name: "Filter" });
+    expect(screen.queryByRole("button", { name: /Remove .* filter/ })).toBeNull();
+    act(() => open.click());
+    const panel = screen.getByRole("dialog");
+    expect(panel.textContent).not.toContain("Has photo");
+    expect(panel.textContent).not.toContain("Sort");
+    expect(panel.textContent).not.toContain("Date");
+    expect(panel.textContent).toContain("People");
+  });
+
+  it("offers them on your saved places", () => {
+    localStorage.setItem("postcards-places-kind", "all");
+    useVisits.setState({ visits: [cityVisit()] });
+    render(<PlacesScreen />);
+    act(() => screen.getByRole("button", { name: "Filter" }).click());
+    const panel = screen.getByRole("dialog");
+    expect(panel.textContent).toContain("Has photo");
+    expect(panel.textContent).toContain("Sort");
+    expect(panel.textContent).toContain("Date");
+  });
+});
