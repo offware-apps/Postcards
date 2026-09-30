@@ -14,12 +14,7 @@
 
 import { normalizeVisitPhotos, backfillUpdatedAt, stampDeletion } from "../schema/helpers";
 import type { SyncTombstone } from "../schema/models";
-import {
-  getAllTombstones,
-  replaceAllPortable,
-  type TombstoneRecord,
-  type TombstoneKind,
-} from "../db/visitsDb";
+import { getAllTombstones, mergeIntoPortable, type TombstoneKind } from "../db/visitsDb";
 import { useVisits } from "../store/useVisits";
 import { useTrips } from "../store/useTrips";
 import { sortStories, useStories } from "../store/useStories";
@@ -196,23 +191,9 @@ export async function runDeviceSync(
           (s) => s.storyId,
         ),
       });
-      const onDisk = withEdits();
-      const records: TombstoneRecord[] = kinds.flatMap((kind) => {
-        const snap = snapFor(onDisk, kind);
-        return snap.tombstones.map((t) => ({
-          key: `${kind}:${t.id}`,
-          kind,
-          id: t.id,
-          deletedAt: t.deletedAt,
-        }));
-      });
-      // Records AND tombstones in one transaction (FR-015).
-      await replaceAllPortable(
-        onDisk.visits.records,
-        onDisk.trips.records,
-        onDisk.stories.records,
-        records,
-      );
+      // Records AND tombstones in one transaction (FR-015), with what another tab
+      // wrote since this run read the stores merged in rather than written over.
+      await mergeIntoPortable(withEdits(), local);
       // An edit made during that write lands in IndexedDB in its own, later
       // transaction; fold it into memory too.
       const inMemory = withEdits();

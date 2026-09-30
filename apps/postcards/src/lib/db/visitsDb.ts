@@ -1,6 +1,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { translate } from "../i18n/core";
 import type { Story, Trip, Visit } from "../schema/models";
+import { mergeById, type SyncSnapshot } from "../sync/merge";
 import { useSettings } from "../store/useSettings";
 import { useToast } from "../store/useToast";
 import {
@@ -52,6 +53,59 @@ let dbPromise: Promise<IDBPDatabase> | null = null;
 // with no IndexedDB at all: writing to the device store later, were it to open,
 // would rewrite whole tables (a sync, an import) from stores that never loaded.
 let unavailable = false;
+
+// Every tab of the app shares this database. A tab says on this channel when it
+// has written, so the others re-read it instead of writing their stale copy back.
+let channel: BroadcastChannel | null = null;
+function tabs(): BroadcastChannel | null {
+  if (!channel && typeof BroadcastChannel === "function") {
+    channel = new BroadcastChannel("postcards-db");
+    (channel as { unref?: () => void }).unref?.(); // never keeps a test process alive
+  }
+  return channel;
+}
+
+/** Call `listener` after each write another tab makes; returns the unsubscribe. */
+export function onOtherTabWrite(listener: () => void): () => void {
+  const ch = tabs();
+  if (!ch) return () => {};
+  ch.addEventListener("message", listener);
+  return () => ch.removeEventListener("message", listener);
+}
+
+// This tab's writes still running, and a count of every write started, so a
+// re-read can tell it raced one of them.
+const running = new Set<Promise<unknown>>();
+let started = 0;
+
+/** Run a write, tell the other tabs once it has landed. */
+export function trackWrite<T>(write: () => Promise<T>): Promise<T> {
+  started++;
+  const p = write();
+  running.add(p);
+  p.then(
+    () => tabs()?.postMessage("write"),
+    () => {},
+  ).finally(() => running.delete(p));
+  return p;
+}
+
+/**
+ * Read the database and hand the result to `apply`, once no write of this tab is
+ * running: a write started after the read would otherwise be missing from what
+ * `apply` puts in memory, while its record lands on disk.
+ */
+export async function readSettled<T>(
+  read: () => Promise<T>,
+  apply: (value: T) => void,
+): Promise<void> {
+  for (;;) {
+    while (running.size) await Promise.allSettled([...running]);
+    const before = started;
+    const value = await read();
+    if (started === before && running.size === 0) return apply(value);
+  }
+}
 
 export function hasIndexedDB(): boolean {
   return !unavailable && typeof indexedDB !== "undefined";
@@ -233,22 +287,31 @@ export async function getAllVisits(): Promise<Visit[]> {
 }
 
 export async function putVisit(visit: Visit): Promise<void> {
+  return putVisits([visit]);
+}
+
+/** Write these visits, leaving every other one as it is, in one transaction. */
+export async function putVisits(visits: Visit[]): Promise<void> {
   if (!hasIndexedDB()) return;
-  const database = await db();
-  const tx = database.transaction([STORE, PHOTOS], "readwrite");
-  const slim = await dehydrateVisit(visit, txKv(tx.objectStore(PHOTOS)));
-  await tx.objectStore(STORE).put(slim);
-  await tx.done;
+  return trackWrite(async () => {
+    const database = await db();
+    const tx = database.transaction([STORE, PHOTOS], "readwrite");
+    const kv = txKv(tx.objectStore(PHOTOS));
+    for (const v of visits) await tx.objectStore(STORE).put(await dehydrateVisit(v, kv));
+    await tx.done;
+  });
 }
 
 export async function deleteVisit(visitId: string): Promise<void> {
   if (!hasIndexedDB()) return;
-  const database = await db();
-  const tx = database.transaction([STORE, PHOTOS], "readwrite");
-  const rec = (await tx.objectStore(STORE).get(visitId)) as StoredVisit | undefined;
-  if (rec) for (const id of referencedPhotoIds(rec)) await tx.objectStore(PHOTOS).delete(id);
-  await tx.objectStore(STORE).delete(visitId);
-  await tx.done;
+  return trackWrite(async () => {
+    const database = await db();
+    const tx = database.transaction([STORE, PHOTOS], "readwrite");
+    const rec = (await tx.objectStore(STORE).get(visitId)) as StoredVisit | undefined;
+    if (rec) for (const id of referencedPhotoIds(rec)) await tx.objectStore(PHOTOS).delete(id);
+    await tx.objectStore(STORE).delete(visitId);
+    await tx.done;
+  });
 }
 
 /**
@@ -258,13 +321,17 @@ export async function deleteVisit(visitId: string): Promise<void> {
  * nothing, and re-storing them all would decode every photo on every sync. The
  * blobs no visit references any more are deleted in the same transaction.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function rewriteVisits(visitStore: any, photoStore: any, visits: Visit[]): Promise<void> {
+async function rewriteVisits(
+  visitStore: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  photoStore: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  visits: (Visit | StoredVisit)[],
+): Promise<void> {
   const kv = txKv(photoStore);
   const referenced = new Set<string>();
   await visitStore.clear();
   for (const v of visits) {
-    const slim = await dehydrateVisit(v, kv);
+    // A record read back from disk in the same transaction is stored already.
+    const slim = isStored(v) ? v : await dehydrateVisit(v as Visit, kv);
     for (const id of referencedPhotoIds(slim)) referenced.add(id);
     await visitStore.put(slim);
   }
@@ -273,12 +340,17 @@ async function rewriteVisits(visitStore: any, photoStore: any, visits: Visit[]):
   }
 }
 
+const isStored = (v: Visit | StoredVisit): v is StoredVisit =>
+  (v.photos ?? []).some((p) => !("src" in p));
+
 export async function replaceAllVisits(visits: Visit[]): Promise<void> {
   if (!hasIndexedDB()) return;
-  const database = await db();
-  const tx = database.transaction([STORE, PHOTOS], "readwrite");
-  await rewriteVisits(tx.objectStore(STORE), tx.objectStore(PHOTOS), visits);
-  await tx.done;
+  return trackWrite(async () => {
+    const database = await db();
+    const tx = database.transaction([STORE, PHOTOS], "readwrite");
+    await rewriteVisits(tx.objectStore(STORE), tx.objectStore(PHOTOS), visits);
+    await tx.done;
+  });
 }
 
 /**
@@ -296,6 +368,15 @@ export async function replaceAllPortable(
   tombstones?: TombstoneRecord[],
 ): Promise<void> {
   if (!hasIndexedDB()) return;
+  return trackWrite(() => rewritePortable(visits, trips, stories, tombstones));
+}
+
+async function rewritePortable(
+  visits: Visit[],
+  trips: Trip[],
+  stories?: Story[],
+  tombstones?: TombstoneRecord[],
+): Promise<void> {
   const database = await db();
   // PHOTOS rides along in the same transaction so a restore/sync lands the visit
   // refs and their blobs atomically (never refs pointing at absent images).
@@ -322,6 +403,92 @@ export async function replaceAllPortable(
   await tx.done;
 }
 
+/** The records and deletions of each portable collection. */
+export interface PortableSnapshots {
+  visits: SyncSnapshot<Visit>;
+  trips: SyncSnapshot<Trip>;
+  stories: SyncSnapshot<Story>;
+}
+
+const stampOf = (r: { updatedAt?: string; addedAt: string }): string => r.updatedAt ?? r.addedAt;
+
+/**
+ * Write `target` over the portable stores, keeping what another tab wrote since
+ * `baseline` was read: a record on disk that `baseline` did not hold, or held at
+ * another stamp, and a deletion `baseline` did not hold, are merged in by the
+ * sync's own rule, newest wins. What `baseline` already held is not merged back,
+ * so a record or deletion `target` dropped stays dropped. One transaction reads
+ * and writes, so no other tab's write lands in between.
+ */
+export async function mergeIntoPortable(
+  target: PortableSnapshots,
+  baseline: PortableSnapshots,
+): Promise<void> {
+  if (!hasIndexedDB()) return;
+  return trackWrite(async () => {
+    const database = await db();
+    const tx = database.transaction([STORE, PHOTOS, "trips", "stories", TOMBSTONES], "readwrite");
+    const diskTombs = (await tx.objectStore(TOMBSTONES).getAll()) as TombstoneRecord[];
+    const since = async <R extends { updatedAt?: string; addedAt: string }>(
+      store: string,
+      kind: TombstoneKind,
+      mine: SyncSnapshot<R>,
+      base: SyncSnapshot<R>,
+      idOf: (r: R) => string,
+    ): Promise<SyncSnapshot<R>> => {
+      const known = new Map(base.records.map((r) => [idOf(r), stampOf(r)]));
+      const knownTombs = new Set(base.tombstones.map((t) => `${t.id}@${t.deletedAt}`));
+      const disk = (await tx.objectStore(store).getAll()) as R[];
+      const theirs = {
+        records: disk.filter((r) => known.get(idOf(r)) !== stampOf(r)),
+        tombstones: diskTombs
+          .filter((t) => t.kind === kind && !knownTombs.has(`${t.id}@${t.deletedAt}`))
+          .map(({ id, deletedAt }) => ({ id, deletedAt })),
+      };
+      return mergeById(mine, theirs, idOf, stampOf);
+    };
+    const visits = await since<Visit | StoredVisit>(
+      STORE,
+      "visit",
+      target.visits,
+      baseline.visits,
+      (v) => v.visitId,
+    );
+    const trips = await since("trips", "trip", target.trips, baseline.trips, (t) => t.tripId);
+    const stories = await since(
+      "stories",
+      "story",
+      target.stories,
+      baseline.stories,
+      (s) => s.storyId,
+    );
+    const tombs = (kind: TombstoneKind, snap: SyncSnapshot<unknown>): TombstoneRecord[] =>
+      snap.tombstones.map(({ id, deletedAt }) => ({
+        key: tombstoneKey(kind, id),
+        kind,
+        id,
+        deletedAt,
+      }));
+    const visitStore = tx.objectStore(STORE);
+    await rewriteVisits(visitStore, tx.objectStore(PHOTOS), visits.records);
+    const tripStore = tx.objectStore("trips");
+    await tripStore.clear();
+    for (const t of trips.records) await tripStore.put(t);
+    const storyStore = tx.objectStore("stories");
+    await storyStore.clear();
+    for (const s of stories.records) await storyStore.put(s);
+    const tombStore = tx.objectStore(TOMBSTONES);
+    await tombStore.clear();
+    for (const t of [
+      ...tombs("visit", visits),
+      ...tombs("trip", trips),
+      ...tombs("story", stories),
+    ])
+      await tombStore.put(t);
+    await tx.done;
+  });
+}
+
 /** Record (or refresh) a deletion marker. Keyed by kind+id, so a re-delete just
  *  updates the timestamp rather than duplicating (spec 013, FR-009). */
 export async function putTombstone(
@@ -330,13 +497,15 @@ export async function putTombstone(
   deletedAt: string,
 ): Promise<void> {
   if (!hasIndexedDB()) return;
-  await (await db()).put(TOMBSTONES, { key: tombstoneKey(kind, id), kind, id, deletedAt });
+  await trackWrite(async () =>
+    (await db()).put(TOMBSTONES, { key: tombstoneKey(kind, id), kind, id, deletedAt }),
+  );
 }
 
 /** Drop a tombstone (e.g. when its record is explicitly restored/re-added). */
 export async function deleteTombstone(kind: TombstoneKind, id: string): Promise<void> {
   if (!hasIndexedDB()) return;
-  await (await db()).delete(TOMBSTONES, tombstoneKey(kind, id));
+  await trackWrite(async () => (await db()).delete(TOMBSTONES, tombstoneKey(kind, id)));
 }
 
 export async function getAllTombstones(): Promise<TombstoneRecord[]> {

@@ -258,24 +258,27 @@ export const useVisits = create<VisitsState>((set, get) => ({
   },
   async mergeVisits(incoming) {
     const byKey = new Map(get().visits.map((v) => [placeKey(v.place), v]));
+    const touched: Visit[] = [];
     let added = 0;
     let updated = 0;
     for (const item of incoming) {
       const key = placeKey(item.place);
       const existing = byKey.get(key);
       if (existing) {
-        byKey.set(key, {
+        const next: Visit = {
           ...existing,
           place: item.place, // refresh coords/name if the import carries better
           status: item.status,
           favorite: item.favorite ?? existing.favorite,
           date: item.date ?? existing.date,
           updatedAt: stampNow(),
-        });
+        };
+        byKey.set(key, next);
+        touched.push(next);
         updated++;
       } else {
         const at = new Date().toISOString();
-        byKey.set(key, {
+        const next: Visit = {
           visitId: uuid(),
           place: item.place,
           status: item.status,
@@ -285,13 +288,16 @@ export const useVisits = create<VisitsState>((set, get) => ({
           photos: [],
           addedAt: at,
           updatedAt: at,
-        });
+        };
+        byKey.set(key, next);
+        touched.push(next);
         added++;
       }
     }
-    const merged = [...byKey.values()];
-    set({ visits: merged });
-    await db.replaceAllVisits(merged);
+    set({ visits: [...byKey.values()] });
+    // Only the places the file touched: a rewrite of the whole table from memory
+    // would drop what another tab wrote since this one last read it.
+    await db.putVisits(touched);
     return { added, updated };
   },
   async setAll(visits) {
