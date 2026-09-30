@@ -75,17 +75,21 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
     fullCitiesEnabled() ? "done" : "idle",
   );
 
+  // The app passes an inline onClose, so any re-render behind the intro hands a
+  // new one; reading it through a ref keeps the focus effect to the first mount.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     // Focus the Start button for keyboard users WITHOUT scrolling it into view —
     // it's the last child of a tall, centred overlay, so a default focus scrolls
     // the hero (globe + title + first rows) off the top on a phone.
     startRef.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   async function getCities() {
     setCities("busy");
