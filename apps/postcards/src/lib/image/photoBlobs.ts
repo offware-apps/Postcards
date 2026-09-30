@@ -54,12 +54,7 @@ const B64_CHUNK = 0x8000;
  *  schema-valid but non-base64 photo can't throw and abort a write or an archive.
  *  Shared by the photo store and the "Save everything" archive. */
 export function decodeDataUrl(dataUrl: string): { bytes: Uint8Array<ArrayBuffer>; mime: string } {
-  const comma = dataUrl.indexOf(",");
-  const meta = dataUrl.slice(5, comma); // between "data:" and ","
-  const isBase64 = /;base64$/i.test(meta);
-  // Strip the ;base64 flag AND any ;charset=… parameters to get the bare mime.
-  const mime = meta.replace(/;base64$/i, "").split(";")[0] || "application/octet-stream";
-  const payload = dataUrl.slice(comma + 1);
+  const { isBase64, mime, payload } = splitDataUrl(dataUrl);
   if (isBase64) {
     const bin = atob(payload);
     const bytes = new Uint8Array(bin.length);
@@ -67,6 +62,28 @@ export function decodeDataUrl(dataUrl: string): { bytes: Uint8Array<ArrayBuffer>
     return { bytes, mime };
   }
   return { bytes: percentDecode(payload), mime };
+}
+
+/** Whether `decodeDataUrl` can decode it: only a base64 payload `atob` rejects
+ *  cannot. The schema refuses such a photo at import, and an export leaves one out. */
+export function isDecodableDataUrl(dataUrl: string): boolean {
+  const { isBase64, payload } = splitDataUrl(dataUrl);
+  if (!isBase64) return true;
+  try {
+    atob(payload);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function splitDataUrl(dataUrl: string): { isBase64: boolean; mime: string; payload: string } {
+  const comma = dataUrl.indexOf(",");
+  const meta = dataUrl.slice(5, comma); // between "data:" and ","
+  const isBase64 = /;base64$/i.test(meta);
+  // Strip the ;base64 flag AND any ;charset=… parameters to get the bare mime.
+  const mime = meta.replace(/;base64$/i, "").split(";")[0] || "application/octet-stream";
+  return { isBase64, mime, payload: dataUrl.slice(comma + 1) };
 }
 
 const isHex = (b: number | undefined) =>
