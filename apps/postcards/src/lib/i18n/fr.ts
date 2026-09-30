@@ -161,7 +161,7 @@ export const fr: Messages = {
   "stats.hero.aria": "{visited} pays sur {total} visités, {pct} — ouvrir votre liste de pays",
   "stats.bars.countries": "Pays",
   "stats.bars.cities": "Villes",
-  "stats.bars.citiesTitle": "Parmi toutes les villes de 15 000+ habitants dans le monde",
+  "stats.bars.citiesTitle": "Parmi les villes de votre liste : les 10 000 plus grandes, ou toutes une fois la liste complète téléchargée",
   "stats.bars.countriesAria": "{visited} pays sur {total} visités, {pct} — ouvrir votre liste de pays",
   "stats.bars.citiesAria": "{visited} villes sur {total} visitées, {pct} — ouvrir vos lieux visités",
   "stats.hero.ofCount": "sur {count} {label}",
@@ -528,7 +528,7 @@ export const fr: Messages = {
   "journal.saveChanges": "Enregistrer",
   "journal.saveStory": "Enregistrer le récit",
   "journal.exportNote":
-    "L'export Markdown partage les dates, lieux, titres et textes — pas les photos. Un export de site web partageable est prévu.",
+    "L'export Markdown partage les dates, lieux, titres et textes — pas les photos. « Publier le site » crée un site web avec les photos.",
   "journal.empty":
     "Votre journal de voyage commence ici. Choisissez un lieu où vous êtes allé, donnez un titre à la journée et racontez — les photos sont les bienvenues.",
   "journal.show": "Afficher",

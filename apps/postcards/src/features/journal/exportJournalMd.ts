@@ -23,7 +23,7 @@ function md(s: string): string {
 /**
  * Human-readable, non-authoritative Markdown feed of your journal, for sharing
  * with friends (date, place, title, text — no photos). Not re-importable;
- * contains no executable content. A shareable website export may come later.
+ * contains no executable content.
  */
 export function journalToMarkdown(stories: Story[], ref: ReferenceData): string {
   const lines: string[] = [];

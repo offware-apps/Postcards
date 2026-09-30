@@ -1404,6 +1404,9 @@ export function MapView({
       map.on("load", () => {
         if (cancelled || !map) return;
         loadedRef.current = true;
+        // MapLibre ignores its first resize observation, so a panel that changed
+        // size while the map booted would keep the boot-time canvas without this.
+        map.resize();
         applyTheme(map, dark);
         applyVisited(map);
         if (map.getLayer("countries-visited-fill")) {

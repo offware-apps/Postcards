@@ -168,7 +168,7 @@ export const en = {
   "stats.hero.aria": "{visited} of {total} countries visited, {pct} — open your countries checklist",
   "stats.bars.countries": "Countries",
   "stats.bars.cities": "Cities",
-  "stats.bars.citiesTitle": "Of every city with 15,000+ people worldwide",
+  "stats.bars.citiesTitle": "Of the cities in your list: the 10,000 largest, or every town once the full list is downloaded",
   "stats.bars.countriesAria": "{visited} of {total} countries visited, {pct} — open your countries checklist",
   "stats.bars.citiesAria": "{visited} of {total} cities visited, {pct} — open your visited places",
   "stats.hero.ofCount": "of {count} {label}",
@@ -533,7 +533,7 @@ export const en = {
   "journal.saveChanges": "Save changes",
   "journal.saveStory": "Save story",
   "journal.exportNote":
-    "The Markdown export shares dates, places, titles and text — no photos. A shareable website export is planned.",
+    "The Markdown export shares dates, places, titles and text — no photos. “Publish site” makes a website with the photos.",
   "journal.empty":
     "Your travel journal starts here. Pick a place you've been, give the day a title, and tell the story — photos welcome.",
   "journal.show": "Show",
