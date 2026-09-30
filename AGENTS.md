@@ -70,7 +70,14 @@ Cmd/Ctrl+Shift+R) before re-implementing.
   user action. Optional egress (map tiles, guides, photos) is opt-in and off by
   default; **Offline mode** is the master switch that forces zero egress.
 - The GitHub sync token stays on-device: never in exports, published sites, or
-  logs. The `connect-src` CSP in `index.html` is the backstop.
+  logs. The `connect-src` CSP in `index.html` keeps a script in the page from
+  sending it to any host outside its list; it does not stop a request to
+  `api.github.com`, which the list allows, carrying the token to a repository
+  of the script's choosing. The token's safety also depends on the app being
+  the only app served from its origin, since every page of an origin shares its
+  localStorage: `offware-apps.github.io` currently also serves another app, and
+  a custom domain or another dedicated origin removes that dependency. Hence
+  the fine-grained token, one repository, Contents read and write only.
 - Imports are validated + sanitized, never executed. One portable JSON file.
 - WCAG 2.1 AA, keyboard-first; every interactive control carries a `title`
   (plus `aria-label` when icon-only).
