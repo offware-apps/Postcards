@@ -11,6 +11,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { feature } from "topojson-client";
+import { unwrapAntimeridian } from "../src/features/map/antimeridian.ts";
 
 const SRC = new URL("../public/basemap/countries-50m.json", import.meta.url);
 const OUT = new URL("../src/lib/publish/landOutline.ts", import.meta.url);
@@ -21,7 +22,9 @@ const MIN_AREA_DEG2 = 1.6; // drop rings whose lon×lat bbox area is below this
 const COORD_DECIMALS = 1; // 0.1° grid — plenty for a small context map
 
 const topo = JSON.parse(readFileSync(SRC, "utf8"));
-const land = feature(topo, topo.objects.land);
+// Unwrapped at the antimeridian first: the reader draws on a plane, where a
+// ring jumping from +180 to -180 streaks across the map.
+const land = unwrapAntimeridian(feature(topo, topo.objects.land));
 
 /** Collect every polygon ring (outer + holes ignored — silhouette only). */
 function collectRings(geo) {

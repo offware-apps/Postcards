@@ -16,25 +16,6 @@ function project([lon, lat]: Position): [number, number] {
   return [((lon + 180) / 360) * W, ((90 - lat) / 180) * MAP_H];
 }
 
-/**
- * Unwrap a ring's longitudes into a continuous sequence (may run past ±180).
- * Natural Earth stores Russia/Fiji with rings that jump across the antimeridian;
- * projecting those jumps linearly smears a fill band across the whole map.
- */
-function unwrapRing(ring: Position[]): Position[] {
-  let prev: number | null = null;
-  let off = 0;
-  return ring.map(([lon, lat]) => {
-    if (prev !== null) {
-      while (lon! + off - prev > 180) off -= 360;
-      while (lon! + off - prev < -180) off += 360;
-    }
-    const l = lon! + off;
-    prev = l;
-    return [l, lat!];
-  });
-}
-
 function drawRing(ctx: CanvasRenderingContext2D, ring: Position[], lonShift = 0): void {
   ring.forEach((pt, i) => {
     const [x, y] = project([pt[0]! + lonShift, pt[1]!]);
@@ -44,10 +25,9 @@ function drawRing(ctx: CanvasRenderingContext2D, ring: Position[], lonShift = 0)
   ctx.closePath();
 }
 
-/** Draw one ring, duplicated ±360° when it runs past the map edge after
- *  unwrapping, so an antimeridian-crossing shape appears on both sides. */
-function drawWrappedRing(ctx: CanvasRenderingContext2D, rawRing: Position[]): void {
-  const ring = unwrapRing(rawRing);
+/** Draw one ring, duplicated ±360° when it runs past the map edge (the rings
+ *  arrive unwrapped), so an antimeridian-crossing shape appears on both sides. */
+function drawWrappedRing(ctx: CanvasRenderingContext2D, ring: Position[]): void {
   let minLon = Infinity;
   let maxLon = -Infinity;
   for (const [lon] of ring as [number, number][]) {
@@ -65,7 +45,7 @@ function flagAnchor(geom: Polygon | MultiPolygon): [number, number] {
   let best: [number, number] | null = null;
   let bestArea = -1;
   for (const p of polys) {
-    const ring = unwrapRing(p[0]!);
+    const ring = p[0]!;
     let minX = Infinity, maxX = -Infinity, minY = 90, maxY = -90;
     for (const [x, y] of ring as [number, number][]) {
       minX = Math.min(minX, x); maxX = Math.max(maxX, x);
