@@ -154,6 +154,45 @@ describe("buildJourney (trips-driven)", () => {
   });
 });
 
+// A multi-stop trip dates each stop (stopDates); a date range keeps the stops that
+// fall inside it, so a trip counts by where you were on those days, not by its start.
+describe("buildJourney (per-stop dates)", () => {
+  const journey: Trip = {
+    ...trip("j1", paris, cairo, "flight", "2026-05-02"),
+    stops: [paris, rome, cairo],
+    legModes: ["flight", "ferry"],
+    stopDates: ["2026-05-02", "2026-05-10", "2026-05-20"],
+  };
+  const build = (sel: { dateFrom?: string; dateTo?: string }, t: Trip = journey) =>
+    buildJourney({ visits: [], trips: [t], stories: [], resolveCoords }, { title: "Trip", ...sel });
+
+  it("dates each stop of the journey by its own day", () => {
+    const j = build({});
+    expect(j.steps.map((s) => s.place.name)).toEqual(["Paris", "Rome", "Cairo"]);
+    expect(j.steps.map((s) => s.arriveBy)).toEqual([null, "flight", "ferry"]);
+    expect(j.steps.map((s) => s.date)).toEqual(["2026-05-02", "2026-05-10", "2026-05-20"]);
+  });
+
+  it("includes a trip whose later stops fall in the range, from the first stop inside it", () => {
+    const j = build({ dateFrom: "2026-05-08", dateTo: "2026-05-31" });
+    expect(j.steps.map((s) => s.place.name)).toEqual(["Rome", "Cairo"]);
+    expect(j.steps.map((s) => s.arriveBy)).toEqual([null, "ferry"]);
+    expect(j.dateRange).toEqual({ start: "2026-05-10", end: "2026-05-20" });
+  });
+
+  it("leaves out the stops of a trip that fall after the range", () => {
+    const j = build({ dateTo: "2026-05-12" });
+    expect(j.steps.map((s) => s.place.name)).toEqual(["Paris", "Rome"]);
+    expect(j.dateRange).toEqual({ start: "2026-05-02", end: "2026-05-10" });
+  });
+
+  it("dates an undated stop by the stop before it", () => {
+    const j = build({ dateTo: "2026-05-12" }, { ...journey, stopDates: ["2026-05-02", null, "2026-05-20"] });
+    expect(j.steps.map((s) => s.place.name)).toEqual(["Paris", "Rome"]);
+    expect(j.steps.map((s) => s.date)).toEqual(["2026-05-02", "2026-05-02"]);
+  });
+});
+
 // The PublishScreen "By trip" (folder) scope resolves a trip NAME to the set of
 // tripIds sharing it, then feeds those to buildJourney. This verifies that path.
 describe("buildJourney (by trip name / folder selection)", () => {

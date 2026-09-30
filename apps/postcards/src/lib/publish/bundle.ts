@@ -72,6 +72,17 @@ function inRange(date: string | null, from?: string, to?: string): boolean {
   return true;
 }
 
+/** A trip's ordered stops, each with the day you were there: its own per-stop date,
+ *  else the last dated stop before it, else the trip's date. */
+function datedStops(t: Trip): { place: PlaceRef; date: string | null }[] {
+  let date = t.date;
+  return tripChain(t).map((place, i) => {
+    const own = t.stopDates?.[i];
+    if (own) date = own;
+    return { place, date };
+  });
+}
+
 /** Build the ordered, self-contained journey for the reader. */
 export function buildJourney(input: JourneyInput, sel: JourneySelection): PublishedJourney {
   const { visits, trips, stories, resolveCoords } = input;
@@ -101,11 +112,17 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
   for (const s of stories) if (s.place && inRange(s.date, sel.dateFrom, sel.dateTo)) addPhotos(s.place, s.photos ?? []);
 
   // Ordered legs from the selected trips (date first, then a stable original order).
+  // A date range keeps a trip's stops that fall inside it, so a journey that runs
+  // into the range from before it (or out past it) publishes only the days picked.
   const wanted = sel.tripIds ? new Set(sel.tripIds) : null;
   const legs = trips
     .filter((t) => (wanted ? wanted.has(t.tripId) : true))
-    .filter((t) => inRange(t.date, sel.dateFrom, sel.dateTo))
-    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+    .map((t) => ({
+      t,
+      stops: datedStops(t).map((s) => ({ ...s, kept: inRange(s.date, sel.dateFrom, sel.dateTo) })),
+    }))
+    .filter(({ stops }) => stops.some((s) => s.kept))
+    .sort((a, b) => (a.t.date ?? "").localeCompare(b.t.date ?? ""));
 
   const steps: JourneyStep[] = [];
   const makeStep = (place: PlaceRef, date: string | null, arriveBy: TravelMode | null): void => {
@@ -124,12 +141,18 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
   };
 
   if (legs.length > 0) {
-    for (const t of legs) {
-      // Every stop of a multi-stop trip, each arrived at by its own leg's mode.
-      const chain = tripChain(t);
-      const last = steps[steps.length - 1];
-      if (!last || placeKey(last.place) !== placeKey(chain[0]!)) makeStep(chain[0]!, t.date, null);
-      for (let i = 1; i < chain.length; i++) makeStep(chain[i]!, t.date, t.legModes?.[i - 1] ?? t.mode);
+    for (const { t, stops } of legs) {
+      // Every kept stop of a multi-stop trip, each arrived at by its own leg's mode;
+      // the first stop after a cut starts the route afresh.
+      stops.forEach((s, i) => {
+        if (!s.kept) return;
+        if (i > 0 && stops[i - 1]!.kept) {
+          makeStep(s.place, s.date, t.legModes?.[i - 1] ?? t.mode);
+        } else {
+          const last = steps[steps.length - 1];
+          if (!last || placeKey(last.place) !== placeKey(s.place)) makeStep(s.place, s.date, null);
+        }
+      });
     }
   } else {
     // No trips selected — publish the stories in date order as the steps.
