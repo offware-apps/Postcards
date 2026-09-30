@@ -19,12 +19,3 @@ export async function deleteTrip(tripId: string): Promise<void> {
   if (!hasIndexedDB()) return;
   await (await getDb()).delete(STORE, tripId);
 }
-
-export async function replaceAllTrips(trips: Trip[]): Promise<void> {
-  if (!hasIndexedDB()) return;
-  const database = await getDb();
-  const tx = database.transaction(STORE, "readwrite");
-  await tx.store.clear();
-  for (const t of trips) await tx.store.put(t);
-  await tx.done;
-}

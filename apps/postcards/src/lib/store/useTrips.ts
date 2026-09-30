@@ -32,7 +32,8 @@ interface TripsState {
     >,
   ) => Promise<void>;
   removeTrip: (tripId: string) => Promise<void>;
-  setAll: (trips: Trip[]) => Promise<void>;
+  /** Put ONE trip back (the undo of a delete or an edit): upsert by tripId. */
+  restoreTrip: (trip: Trip) => Promise<void>;
 }
 
 export const useTrips = create<TripsState>((set, get) => ({
@@ -102,10 +103,18 @@ export const useTrips = create<TripsState>((set, get) => ({
     // Tombstone the deletion so it propagates on sync (spec 013, FR-009).
     await visitsDb.putTombstone("trip", tripId, stampNow());
   },
-  async setAll(trips) {
-    // Bulk load: backfill `updatedAt` without stamping "now" (keep real ages).
-    const backfilled = trips.map(backfillUpdatedAt);
-    set({ trips: backfilled });
-    await db.replaceAllTrips(backfilled);
+  async restoreTrip(trip) {
+    // Bump `updatedAt` so the restored trip wins on the next merge, over its own
+    // tombstone or over the undone edit a sync already pushed, and clear that
+    // tombstone so the restore is clean (mirrors useVisits.restoreVisit).
+    const restored: Trip = { ...trip, updatedAt: stampNow() };
+    const exists = get().trips.some((t) => t.tripId === restored.tripId);
+    set({
+      trips: exists
+        ? get().trips.map((t) => (t.tripId === restored.tripId ? restored : t))
+        : [...get().trips, restored],
+    });
+    await db.putTrip(restored);
+    await visitsDb.deleteTombstone("trip", restored.tripId);
   },
 }));

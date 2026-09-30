@@ -19,12 +19,3 @@ export async function deleteStory(storyId: string): Promise<void> {
   if (!hasIndexedDB()) return;
   await (await getDb()).delete(STORE, storyId);
 }
-
-export async function replaceAllStories(stories: Story[]): Promise<void> {
-  if (!hasIndexedDB()) return;
-  const database = await getDb();
-  const tx = database.transaction(STORE, "readwrite");
-  await tx.store.clear();
-  for (const s of stories) await tx.store.put(s);
-  await tx.done;
-}

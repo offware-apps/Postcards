@@ -456,7 +456,7 @@ export function JournalScreen() {
   const addStory = useStories((s) => s.addStory);
   const updateStory = useStories((s) => s.updateStory);
   const removeStory = useStories((s) => s.removeStory);
-  const setAll = useStories((s) => s.setAll);
+  const restoreStory = useStories((s) => s.restoreStory);
   const storiesLoaded = useStories((s) => s.loaded);
   const visits = useVisits((s) => s.visits);
   const trips = useTrips((s) => s.trips);
@@ -982,7 +982,6 @@ export function JournalScreen() {
     const cleanText = sanitizeText(text, 8000);
     // Allow an image-only entry: a place + date and at least one of title/text/photo.
     if (!place || !date || !(cleanTitle || cleanText || photos.length)) return;
-    const prev = useStories.getState().stories;
     // Blank captions become null (never stored as empty strings).
     const cleanPhotos = photos.map((p) => ({
       ...p,
@@ -1001,12 +1000,18 @@ export function JournalScreen() {
     };
     // A titleless (image-only) entry uses its place as the toast label.
     const label = cleanTitle || place.name;
+    // Undo puts back the one story it changed, as a fresh write, so it also
+    // holds once a sync has pushed the change it undoes.
     if (editingId) {
+      const before = useStories.getState().stories.find((x) => x.storyId === editingId);
       await updateStory(editingId, fields);
-      showToast(t("journal.toast.updated", { title: label }), () => setAll(prev));
+      showToast(
+        t("journal.toast.updated", { title: label }),
+        before && (() => restoreStory(before)),
+      );
     } else {
-      await addStory(fields);
-      showToast(t("journal.toast.added", { title: label }), () => setAll(prev));
+      const added = await addStory(fields);
+      showToast(t("journal.toast.added", { title: label }), () => removeStory(added.storyId));
     }
     resetForm();
     // The writing is stored; the crash-recovery cache has done its job.
@@ -1014,9 +1019,8 @@ export function JournalScreen() {
   }
 
   function removeWithUndo(s: Story) {
-    const prev = useStories.getState().stories;
     void removeStory(s.storyId);
-    showToast(t("journal.toast.removed", { title: s.title || s.place.name }), () => setAll(prev));
+    showToast(t("journal.toast.removed", { title: s.title || s.place.name }), () => restoreStory(s));
   }
 
   function exportMd() {
