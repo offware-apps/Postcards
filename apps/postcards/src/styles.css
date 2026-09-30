@@ -1451,8 +1451,7 @@ h1.brand {
 }
 /* One card grammar for every grouped section (hero, continents, records,
    travel): surface + border + a real <h3> head so heading navigation works. */
-.stats-section,
-.dash-card {
+.stats-section {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1460,8 +1459,7 @@ h1.brand {
   padding: 14px;
   margin-bottom: 12px;
 }
-.stats-section > h3,
-.dash-card > h3 {
+.stats-section > h3 {
   margin: 0 0 10px;
   font-size: 15px;
   font-weight: 600;
@@ -1725,23 +1723,6 @@ h1.brand {
   text-decoration: underline;
   color: var(--accent);
 }
-.country-tags {
-  grid-area: tags;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
-}
-.country-tag {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--bg-sub);
-  border-radius: 999px;
-  padding: 2px 8px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
 .country-caret {
   grid-area: caret;
   color: var(--muted);
@@ -1916,44 +1897,6 @@ h1.brand {
 }
 .tier-grid .metric-label .muted {
   font-size: 10.5px;
-}
-/* "What's left to explore" as plain, scannable text — a label + count, then
-   names as accent links joined by thin separators. Far lighter than the old
-   rounded-chip wall, and it wraps cleanly on a narrow phone. */
-.name-list {
-  margin-top: 12px;
-  font-size: 12.5px;
-  line-height: 1.75;
-}
-.name-list-label {
-  display: block;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 1px;
-}
-.name-list-label .muted {
-  font-weight: 400;
-}
-.name-list-names {
-  color: var(--muted);
-}
-.name-list-sep {
-  color: var(--border);
-}
-.name-list-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: var(--accent);
-  font-weight: 500;
-}
-.name-list-link:hover {
-  text-decoration: underline;
-}
-.name-list-more {
-  font-weight: 600;
-  margin-left: 4px;
 }
 .metric {
   margin-top: 8px;
@@ -2415,22 +2358,6 @@ a.btn-ghost {
   }
 }
 
-/* Country drill-down */
-.country-detail {
-  margin-top: 10px;
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-}
-.country-detail summary {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--muted);
-  font-weight: 600;
-}
-.country-detail p {
-  margin: 8px 0 0;
-}
-
 /* "How it works" modal */
 .about-modal {
   max-width: 540px;
@@ -2797,26 +2724,8 @@ a.btn-ghost {
   opacity: 0.35;
   cursor: not-allowed;
 }
-.trip-distance {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-sm);
-}
-.trip-distance-label {
-  font-size: 13px;
-  color: var(--text-muted, inherit);
-}
 .trip-distance-km {
   font-size: 18px;
-}
-.trip-composer-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 .field {
   display: flex;
@@ -2934,10 +2843,6 @@ a.btn-ghost {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.myplaces-legend {
-  max-height: 200px;
-  overflow-y: auto;
 }
 /* Trip folders — group legs under their shared trip name. */
 .trip-folders {
@@ -3207,46 +3112,6 @@ a.btn-ghost {
 }
 .record-emoji {
   flex: none;
-}
-.chip-row {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  margin: 7px 0 0;
-}
-.chip-row-label {
-  flex: none;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  min-width: 104px;
-}
-.chip-row-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.place-chip {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  color: var(--text);
-}
-.place-chip.chip-done {
-  background: var(--visited-soft);
-  border-color: var(--visited);
-  color: var(--visited);
-}
-.place-chip:not(:disabled):hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.place-chip.chip-more {
-  border-style: dashed;
-  color: var(--muted);
 }
 
 /* Passport: flags. */
@@ -4537,13 +4402,6 @@ button.brand:focus-visible {
 .bar {
   height: 5px;
 }
-.chip-row {
-  margin: 3px 0;
-}
-.place-chip {
-  padding: 2px 8px;
-  font-size: 12px;
-}
 .section-head + .muted.small {
   margin-top: 0;
 }
@@ -4773,10 +4631,7 @@ button.brand:focus-visible {
   .city-row.compact {
     padding: 5px 0;
   }
-  /* Stats: give the chips and the record-city fly-to links comfortable targets. */
-  .place-chip {
-    min-height: 34px;
-  }
+  /* Stats: give the record-city fly-to links comfortable targets. */
   .record .country-open {
     min-height: 34px;
   }
@@ -5118,28 +4973,6 @@ button.brand:focus-visible {
 .intro-row-desc {
   font-size: 13px;
   color: rgba(234, 240, 255, 0.6);
-}
-.intro-get {
-  flex: none;
-  border: 1px solid rgba(150, 185, 255, 0.5);
-  background: rgba(120, 160, 255, 0.16);
-  color: #dfe8ff;
-  border-radius: 999px;
-  padding: 7px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.intro-get:hover:not(:disabled) {
-  background: rgba(120, 160, 255, 0.3);
-}
-.intro-get:disabled {
-  opacity: 0.7;
-  cursor: default;
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(234, 240, 255, 0.75);
 }
 /* On/off toggle switch — the intro's single control type, so every optional
    feature reads the same: flip to activate, flip back to deactivate. */
