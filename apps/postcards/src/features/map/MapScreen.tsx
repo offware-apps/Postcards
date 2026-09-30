@@ -907,11 +907,13 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
         <div className="section-head">
           <h2>{mode === "monuments" ? t("map.list.headingMonuments") : mode === "airports" ? t("map.list.headingAirports") : t("map.list.headingCities")}</h2>
           <span className="list-head-meta muted">
-            <span>
-              {t("map.list.inView", {
-                count: poi ? poi.total : formatInt(inView.length) + (inViewCapped ? "+" : ""),
-              })}
-            </span>
+            {bounds !== null && (
+              <span>
+                {t("map.list.inView", {
+                  count: poi ? poi.total : formatInt(inView.length) + (inViewCapped ? "+" : ""),
+                })}
+              </span>
+            )}
             {(poi ? poi.visited : visitedInView) > 0 && (
               <span>{t("map.list.visited", { count: poi ? poi.visited : visitedInView })}</span>
             )}
@@ -923,7 +925,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
         {!listOnly && <FilterSummary exclude={MAP_HIDDEN_FIELDS} />}
 
         {poi ? (
-          poi.items.length === 0 ? (
+          bounds === null ? (
+            <p className="muted empty">{t("map.loading")}</p>
+          ) : poi.items.length === 0 ? (
             <p className="muted empty">{t("map.list.poiEmpty")}</p>
           ) : (
             <>
@@ -975,7 +979,10 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
           )
         ) : (
         <>
-        {inView.length === 0 ? (
+        {/* No bounds yet means the map is still loading, not an empty view. */}
+        {bounds === null ? (
+          <p className="muted empty">{t("map.loading")}</p>
+        ) : inView.length === 0 ? (
           <p className="muted empty">
             <span className="empty-emoji" aria-hidden>
               🗺️

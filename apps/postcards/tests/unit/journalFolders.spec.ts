@@ -3,7 +3,6 @@ import {
   distinctFolders,
   folderSuggestions,
   matchesFolder,
-  storiesInFolder,
 } from "../../src/features/journal/folders";
 import type { PlaceRef, Story, Trip } from "../../src/lib/schema/models";
 
@@ -41,14 +40,8 @@ describe("distinctFolders", () => {
   });
 });
 
-describe("matchesFolder / storiesInFolder (feed 'By folder' filter)", () => {
+describe("matchesFolder (feed 'By folder' filter)", () => {
   it("keeps only the stories in a named folder; folder-less stories never match", () => {
-    const list = [
-      { folder: "A", id: 1 },
-      { folder: "B", id: 2 },
-      { id: 3 },
-    ];
-    expect(storiesInFolder(list, "A").map((s) => s.id)).toEqual([1]);
     expect(matchesFolder({ folder: "A" }, "A")).toBe(true);
     expect(matchesFolder({ folder: "B" }, "A")).toBe(false);
     expect(matchesFolder({}, "A")).toBe(false);

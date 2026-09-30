@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openApp, openAppWithVisits, markVisited } from "./nav-helper";
 
 // Spec 016 — the ONE Filter panel. Every slicing dimension the map used to
 // scatter across its header (status segmented, population row, sort, place-kind
@@ -6,13 +7,10 @@ import { test, expect } from "@playwright/test";
 // show as removable chips. These prove the consolidation and the summary.
 
 test("the one Filter panel drives the map; the old inline controls are gone", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByText("Postcards")).toBeVisible();
+  await openApp(page);
 
   // A visited city so the list has something to slice.
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: "Mark Paris visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Paris");
 
   // The scattered per-dimension map controls are gone: no population row. The
   // place-kind switch (cities / monuments / airports) is its OWN prominent pill
@@ -58,10 +56,8 @@ test("the one Filter panel drives the map; the old inline controls are gone", as
 });
 
 test("'Lists only' scope stops the filter from touching the map", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: "Mark Paris visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await openApp(page);
+  await markVisited(page, "Paris");
 
   const openFilter = () =>
     page.locator(".map-ctl-right").getByRole("button", { name: /Filter/ }).click();
@@ -92,8 +88,7 @@ test("'Lists only' scope stops the filter from touching the map", async ({ page 
 });
 
 test("status is MULTI-SELECT: pick any combination, deselect to show all", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByText("Postcards")).toBeVisible();
+  await openApp(page);
 
   await page.locator(".map-ctl-right").getByRole("button", { name: /Filter/ }).click();
   const panel = page.getByRole("dialog", { name: "Filters" });
@@ -128,8 +123,7 @@ test("status is MULTI-SELECT: pick any combination, deselect to show all", async
 });
 
 test("the place-kind pill switches the map's dataset", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByText("Cities in view")).toBeVisible();
+  await openApp(page);
 
   // Cities / monuments / airports are genuinely different data, so the switch is
   // a first-class map control (its own prominent pill), not a row in the Filter
@@ -144,10 +138,8 @@ test("the place-kind pill switches the map's dataset", async ({ page }) => {
 });
 
 test("chips remove one dimension; Clear all resets everything", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: "Mark Paris visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await openApp(page);
+  await markVisited(page, "Paris");
 
   // Apply two dimensions.
   await page.locator(".map-ctl-right").getByRole("button", { name: /Filter/ }).click();
@@ -171,16 +163,12 @@ test("chips remove one dimension; Clear all resets everything", async ({ page })
 });
 
 test("Places shares the same Filter panel; population gates cities only (D4)", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
 
   // A big city (>1M), a small city (<1M) and an airport (a non-city).
-  await page.getByLabel("Search a city or country").fill("Tokyo");
-  await page.getByRole("button", { name: /Mark .*Tokyo.* visited/ }).first().click();
-  await page.getByLabel("Search a city or country").fill("Reykjavik");
-  await page.getByRole("button", { name: /Mark .*Reykjav.* visited/ }).first().click();
-  await page.getByLabel("Search a city or country").fill("JFK");
-  await page.getByRole("button", { name: /Mark .*JFK.* visited/ }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Tokyo");
+  await markVisited(page, "Reykjavik", "Reykjavík");
+  await markVisited(page, "JFK", "John F Kennedy International Airport (JFK)");
 
   // Places → Visited (default view) lists all three.
   await page.getByRole("button", { name: "Places", exact: true }).click();
@@ -210,16 +198,8 @@ test("Places shares the same Filter panel; population gates cities only (D4)", a
 });
 
 test("Places grows: Favorites-only narrows to starred places (spec 016 US4)", async ({ page }) => {
-  await page.goto("/");
-
   // Two visited cities.
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: /Mark .*Paris.* visited/ }).first().click();
-  await page.getByLabel("Search a city or country").fill("Tokyo");
-  await page.getByRole("button", { name: /Mark .*Tokyo.* visited/ }).first().click();
-  // Clear + dismiss the search so its dropdown can't overlay the list below.
-  await page.getByLabel("Search a city or country").fill("");
-  await page.keyboard.press("Escape");
+  await openAppWithVisits(page, ["Paris", "Tokyo"]);
 
   await page.getByRole("button", { name: "Places", exact: true }).click();
   const list = page.locator(".city-list").first();

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { sanitizeText } from "./sanitize";
 import { FORMAT, MAX_PHOTOS_PER_STORY, MAX_PHOTOS_PER_VISIT, isCalendarDate } from "./helpers";
+import { isDecodableDataUrl } from "../image/photoBlobs";
 
 // Canonical, versioned schema for the portable data file.
 // Single source of truth: these Zod models generate TS types AND the published
@@ -67,7 +68,10 @@ const photoDataUrl = z
   .refine(
     (s) => /^data:image\/(png|jpe?g|webp|gif|avif);/i.test(s),
     "photo must be an inline raster image data URL",
-  );
+  )
+  // A base64 payload that does not decode renders as nothing and breaks the photo
+  // store and the archive, so the file is refused here with the normal error.
+  .refine(isDecodableDataUrl, "photo data does not decode");
 
 /**
  * One photo in a place's gallery: the inline image + an optional short caption

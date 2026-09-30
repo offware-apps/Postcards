@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openApp } from "./nav-helper";
 
 // End-to-end: paste a boarding-pass (BCBP) code, and the trip form is prefilled
 // with the resolved airports so it can be saved as a logged flight.
 test("import a trip from a pasted boarding-pass code", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await gotoTab(page, "Trips");
 
   await page.getByRole("button", { name: /Add from a boarding pass/ }).click();

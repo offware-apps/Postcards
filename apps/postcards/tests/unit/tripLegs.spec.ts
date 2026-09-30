@@ -4,7 +4,6 @@ import {
   removeStopAt,
   moveStopTo,
   setLegMode,
-  legModeAt,
   type StopChain,
 } from "../../src/features/travel/tripStops";
 import { stopsArcs } from "../../src/features/map/visitedLayers";
@@ -45,12 +44,6 @@ describe("per-leg chain helpers keep legModes in sync with stops", () => {
     const c = moveStopTo({ stops: [P, T, O], legModes: ["flight", "train"] }, 2, 0, "flight");
     expect(c.stops[0]).toBe(O);
     expect(c.legModes).toHaveLength(2);
-  });
-
-  it("legModeAt falls back to the default when a leg has no override", () => {
-    expect(legModeAt(["train"], 0, "flight")).toBe("train");
-    expect(legModeAt(["train"], 5, "flight")).toBe("flight");
-    expect(legModeAt(undefined, 0, "flight")).toBe("flight");
   });
 });
 

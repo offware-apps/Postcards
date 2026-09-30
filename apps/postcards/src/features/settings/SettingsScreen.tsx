@@ -16,6 +16,7 @@ import { Attribution } from "../../ui/Attribution";
 import { formatInt } from "../../lib/format/format";
 import { downloadFullCities, fullCitiesEnabled } from "../../lib/reference/referenceData";
 import { useT } from "../../lib/i18n";
+import { LoadBoundary } from "../../ui/LoadFailure";
 
 // The newest Android build of main, republished by .github/workflows/android-apk.yml
 // under a tag that never moves away from this URL.
@@ -440,9 +441,11 @@ export function SettingsScreen() {
       <Attribution />
 
       {publishOpen && (
-        <Suspense fallback={null}>
-          <PublishScreen onClose={() => setPublishOpen(false)} />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <PublishScreen onClose={() => setPublishOpen(false)} />
+          </Suspense>
+        </LoadBoundary>
       )}
     </section>
   );

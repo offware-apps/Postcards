@@ -11,6 +11,8 @@ const TILE_HEADERS = { "access-control-allow-origin": "*" };
 // Each test installs the worker, which precaches the whole app: run them one at
 // a time, with room for a slow machine.
 test.describe.configure({ mode: "serial" });
+// The suite blocks service workers; this file is about the installed one.
+test.use({ serviceWorkers: "allow" });
 test.setTimeout(120_000);
 
 /** Open the app with the service worker controlling the page. */

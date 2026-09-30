@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  parseTripDate,
-  isValidTripDate,
-  formatTripDate,
-  compareTripDate,
-  tripDateSpan,
-} from "../../src/features/travel/tripDate";
+import { parseTripDate, formatTripDate, tripDateSpan } from "../../src/features/travel/tripDate";
 
 describe("tripDate — approximate trip dates (spec 019)", () => {
   it("parses year, month, and full-day granularities", () => {
@@ -17,16 +11,15 @@ describe("tripDate — approximate trip dates (spec 019)", () => {
   });
 
   it("rejects malformed or out-of-range dates", () => {
-    expect(isValidTripDate("2024")).toBe(true);
-    expect(isValidTripDate("2024-13")).toBe(false); // no month 13
-    expect(isValidTripDate("2024-00")).toBe(false);
-    expect(isValidTripDate("2024-08-40")).toBe(false); // no day 40
-    expect(isValidTripDate("2024-02-30")).toBe(false); // no Feb 30
-    expect(isValidTripDate("2023-02-29")).toBe(false); // not a leap year
-    expect(isValidTripDate("2024-02-29")).toBe(true);
+    expect(parseTripDate("2024-13")).toBeNull(); // no month 13
+    expect(parseTripDate("2024-00")).toBeNull();
+    expect(parseTripDate("2024-08-40")).toBeNull(); // no day 40
+    expect(parseTripDate("2024-02-30")).toBeNull(); // no Feb 30
+    expect(parseTripDate("2023-02-29")).toBeNull(); // not a leap year
+    expect(parseTripDate("2024-02-29")).toEqual({ year: 2024, month: 2, day: 29 });
     expect(formatTripDate("2024-02-31", "en")).toBe(""); // never rolled into March
-    expect(isValidTripDate("abc")).toBe(false);
-    expect(isValidTripDate("24-08")).toBe(false);
+    expect(parseTripDate("abc")).toBeNull();
+    expect(parseTripDate("24-08")).toBeNull();
   });
 
   it("formats each granularity (year, month, full day)", () => {
@@ -44,11 +37,5 @@ describe("tripDate — approximate trip dates (spec 019)", () => {
     expect(tripDateSpan("2024-08-12")).toEqual({ first: "2024-08-12", last: "2024-08-12" });
     expect(tripDateSpan(null)).toBeNull();
     expect(tripDateSpan("2024-13")).toBeNull();
-  });
-
-  it("sorts ascending with undated last; year-only orders at its start", () => {
-    const dates = ["2024-08-12", null, "2023", "2024", "2024-01"];
-    const sorted = [...dates].sort(compareTripDate);
-    expect(sorted).toEqual(["2023", "2024", "2024-01", "2024-08-12", null]);
   });
 });

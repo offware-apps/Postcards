@@ -328,7 +328,7 @@ describe("syncOnce safety guard (mass-deletion remediation)", () => {
 describe("the same place marked on two devices", () => {
   const PNG =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-  const PNG2 = PNG.replace("ggg==", "ggA=");
+  const PNG2 = PNG.replace("ggg==", "ggA=="); // a second image that still decodes
   const paris = (id: string, updatedAt: string, src: string, note: string | null): Visit => ({
     ...visit(id, updatedAt, note),
     place: { kind: "city", id: "2988507", name: "Paris", countryId: "FR" },

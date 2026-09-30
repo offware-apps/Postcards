@@ -2,13 +2,11 @@
 // visited country coloured by continent and stamped with its flag. Everything is
 // drawn on-device from the bundled Natural Earth geometry — no network, no server.
 
-import { feature } from "topojson-client";
 import type { FeatureCollection, MultiPolygon, Polygon, Position } from "geojson";
 import type { ReferenceData } from "../../lib/reference/types";
 import { CONTINENT_COLORS } from "../../lib/reference/continents";
 import { countryFlag, flagFontReady, FLAG_FONT } from "../../lib/format/format";
-
-const GEOMETRY_URL = `${import.meta.env.BASE_URL}basemap/countries-50m.json`;
+import { getLand } from "../travel/landGeometry";
 
 const W = 2000;
 const H = 1150;
@@ -99,13 +97,8 @@ export async function renderPoster(
   stats: PosterStats,
   opts?: { anchors?: Map<string, [number, number]> },
 ): Promise<Blob> {
-  const res = await fetch(GEOMETRY_URL);
-  if (!res.ok) throw new Error("map geometry unavailable");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const topo: any = await res.json();
-  const fc = feature(topo, topo.objects.countries) as unknown as FeatureCollection<
-    Polygon | MultiPolygon
-  >;
+  const fc = (await getLand()) as FeatureCollection<Polygon | MultiPolygon> | null;
+  if (!fc) throw new Error("map geometry unavailable");
 
   const canvas = document.createElement("canvas");
   canvas.width = W;

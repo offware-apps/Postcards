@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { openApp } from "./nav-helper";
 
 // US5: the core flow is fully keyboard-operable.
 test("add a visit and browse with the keyboard only", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByText("Cities in view")).toBeVisible();
+  await openApp(page);
 
   // "/" focuses the search input.
   await page.keyboard.press("/");

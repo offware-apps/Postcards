@@ -24,27 +24,6 @@ export function distinctYearsDesc(items: { date: string | null }[]): string[] {
 }
 
 /**
- * A date-bucket selection shared by the year filters (Places/Journal/Trips and
- * now the map): "all" = any date, "none" = undated only, else a 4-digit year.
- */
-export type DateFilter = "all" | "none" | string;
-
-/** Whether a (possibly missing) date falls in the selected bucket. */
-export function matchesDateFilter(date: string | null | undefined, filter: DateFilter): boolean {
-  if (filter === "all") return true;
-  if (filter === "none") return !date;
-  return typeof date === "string" && date.slice(0, 4) === filter;
-}
-
-/** Keep only the items whose date qualifies for the selected bucket. */
-export function itemsInDateBucket<T extends { date: string | null }>(
-  items: T[],
-  filter: DateFilter,
-): T[] {
-  return items.filter((it) => matchesDateFilter(it.date, filter));
-}
-
-/**
  * The map's richer date selection. The quick year chips are presets over this:
  *   • all — any date
  *   • undated — only places with no date

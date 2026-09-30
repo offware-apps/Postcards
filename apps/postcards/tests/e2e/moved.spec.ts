@@ -37,7 +37,9 @@ function storedPlaces(page: Page) {
 test("the old address hands its places to the new one", async ({ page, context }) => {
   // Seed the old origin's store and sync settings directly: served from there,
   // the app redirects straight away when it holds nothing. A static file keeps
-  // the app from booting.
+  // the app from booting. The seed is a first-version database holding visits
+  // alone; the app upgrades it to its current version, as it does for anyone who
+  // installed early.
   await page.goto(`${OLD}/manifest.webmanifest`);
   await page.evaluate(
     (visit) =>
@@ -45,14 +47,9 @@ test("the old address hands its places to the new one", async ({ page, context }
         localStorage.setItem("postcards-sync-owner", "someone");
         localStorage.setItem("postcards-sync-repo", "places");
         localStorage.setItem("postcards-sync-token", "github_pat_e2e");
-        const req = indexedDB.open("postcards", 5);
+        const req = indexedDB.open("postcards", 1);
         req.onupgradeneeded = () => {
-          const db = req.result;
-          db.createObjectStore("visits", { keyPath: "visitId" });
-          db.createObjectStore("trips", { keyPath: "tripId" });
-          db.createObjectStore("stories", { keyPath: "storyId" });
-          db.createObjectStore("tombstones", { keyPath: "key" });
-          db.createObjectStore("photos", { keyPath: "id" });
+          req.result.createObjectStore("visits", { keyPath: "visitId" });
         };
         req.onsuccess = () => {
           const tx = req.result.transaction("visits", "readwrite");
@@ -74,20 +71,26 @@ test("the old address hands its places to the new one", async ({ page, context }
     }),
   );
 
+  // Each of the next two waits spans an app boot, the move screen's here and the
+  // whole app's in the new tab, so they take openApp's boot budget.
   await page.goto(`${OLD}/`);
-  await expect(page.getByRole("heading", { name: "Postcards has moved" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Postcards has moved" })).toBeVisible({
+    timeout: 15_000,
+  });
   const [tab] = await Promise.all([
     context.waitForEvent("page"),
     page.getByRole("button", { name: "Move my places" }).click(),
   ]);
-  await expect(page.getByText("Done: your places are at the new address.")).toBeVisible();
+  await expect(page.getByText("Done: your places are at the new address.")).toBeVisible({
+    timeout: 15_000,
+  });
   expect(prompts).toHaveLength(1);
-  expect(prompts[0]).toContain("1 places, 0 trips and 0 stories");
+  expect(prompts[0]).toContain("1 place, 0 trips and 0 stories");
 
   // The new tab took the file, dropped the handoff parameter, and shows the place.
   await expect(tab).toHaveURL(`${NEW}/`);
   await expect(
-    tab.getByText("Moved 1 places, 0 trips and 0 stories from the old address."),
+    tab.getByText("Moved 1 place, 0 trips and 0 stories from the old address."),
   ).toBeVisible();
   await tab.getByRole("button", { name: "Places", exact: true }).click();
   await expect(tab.getByText("Paris", { exact: true })).toBeVisible();
@@ -132,7 +135,7 @@ test("the new address asks before restoring a file it was handed", async ({ page
   );
   const tab = await context.waitForEvent("page");
   const dialog = await tab.waitForEvent("dialog");
-  expect(dialog.message()).toContain("1 places, 0 trips and 0 stories");
+  expect(dialog.message()).toContain("1 place, 0 trips and 0 stories");
   await dialog.dismiss();
 
   expect(await answer).toEqual({ type: "postcards-handoff-failed", cancelled: true });

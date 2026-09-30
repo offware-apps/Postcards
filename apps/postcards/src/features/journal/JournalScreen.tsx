@@ -20,6 +20,7 @@ import { journalToMarkdown, JOURNAL_EXPORT_FILENAME } from "./exportJournalMd";
 import { download } from "../../lib/download";
 import { useT, useLocale, type MessageKey } from "../../lib/i18n";
 import { folderSuggestions, distinctFolders, matchesFolder } from "./folders";
+import { ListPager } from "../../ui/ListPager";
 import {
   addMonths,
   hexToRgba,
@@ -30,6 +31,7 @@ import {
   type StoryDayCell,
 } from "./calendar";
 import { CONTINENT_ORDER, CONTINENT_FALLBACK, continentColor } from "../../lib/reference/continents";
+import { LoadBoundary } from "../../ui/LoadFailure";
 
 // Publish mode pulls in the site renderer + encryption + connector; load it
 // only when the user opens it, so the Journal's own path stays lean.
@@ -1088,9 +1090,11 @@ export function JournalScreen() {
       )}
 
       {publishOpen && (
-        <Suspense fallback={null}>
-          <PublishScreen onClose={() => setPublishOpen(false)} />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <PublishScreen onClose={() => setPublishOpen(false)} />
+          </Suspense>
+        </LoadBoundary>
       )}
       {dayChoice && (
         <div className="day-choice" role="group" aria-label={t("journal.dayChoiceAria")}>
@@ -1455,18 +1459,12 @@ export function JournalScreen() {
             ))}
           </div>
           {filtered.length > feedShown && (
-            <div className="list-pager">
-              <span className="muted small">
-                {t("journal.showingCount", { shown: feedShown, total: filtered.length })}
-              </span>
-              <button
-                className="mini-btn"
-                type="button"
-                onClick={() => setFeedShown((n) => n + FEED_PAGE)}
-              >
-                {t("journal.showMore", { count: Math.min(FEED_PAGE, filtered.length - feedShown) })}
-              </button>
-            </div>
+            <ListPager
+              shown={feedShown}
+              total={filtered.length}
+              step={Math.min(FEED_PAGE, filtered.length - feedShown)}
+              onMore={() => setFeedShown((n) => n + FEED_PAGE)}
+            />
           )}
           </>
           )}

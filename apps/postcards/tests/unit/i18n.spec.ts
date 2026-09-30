@@ -6,6 +6,7 @@ import { ko } from "../../src/lib/i18n/ko";
 import { translate, detectLocale, isLocale, LOCALES } from "../../src/lib/i18n/core";
 import { useT } from "../../src/lib/i18n";
 import { useSettings } from "../../src/lib/store/useSettings";
+import { countPhrases } from "../../src/features/backup/restore";
 
 describe("translate: interpolation", () => {
   it("fills a named {param}", () => {
@@ -86,6 +87,33 @@ describe("useT() plural helper", () => {
     act(() => useSettings.getState().setLocale("ko"));
     expect(result.current.plural("noun.place", 1)).toBe("장소");
     expect(result.current.plural("noun.place", 2)).toBe("장소");
+  });
+
+  it("counts places, trips and stories in the restore and move messages", () => {
+    const { result } = renderHook(() => useT());
+    const one = { places: 1, trips: 0, stories: 2 };
+
+    act(() => useSettings.getState().setLocale("en"));
+    const t = () => result.current;
+    expect(t()("moved.received", countPhrases(t(), one))).toBe(
+      "Moved 1 place, 0 trips and 2 stories from the old address.",
+    );
+    expect(t()("backup.msg.restored", countPhrases(t(), one))).toBe(
+      "Restored 1 place, 0 trips and 2 stories.",
+    );
+    expect(t().plural("backup.msg.merged", 1, { updated: 0, skip: "" })).toMatch(/^Added 1 place, /);
+
+    act(() => useSettings.getState().setLocale("fr"));
+    expect(t()("moved.received", countPhrases(t(), one))).toBe(
+      "1 lieu, 0 voyage et 2 récits transférés depuis l'ancienne adresse.",
+    );
+    expect(t().plural("backup.msg.merged", 1, { updated: 0, skip: "" })).toMatch(/^1 lieu ajouté, /);
+
+    act(() => useSettings.getState().setLocale("ko"));
+    expect(t()("moved.received", countPhrases(t(), one))).toBe(
+      "이전 주소에서 장소 1곳, 여행 0개, 이야기 2개를 옮겼습니다.",
+    );
+    act(() => useSettings.getState().setLocale("en"));
   });
 });
 

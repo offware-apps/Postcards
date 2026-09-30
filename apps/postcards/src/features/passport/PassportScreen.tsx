@@ -6,6 +6,7 @@ import { useUi } from "../../lib/store/useUi";
 import { useSettings } from "../../lib/store/useSettings";
 import { useToast } from "../../lib/store/useToast";
 import { computeCoverage, visitedCountryIds } from "../stats/computeStats";
+import { coordsOf } from "../travel/distance";
 import { inScope } from "../../lib/reference/scope";
 import { countryFlag, formatInt } from "../../lib/format/format";
 import { ScopeToggle } from "../../ui/ScopeToggle";
@@ -99,21 +100,8 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
     const anchors = new Map<string, [number, number]>();
     for (const v of visits) {
       if (v.status === "wishlist" || anchors.has(v.place.countryId)) continue;
-      let lon: number | undefined;
-      let lat: number | undefined;
-      if (v.place.kind === "city") {
-        const c = ref.cityById(v.place.id);
-        if (c) [lon, lat] = [c.lon, c.lat];
-      } else if (v.place.kind === "heritage") {
-        const h = ref.heritageById(v.place.id);
-        if (h && (h.lat !== 0 || h.lon !== 0)) [lon, lat] = [h.lon, h.lat];
-      } else if (v.place.kind === "airport") {
-        const a = ref.airportById(v.place.id);
-        if (a) [lon, lat] = [a.lon, a.lat];
-      } else if (v.place.kind === "custom" && v.place.lat != null && v.place.lon != null) {
-        [lon, lat] = [v.place.lon, v.place.lat];
-      }
-      if (lon != null && lat != null) anchors.set(v.place.countryId, [lon, lat]);
+      const c = coordsOf(v.place, ref);
+      if (c) anchors.set(v.place.countryId, [c.lon, c.lat]);
     }
     return anchors;
   }, [visits, ref]);

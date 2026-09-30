@@ -1,10 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
-import { existsSync } from "node:fs";
 
-// Uses the preinstalled Chromium in this environment when present; elsewhere
-// (CI) Playwright's own installed browser is used.
 // Run with: pnpm --filter postcards test:e2e
-const LOCAL_CHROMIUM = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -17,6 +13,10 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
+    // Every test starts a fresh context, so an allowed service worker would
+    // install and precache the whole app in each one. The specs that exercise
+    // the installed app opt back in with test.use({ serviceWorkers: "allow" }).
+    serviceWorkers: "block",
     // Seed the "intro seen" flag so the first-run welcome modal never auto-opens
     // over the app during tests (it would block the very first interaction). The
     // real first-run intro is exercised by users, not the suite.
@@ -43,13 +43,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        // Use the environment's preinstalled Chromium instead of downloading.
-        ...(existsSync(LOCAL_CHROMIUM)
-          ? { launchOptions: { executablePath: LOCAL_CHROMIUM } }
-          : {}),
-      },
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 });

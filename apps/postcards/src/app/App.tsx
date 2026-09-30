@@ -15,6 +15,7 @@ import { AboutModal } from "../ui/AboutModal";
 import { IntroScreen } from "../ui/IntroScreen";
 import { Toast } from "../ui/Toast";
 import { UpdateBanner } from "../ui/UpdateBanner";
+import { LoadBoundary } from "../ui/LoadFailure";
 import { handoffRequested } from "../lib/moved/moved";
 import { followOtherTabs, loadPortable } from "../lib/store/portable";
 import { ConnectionStatus } from "../ui/ConnectionStatus";
@@ -417,9 +418,11 @@ export function App() {
                 reloaded the whole map. Hidden it keeps its camera and tiles. */}
             {(mapShown.current || tab === "map") && (
               <div className={"map-keep" + (mapVisible ? "" : " map-keep-hidden")}>
-                <Suspense fallback={<p className="muted empty">{t("map.loading")}</p>}>
-                  <MapScreen active={mapVisible} />
-                </Suspense>
+                <LoadBoundary>
+                  <Suspense fallback={<p className="muted empty">{t("map.loading")}</p>}>
+                    <MapScreen active={mapVisible} />
+                  </Suspense>
+                </LoadBoundary>
               </div>
             )}
             {waitForExtras ? (
@@ -469,9 +472,11 @@ export function App() {
       <Toast />
       <UpdateBanner />
       {handoffRequested && (
-        <Suspense fallback={null}>
-          <HandoffReceiver />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <HandoffReceiver />
+          </Suspense>
+        </LoadBoundary>
       )}
 
       {showHelp && <ShortcutsHelp onClose={() => setShowHelp(false)} />}

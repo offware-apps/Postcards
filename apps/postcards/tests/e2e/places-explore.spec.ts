@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openApp } from "./nav-helper";
 
 // Spec 018 — Places Explore & Track. The screen is ONE unified hub with two
 // independent single-select axes: a KIND (cities/monuments/airports/countries)
@@ -9,7 +10,7 @@ const KIND = "Place kind";
 const STATUS = "Which places to show";
 
 async function openPlaces(page: Page): Promise<void> {
-  await page.goto("/");
+  await openApp(page);
   await page.getByRole("button", { name: "Places", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Places" })).toBeVisible();
 }
@@ -76,10 +77,9 @@ test("a fresh profile browsing Cities + Not-visited shows the whole world", asyn
   await status.getByRole("button", { name: "Not visited", exact: true }).click();
 
   const list = page.locator(".city-list").first();
-  await expect(list.locator("li").first()).toBeVisible();
   // A bounded, most-populous working set — dozens of never-logged reference cities,
   // each with a per-row "mark visited" toggle (not an empty "you've been everywhere").
-  expect(await list.locator("li").count()).toBeGreaterThan(20);
+  await expect.poll(() => list.locator("li").count()).toBeGreaterThan(20);
   await expect(list.getByRole("button", { name: /Mark .* visited/ }).first()).toBeVisible();
 });
 
@@ -118,8 +118,6 @@ test("Monuments + a country query narrows the browse to that country's monuments
   await expect(list.locator("li").first()).toBeVisible();
   // Every surfaced monument sits in France (its sub-line names the country),
   // and none belongs to an unrelated country like Japan.
-  const rows = list.locator("li");
-  expect(await rows.count()).toBeGreaterThan(0);
   await expect(list.getByText("France").first()).toBeVisible();
   await expect(list.getByText("Japan")).toHaveCount(0);
 });
@@ -136,7 +134,6 @@ test("Airports + a country query narrows the browse to that country's airports",
   await page.getByLabel("Search all places").fill("Japan");
   const list = page.locator(".city-list").first();
   await expect(list.locator("li").first()).toBeVisible();
-  expect(await list.locator("li").count()).toBeGreaterThan(0);
   await expect(list.getByText("Japan").first()).toBeVisible();
 });
 
@@ -147,13 +144,13 @@ test("Countries shows all at once with no load-more pager, still searchable", as
   await page.getByRole("group", { name: KIND }).getByRole("button", { name: "Countries", exact: true }).click();
 
   const list = page.locator(".city-list").first();
+  await expect.poll(() => list.locator("li").count()).toBeGreaterThan(50); // ~193–250 countries, all rendered
   const before = await list.locator("li").count();
-  expect(before).toBeGreaterThan(50); // ~193–250 countries, all rendered
   await expect(page.locator(".list-pager")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Show .* more/ })).toHaveCount(0);
 
   // The name search narrows the full list live.
   await page.getByLabel("Filter countries").fill("Japan");
   await expect(list.getByText("Japan", { exact: true })).toBeVisible();
-  expect(await list.locator("li").count()).toBeLessThan(before);
+  await expect.poll(() => list.locator("li").count()).toBeLessThan(before);
 });
