@@ -32,6 +32,7 @@ import { useState } from "react";
 import { useInstallPrompt } from "../lib/hooks/useInstallPrompt";
 import { useAutoSync } from "../lib/hooks/useAutoSync";
 import { useT, type MessageKey } from "../lib/i18n";
+import { parseRoute, routeHash, type Route } from "./route";
 
 // Code-split MapLibre so it loads only when the map is shown.
 const MapScreen = lazy(() =>
@@ -56,6 +57,16 @@ const TABS: { id: Tab; label: MessageKey; keys: string[]; Icon: () => JSX.Elemen
 // hidden, behind the other tabs.
 const DIALOG_LAYER_SELECTOR =
   ".modal-backdrop, .lightbox, .maplibregl-popup:not(.map-keep-hidden *), .journal-composer-busy";
+
+// Land on the screen the address names (a reload, a shared link) before the
+// first render, so reloading Places never spins the map up first.
+const initialRoute = typeof location === "undefined" ? null : parseRoute(location.hash);
+if (initialRoute) useUi.setState(initialRoute);
+
+/** What the address shows for the current screen (the trip composer stays out). */
+function currentRoute(s: Route): Route {
+  return { tab: s.tab, cityPageId: s.cityPageId, countryPageId: s.countryPageId };
+}
 
 // First run: show the "How it works" intro once so a newcomer learns what the
 // app is and what's optionally downloadable, before touching anything. Stored,
@@ -217,45 +228,70 @@ export function App() {
   // Back NEVER quits the app: at the home screen (map, empty history) it just
   // re-arms and stays put — like a native app, where you leave with the home/tab
   // gesture, not by backing out into a blank page.
-  useEffect(() => {
-    const arm = () => history.pushState({ pc: true }, "");
-    arm();
-    function onPop() {
+  // The screen also lives in the address (route.ts): each navigation pushes an
+  // entry carrying its position, so a reload lands where you were, Back after a
+  // reload walks the screens before it, and Forward re-opens what Back left.
+  // A layout effect, so a Back pressed as soon as the screen shows is caught.
+  useLayoutEffect(() => {
+    const state = history.state as { pc?: unknown } | null;
+    let at = typeof state?.pc === "number" ? state.pc : 0;
+    const hashNow = () => routeHash(currentRoute(useUi.getState()));
+    history.replaceState({ ...state, pc: at }, "", hashNow());
+    // Point the address at the screen: a new entry when the screen moved, and
+    // one spare entry above the first, so Back from home has one to consume.
+    const sync = () => {
+      if (location.hash === hashNow() && at > 0) return;
+      at += 1;
+      history.pushState({ pc: at }, "", hashNow());
+    };
+    sync();
+    const unsubscribe = useUi.subscribe((s, prev) => {
+      if (
+        s.tab !== prev.tab ||
+        s.cityPageId !== prev.cityPageId ||
+        s.countryPageId !== prev.countryPageId
+      )
+        sync();
+    });
+    function onPop(e: PopStateEvent) {
+      const to = (e.state as { pc?: unknown } | null)?.pc;
+      // A fragment link (the skip link) makes an entry of its own: not a screen.
+      if (typeof to !== "number") return;
+      const forward = to > at;
+      at = to;
       const ui = useUi.getState();
+      const landed = parseRoute(location.hash);
+      if (forward) {
+        if (landed) ui.openRoute(landed);
+        sync();
+        return;
+      }
       const dialogOpen = !!document.querySelector(DIALOG_LAYER_SELECTOR);
       if (dialogOpen) {
         // Let the open layer close via its own Escape handler.
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-        arm();
-        return;
-      }
-      // Step out of a local sub-view first (mirrors Escape), then the LAST
-      // screen: pop the app's own navigation history.
-      if (runEscapeInterceptors()) {
-        arm();
-        return;
-      }
-      if (ui.goBack()) {
-        arm();
-        return;
-      }
-      // A detail page is still open with no history behind it (e.g. deep-linked or
-      // opened from search): close it in place — Back must never fall through and
-      // quit the app while you're looking at a city/country page.
-      if (ui.cityPageId || ui.countryPageId || ui.tripEditId) {
+      } else if (runEscapeInterceptors()) {
+        // Stepped out of a local sub-view first (mirrors Escape).
+      } else if (ui.goBack()) {
+        // The LAST screen: popped the app's own navigation history.
+      } else if (landed) {
+        // No history of its own (after a reload): the screen this entry names.
+        useUi.setState({ ...landed, tripEditId: null });
+      } else if (ui.cityPageId || ui.countryPageId || ui.tripEditId) {
+        // A detail page with nothing behind it: close it in place — Back must
+        // never fall through and quit the app on a city/country page.
         ui.closePages();
-        arm();
-        return;
       }
-      // At the home screen (map) with nothing left in history: DON'T let Back quit
-      // the app — re-arm so the map is the terminal home for the Back gesture
-      // (matches a native app; use the tab/home gesture to actually leave). Fixes
+      // At the home screen with nothing left, this re-arms instead of letting
+      // Back quit the app (use the tab/home gesture to actually leave). Fixes
       // "map → places → country → back back … quit the application".
-      arm();
+      sync();
     }
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      unsubscribe();
+    };
   }, []);
 
   const currentTab = TABS.find((x) => x.id === tab);
