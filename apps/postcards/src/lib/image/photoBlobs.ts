@@ -21,6 +21,8 @@ import type { Photo, Visit } from "../schema/models";
 /** Minimal async blob store the split logic writes/reads through. */
 export interface PhotoBlobKV {
   get(id: string): Promise<Blob | undefined>;
+  /** Whether a blob is stored under `id` — a key lookup, the blob is not read. */
+  has(id: string): Promise<boolean>;
   put(id: string, blob: Blob): Promise<void>;
 }
 
@@ -39,6 +41,8 @@ export type StoredVisit = Omit<Visit, "photos" | "photo"> & { photos?: PhotoRef[
  * its objects are untouched), so on the hot path every photo is already mapped:
  * dehydrate writes refs with ZERO blob writes and ZERO base64 work. A WeakMap so
  * superseded photo objects (after an edit that replaces one) are collectible.
+ * A mapped id is a hint, not a guarantee: deleting a visit removes its blobs
+ * while an undo still holds its photo objects.
  */
 const idOf = new WeakMap<object, string>();
 
@@ -78,8 +82,9 @@ export async function blobToDataUrl(blob: Blob): Promise<string> {
 
 /**
  * In-memory Visit (data-URL photos) → disk record (photo refs), storing any blob
- * that isn't stored yet. On the toggle hot path every photo is already mapped, so
- * this does no blob writes and no base64 decoding — just builds tiny refs.
+ * that isn't stored yet. On the toggle hot path every photo is already mapped and
+ * stored, so this does one key lookup per photo and no blob writes and no base64
+ * decoding — just builds tiny refs.
  */
 export async function dehydrateVisit(visit: Visit, kv: PhotoBlobKV): Promise<StoredVisit> {
   const { photo: _legacy, photos, ...rest } = visit as Visit & { photo?: string };
@@ -87,8 +92,8 @@ export async function dehydrateVisit(visit: Visit, kv: PhotoBlobKV): Promise<Sto
   const refs: PhotoRef[] = [];
   for (const p of photos) {
     let id = idOf.get(p);
-    if (!id) {
-      id = uuid();
+    if (!id || !(await kv.has(id))) {
+      id ??= uuid();
       await kv.put(id, dataUrlToBlob(p.src));
       idOf.set(p, id);
     }

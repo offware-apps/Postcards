@@ -117,6 +117,9 @@ function snapshotKv(blobs: Map<string, Blob>): PhotoBlobKV {
     async get(id) {
       return blobs.get(id);
     },
+    async has(id) {
+      return blobs.has(id);
+    },
     async put() {
       /* hydrate never writes */
     },
@@ -129,6 +132,9 @@ function txKv(store: any): PhotoBlobKV {
   return {
     async get(id) {
       return (await store.get(id))?.blob as Blob | undefined;
+    },
+    async has(id) {
+      return (await store.getKey(id)) !== undefined;
     },
     async put(id, blob) {
       await store.put({ id, blob });
@@ -207,14 +213,33 @@ export async function deleteVisit(visitId: string): Promise<void> {
   await tx.done;
 }
 
+/**
+ * Rewrite the visits table to `visits` inside an open transaction. The photo
+ * blobs are kept rather than cleared: the in-memory photos keep their blob ids
+ * across the rewrite, so a cleared store would leave every ref pointing at
+ * nothing, and re-storing them all would decode every photo on every sync. The
+ * blobs no visit references any more are deleted in the same transaction.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function rewriteVisits(visitStore: any, photoStore: any, visits: Visit[]): Promise<void> {
+  const kv = txKv(photoStore);
+  const referenced = new Set<string>();
+  await visitStore.clear();
+  for (const v of visits) {
+    const slim = await dehydrateVisit(v, kv);
+    for (const id of referencedPhotoIds(slim)) referenced.add(id);
+    await visitStore.put(slim);
+  }
+  for (const id of (await photoStore.getAllKeys()) as string[]) {
+    if (!referenced.has(id)) await photoStore.delete(id);
+  }
+}
+
 export async function replaceAllVisits(visits: Visit[]): Promise<void> {
   if (!hasIndexedDB()) return;
   const database = await db();
   const tx = database.transaction([STORE, PHOTOS], "readwrite");
-  await tx.objectStore(STORE).clear();
-  await tx.objectStore(PHOTOS).clear();
-  const kv = txKv(tx.objectStore(PHOTOS));
-  for (const v of visits) await tx.objectStore(STORE).put(await dehydrateVisit(v, kv));
+  await rewriteVisits(tx.objectStore(STORE), tx.objectStore(PHOTOS), visits);
   await tx.done;
 }
 
@@ -242,13 +267,8 @@ export async function replaceAllPortable(
   // can never leave the device with the new records but the old tombstones.
   if (tombstones) stores.push(TOMBSTONES);
   const tx = database.transaction(stores, "readwrite");
-  const visitStore = tx.objectStore(STORE);
-  const photoStore = tx.objectStore(PHOTOS);
   const tripStore = tx.objectStore("trips");
-  const kv = txKv(photoStore);
-  await visitStore.clear();
-  await photoStore.clear();
-  for (const v of visits) await visitStore.put(await dehydrateVisit(v, kv));
+  await rewriteVisits(tx.objectStore(STORE), tx.objectStore(PHOTOS), visits);
   await tripStore.clear();
   for (const t of trips) await tripStore.put(t);
   if (stories) {

@@ -27,6 +27,9 @@ function memKv(): PhotoBlobKV & { store: Map<string, Blob>; puts: number } {
     async get(id: string) {
       return store.get(id);
     },
+    async has(id: string) {
+      return store.has(id);
+    },
     async put(id: string, blob: Blob) {
       kv.puts++;
       store.set(id, blob);
@@ -125,6 +128,16 @@ describe("hot path: re-persisting an unchanged photo writes no new blob", () => 
     expect(kv.puts).toBe(putsAfterFirst);
     expect(kv.store.size).toBe(1);
     expect(stored.photos![0]!.id).toBeTruthy();
+  });
+
+  it("stores the blob again when it was deleted under a photo still in memory", async () => {
+    const kv = memKv();
+    const v = visit({ photos: [{ src: DATA_URL, caption: null }] });
+    const first = await dehydrateVisit(v, kv);
+    kv.store.clear(); // the visit was deleted; an undo still holds its photo objects
+    const again = await dehydrateVisit(v, kv);
+    expect(again.photos![0]!.id).toBe(first.photos![0]!.id);
+    expect(kv.store.has(first.photos![0]!.id)).toBe(true);
   });
 });
 
