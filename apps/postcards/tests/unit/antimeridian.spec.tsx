@@ -8,6 +8,7 @@ import type { FeatureCollection, MultiPolygon, Polygon, Position } from "geojson
 import { unwrapAntimeridian } from "../../src/features/map/antimeridian";
 import { getLand } from "../../src/features/travel/landGeometry";
 import { CountryCoverageMap } from "../../src/features/stats/CountryCoverageMap";
+import { LAND_OUTLINE } from "../../src/lib/publish/landOutline";
 import type { Visit } from "../../src/lib/schema/models";
 import { useVisits } from "../../src/lib/store/useVisits";
 
@@ -148,5 +149,13 @@ describe("route and coverage maps: the land they share", () => {
     const dot = Number(document.querySelector("circle.ccov-visited")!.getAttribute("cx"));
     expect(dot).toBeGreaterThan(Math.max(...xs) * 0.9);
     useVisits.setState({ visits: [] });
+  });
+});
+
+describe("published reader: the embedded land outline", () => {
+  it("has no edge spanning the map", () => {
+    const rs = LAND_OUTLINE as Position[][];
+    expect(widestEdge(rs)).toBeLessThan(180);
+    expect(seams(rs)).toBe(0);
   });
 });
