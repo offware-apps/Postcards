@@ -22,8 +22,9 @@ export function formatInt(n: number, locale = activeLocale): string {
 
 /**
  * Flag emoji for an ISO 3166-1 alpha-2 country/territory code ("FR" -> 🇫🇷).
- * Pure Unicode regional indicators — offline, no assets; platforms without a
- * flag font show the letter pair, which stays informative.
+ * Pure Unicode regional indicators. Platforms without flag glyphs (Windows,
+ * minimal Linux) get them from the bundled flag-only font that leads the app's
+ * font stacks (styles.css, FLAG_FONT for canvases), so a flag always renders.
  */
 export function countryFlag(iso2: string): string {
   // "ZZ" is the ISO user-assigned code Postcards uses for places outside any
@@ -32,6 +33,20 @@ export function countryFlag(iso2: string): string {
   return iso2
     .toUpperCase()
     .replace(/[A-Z]/g, (ch) => String.fromCodePoint(0x1f1e6 + ch.charCodeAt(0) - 65));
+}
+
+/** Font stack for flags drawn on a canvas: the bundled flag font first, then
+ *  the platform's colour emoji for everything else (pins, stars). */
+export const FLAG_FONT =
+  '"Twemoji Country Flags", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+
+/** Resolves once the flag font can draw on a canvas (a canvas never waits for
+ *  a web font, and an image drawn before it loads keeps the empty boxes). */
+export function flagFontReady(): Promise<unknown> {
+  if (typeof document === "undefined" || !document.fonts) return Promise.resolve();
+  return document.fonts
+    .load('16px "Twemoji Country Flags"', "\u{1F1EB}\u{1F1F7}")
+    .catch(() => undefined);
 }
 
 /** Great-circle distance in km -> localized "1,234 km" (rounded to the km). */

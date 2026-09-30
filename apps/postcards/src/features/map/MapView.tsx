@@ -28,7 +28,7 @@ import { markerCitiesInView, type Bounds } from "./viewport";
 import { statusShows, type FilterStatus } from "../../lib/store/useFilters";
 import type { City } from "../../lib/reference/types";
 import type { PlaceRef, Visit } from "../../lib/schema/models";
-import { countryFlag, formatInt } from "../../lib/format/format";
+import { countryFlag, flagFontReady, FLAG_FONT, formatInt } from "../../lib/format/format";
 
 // Natural Earth 50m country geometry, served as a static asset (SW-cached for
 // offline). Fetched ONCE and cached at module scope so remounts (basemap change,
@@ -128,7 +128,6 @@ function getRivers(): Promise<FeatureCollection | null> {
   return riversPromise;
 }
 
-const EMOJI_FONT = '"Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
 const PILL_FONT = '600 21px "Inter Variable", system-ui, sans-serif';
 
 /**
@@ -158,11 +157,11 @@ function makeCityPill(iso2: string, favorite: boolean, wish: boolean): ImageData
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
   } else {
-    ctx.font = `27px ${EMOJI_FONT}`;
+    ctx.font = `27px ${FLAG_FONT}`;
     ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 1);
   }
   if (favorite) {
-    ctx.font = `14px ${EMOJI_FONT}`;
+    ctx.font = `14px ${FLAG_FONT}`;
     ctx.fillText("⭐", w - 9, 9);
   }
   return ctx.getImageData(0, 0, w, h);
@@ -195,10 +194,10 @@ function makeMonumentPin(category: string, seen: boolean): ImageData {
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `29px ${EMOJI_FONT}`;
+  ctx.font = `29px ${FLAG_FONT}`;
   ctx.fillText(st.emoji, s / 2, s / 2 + 1);
   if (seen) {
-    ctx.font = `15px ${EMOJI_FONT}`;
+    ctx.font = `15px ${FLAG_FONT}`;
     ctx.fillText("✅", s - 10, 10);
   }
   return ctx.getImageData(0, 0, s, s);
@@ -221,7 +220,7 @@ function makeAirportDot(): ImageData {
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `17px ${EMOJI_FONT}`;
+  ctx.font = `17px ${FLAG_FONT}`;
   ctx.fillText("✈️", s / 2, s / 2 + 1);
   return ctx.getImageData(0, 0, s, s);
 }
@@ -231,7 +230,7 @@ function makeAirportPin(iata: string, wish: boolean, favorite: boolean): ImageDa
   const h = 30;
   const pad = 8;
   const gap = 5;
-  const planeFont = `16px ${EMOJI_FONT}`;
+  const planeFont = `16px ${FLAG_FONT}`;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
   const plane = "✈️";
@@ -1392,6 +1391,17 @@ export function MapView({
       // OSM/ODbL + Natural Earth credit, bottom-LEFT so it clears the Filter and
       // Layers pills in the bottom-right (they were literally covering the ⓘ).
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
+
+      // A flag drawn before the bundled flag font loaded keeps its empty boxes:
+      // redraw every flag marker once the font is there (a no-op when cached).
+      void flagFontReady().then(() => {
+        if (cancelled || !map) return;
+        for (const id of map.listImages()) {
+          if (!id.startsWith("pill-")) continue;
+          const [, cc, fav, wish] = id.split("-");
+          map.updateImage(id, makeCityPill(cc ?? "", fav === "1", wish === "1"));
+        }
+      });
 
       // Marker images, generated lazily on demand.
       map.on("styleimagemissing", (e) => {
