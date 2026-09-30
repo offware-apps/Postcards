@@ -42,9 +42,11 @@ const TABS: { id: Tab; label: MessageKey; keys: string[]; Icon: () => JSX.Elemen
 ];
 
 // An open modal/lightbox/popup/dirty-composer consumes Escape and the Back
-// gesture; these selectors detect one so an unobstructed press navigates.
+// gesture; these selectors detect one so an unobstructed press navigates. A popup
+// left open on the map counts only while the map shows: the map stays mounted,
+// hidden, behind the other tabs.
 const DIALOG_LAYER_SELECTOR =
-  ".modal-backdrop, .lightbox, .maplibregl-popup, .journal-composer-busy";
+  ".modal-backdrop, .lightbox, .maplibregl-popup:not(.map-keep-hidden *), .journal-composer-busy";
 
 // First run: show the "How it works" intro once so a newcomer learns what the
 // app is and what's optionally downloadable, before touching anything. Stored,
