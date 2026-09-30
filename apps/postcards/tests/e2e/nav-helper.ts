@@ -25,9 +25,10 @@ export async function openApp(page: Page): Promise<void> {
 }
 
 /**
- * Mark a place visited from the top-bar search, then empty the search so its
- * results never cover what the test clicks next. `name` is the place's label
- * where it differs from the query, as for an airport found by its code.
+ * Mark a place visited from the top-bar search, then empty the search and wait
+ * for its results list to close, so a leftover dropdown never covers what the
+ * test clicks next. `name` is the place's label where it differs from the
+ * query, as for an airport found by its code.
  */
 export async function markVisited(page: Page, query: string, name = query): Promise<void> {
   const search = page.getByLabel("Search a city or country");
@@ -35,7 +36,7 @@ export async function markVisited(page: Page, query: string, name = query): Prom
   await page.getByRole("button", { name: `Mark ${name} visited` }).first().click();
   await expect(page.getByRole("button", { name: `Remove ${name} from visited` }).first()).toBeVisible();
   await search.fill("");
-  await expect(page.locator("#search-results")).toHaveCount(0);
+  await expect(page.getByRole("listbox", { name: "Search results" })).toHaveCount(0);
 }
 
 /** Log a single-leg trip with the Trips screen's quick form, from IATA codes. */

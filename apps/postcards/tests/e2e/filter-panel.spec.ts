@@ -166,13 +166,9 @@ test("Places shares the same Filter panel; population gates cities only (D4)", a
   await openApp(page);
 
   // A big city (>1M), a small city (<1M) and an airport (a non-city).
-  await page.getByLabel("Search a city or country").fill("Tokyo");
-  await page.getByRole("button", { name: /Mark .*Tokyo.* visited/ }).first().click();
-  await page.getByLabel("Search a city or country").fill("Reykjavik");
-  await page.getByRole("button", { name: /Mark .*Reykjav.* visited/ }).first().click();
-  await page.getByLabel("Search a city or country").fill("JFK");
-  await page.getByRole("button", { name: /Mark .*JFK.* visited/ }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Tokyo");
+  await markVisited(page, "Reykjavik", "Reykjavík");
+  await markVisited(page, "JFK", "John F Kennedy International Airport (JFK)");
 
   // Places → Visited (default view) lists all three.
   await page.getByRole("button", { name: "Places", exact: true }).click();
@@ -205,13 +201,8 @@ test("Places grows: Favorites-only narrows to starred places (spec 016 US4)", as
   await openApp(page);
 
   // Two visited cities.
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: /Mark .*Paris.* visited/ }).first().click();
-  await page.getByLabel("Search a city or country").fill("Tokyo");
-  await page.getByRole("button", { name: /Mark .*Tokyo.* visited/ }).first().click();
-  // Clear + dismiss the search so its dropdown can't overlay the list below.
-  await page.getByLabel("Search a city or country").fill("");
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Paris");
+  await markVisited(page, "Tokyo");
 
   await page.getByRole("button", { name: "Places", exact: true }).click();
   const list = page.locator(".city-list").first();
