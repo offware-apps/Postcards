@@ -1084,6 +1084,7 @@ export const ko: Messages = {
   // ── Misc shared ──────────────────────────────────────────────────────────
   "update.available": "새 버전이 있습니다.",
   "update.reload": "새로고침",
+  "storage.blocked": "이 탭에서 계속 열려면 다른 탭의 Postcards를 닫으세요.",
   "common.undo": "실행 취소",
   "common.retry": "다시 시도",
   "map.canvasAria": "방문한 장소 지도",

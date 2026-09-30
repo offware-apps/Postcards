@@ -185,6 +185,30 @@ describe("import security (SC-008, Constitution VI)", () => {
     }
   });
 
+  it("keeps one visit per visitId, as the keyed store does (last wins)", () => {
+    const mk = (id: string, name: string) => ({
+      visitId: "same",
+      place: { kind: "city", id, name, countryId: "FR" },
+      date: null,
+      note: null,
+      status: "visited" as const,
+      favorite: false,
+      addedAt: new Date().toISOString(),
+    });
+    const text = JSON.stringify({
+      format: "postcards",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      visits: [mk("paris-fr", "Paris"), mk("lyon-fr", "Lyon")],
+    });
+    const result = importFile(text);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.visits.map((v) => v.place.name)).toEqual(["Lyon"]);
+      expect(result.warnings.length).toBeGreaterThan(0);
+    }
+  });
+
   it("accepts a legacy Place'Been file (format: placebeen) for backward compatibility", () => {
     const text = JSON.stringify({
       format: "placebeen", // pre-rename marker

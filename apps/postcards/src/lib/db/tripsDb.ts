@@ -1,5 +1,5 @@
 import type { Trip } from "../schema/models";
-import { getDb, hasIndexedDB } from "./visitsDb";
+import { getDb, hasIndexedDB, trackWrite } from "./visitsDb";
 
 // Travel Log working store — shares the "postcards" IndexedDB opened by visitsDb
 // (v2 adds the "trips" object store). Local-first, no backend.
@@ -12,19 +12,10 @@ export async function getAllTrips(): Promise<Trip[]> {
 
 export async function putTrip(trip: Trip): Promise<void> {
   if (!hasIndexedDB()) return;
-  await (await getDb()).put(STORE, trip);
+  await trackWrite(async () => (await getDb()).put(STORE, trip));
 }
 
 export async function deleteTrip(tripId: string): Promise<void> {
   if (!hasIndexedDB()) return;
-  await (await getDb()).delete(STORE, tripId);
-}
-
-export async function replaceAllTrips(trips: Trip[]): Promise<void> {
-  if (!hasIndexedDB()) return;
-  const database = await getDb();
-  const tx = database.transaction(STORE, "readwrite");
-  await tx.store.clear();
-  for (const t of trips) await tx.store.put(t);
-  await tx.done;
+  await trackWrite(async () => (await getDb()).delete(STORE, tripId));
 }

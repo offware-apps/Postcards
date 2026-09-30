@@ -16,7 +16,7 @@ import { IntroScreen } from "../ui/IntroScreen";
 import { Toast } from "../ui/Toast";
 import { UpdateBanner } from "../ui/UpdateBanner";
 import { handoffRequested } from "../lib/moved/moved";
-import { loadPortable } from "../lib/store/portable";
+import { followOtherTabs, loadPortable } from "../lib/store/portable";
 import { ConnectionStatus } from "../ui/ConnectionStatus";
 import { MapIcon, ChartIcon, ListIcon, RouteIcon, BookIcon, GearIcon, InfoIcon } from "../ui/icons";
 import { useState } from "react";
@@ -122,6 +122,7 @@ export function App() {
 
   useEffect(() => {
     loadPortable();
+    return followOtherTabs();
   }, []);
 
   // Opt-in background device sync (spec 013). No-op unless the user turned it on.

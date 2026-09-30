@@ -1090,6 +1090,7 @@ export const en = {
   // ── App update prompt ────────────────────────────────────────────────────
   "update.available": "A new version is available.",
   "update.reload": "Reload",
+  "storage.blocked": "Close Postcards in your other tabs to finish opening it here.",
 
   // ── Misc shared ──────────────────────────────────────────────────────────
   "common.undo": "Undo",

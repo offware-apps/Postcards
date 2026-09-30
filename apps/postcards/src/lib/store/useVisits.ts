@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import { backfillUpdatedAt, MAX_PHOTOS_PER_VISIT, normalizeVisitPhotos, placeKey, stampNow } from "../schema/helpers";
+import {
+  backfillUpdatedAt,
+  MAX_PHOTOS_PER_VISIT,
+  normalizeVisitPhotos,
+  placeKey,
+  stampDeletion,
+  stampNow,
+} from "../schema/helpers";
 import type { Photo, PlaceRef, Visit } from "../schema/models";
 import { sanitizeText } from "../schema/sanitize";
 import * as db from "../db/visitsDb";
@@ -104,7 +111,9 @@ export const useVisits = create<VisitsState>((set, get) => ({
   async load() {
     // Migrate any legacy single-photo records into the `photos` gallery, and
     // backfill `updatedAt` from `addedAt` for records made before sync existed.
-    const dbVisits = (await db.getAllVisits()).map(normalizeVisitPhotos).map(backfillUpdatedAt);
+    const dbVisits = (await db.loadOrEmpty(db.getAllVisits))
+      .map(normalizeVisitPhotos)
+      .map(backfillUpdatedAt);
     // Don't clobber optimistic writes that landed DURING this async read: marking a
     // place and immediately opening a list would otherwise blank it (the snapshot
     // predated the in-flight putVisit). Merge by id, newest `updatedAt` winning —
@@ -145,11 +154,12 @@ export const useVisits = create<VisitsState>((set, get) => ({
     return visit;
   },
   async removeVisit(visitId) {
+    const gone = get().visits.find((v) => v.visitId === visitId);
     set({ visits: get().visits.filter((v) => v.visitId !== visitId) });
     await db.deleteVisit(visitId);
     // Record a tombstone so the deletion propagates on sync instead of the record
     // being re-added by a device that still holds it (spec 013, FR-009).
-    await db.putTombstone("visit", visitId, stampNow());
+    await db.putTombstone("visit", visitId, stampDeletion(gone));
   },
   async toggleVisit(place) {
     const existing = findByPlace(get().visits, place);
@@ -248,24 +258,27 @@ export const useVisits = create<VisitsState>((set, get) => ({
   },
   async mergeVisits(incoming) {
     const byKey = new Map(get().visits.map((v) => [placeKey(v.place), v]));
+    const touched: Visit[] = [];
     let added = 0;
     let updated = 0;
     for (const item of incoming) {
       const key = placeKey(item.place);
       const existing = byKey.get(key);
       if (existing) {
-        byKey.set(key, {
+        const next: Visit = {
           ...existing,
           place: item.place, // refresh coords/name if the import carries better
           status: item.status,
           favorite: item.favorite ?? existing.favorite,
           date: item.date ?? existing.date,
           updatedAt: stampNow(),
-        });
+        };
+        byKey.set(key, next);
+        touched.push(next);
         updated++;
       } else {
         const at = new Date().toISOString();
-        byKey.set(key, {
+        const next: Visit = {
           visitId: uuid(),
           place: item.place,
           status: item.status,
@@ -275,13 +288,16 @@ export const useVisits = create<VisitsState>((set, get) => ({
           photos: [],
           addedAt: at,
           updatedAt: at,
-        });
+        };
+        byKey.set(key, next);
+        touched.push(next);
         added++;
       }
     }
-    const merged = [...byKey.values()];
-    set({ visits: merged });
-    await db.replaceAllVisits(merged);
+    set({ visits: [...byKey.values()] });
+    // Only the places the file touched: a rewrite of the whole table from memory
+    // would drop what another tab wrote since this one last read it.
+    await db.putVisits(touched);
     return { added, updated };
   },
   async setAll(visits) {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { backfillUpdatedAt, stampNow } from "../schema/helpers";
+import { backfillUpdatedAt, stampDeletion, stampNow } from "../schema/helpers";
 import type { PlaceRef, TravelMode, Trip } from "../schema/models";
 import * as db from "../db/tripsDb";
 import * as visitsDb from "../db/visitsDb";
@@ -32,7 +32,8 @@ interface TripsState {
     >,
   ) => Promise<void>;
   removeTrip: (tripId: string) => Promise<void>;
-  setAll: (trips: Trip[]) => Promise<void>;
+  /** Put ONE trip back (the undo of a delete or an edit): upsert by tripId. */
+  restoreTrip: (trip: Trip) => Promise<void>;
 }
 
 export const useTrips = create<TripsState>((set, get) => ({
@@ -40,7 +41,7 @@ export const useTrips = create<TripsState>((set, get) => ({
   loaded: false,
   async load() {
     // Backfill `updatedAt` from `addedAt` for trips made before sync existed.
-    const trips = (await db.getAllTrips()).map(backfillUpdatedAt);
+    const trips = (await visitsDb.loadOrEmpty(db.getAllTrips)).map(backfillUpdatedAt);
     set({ trips, loaded: true });
   },
   async addTrip({
@@ -97,15 +98,24 @@ export const useTrips = create<TripsState>((set, get) => ({
     await db.putTrip(updated);
   },
   async removeTrip(tripId) {
+    const gone = get().trips.find((t) => t.tripId === tripId);
     set({ trips: get().trips.filter((t) => t.tripId !== tripId) });
     await db.deleteTrip(tripId);
     // Tombstone the deletion so it propagates on sync (spec 013, FR-009).
-    await visitsDb.putTombstone("trip", tripId, stampNow());
+    await visitsDb.putTombstone("trip", tripId, stampDeletion(gone));
   },
-  async setAll(trips) {
-    // Bulk load: backfill `updatedAt` without stamping "now" (keep real ages).
-    const backfilled = trips.map(backfillUpdatedAt);
-    set({ trips: backfilled });
-    await db.replaceAllTrips(backfilled);
+  async restoreTrip(trip) {
+    // Bump `updatedAt` so the restored trip wins on the next merge, over its own
+    // tombstone or over the undone edit a sync already pushed, and clear that
+    // tombstone so the restore is clean (mirrors useVisits.restoreVisit).
+    const restored: Trip = { ...trip, updatedAt: stampNow() };
+    const exists = get().trips.some((t) => t.tripId === restored.tripId);
+    set({
+      trips: exists
+        ? get().trips.map((t) => (t.tripId === restored.tripId ? restored : t))
+        : [...get().trips, restored],
+    });
+    await db.putTrip(restored);
+    await visitsDb.deleteTombstone("trip", restored.tripId);
   },
 }));

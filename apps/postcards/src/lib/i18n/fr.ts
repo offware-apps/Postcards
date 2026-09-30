@@ -1092,6 +1092,7 @@ export const fr: Messages = {
   // ── Misc shared ──────────────────────────────────────────────────────────
   "update.available": "Une nouvelle version est disponible.",
   "update.reload": "Recharger",
+  "storage.blocked": "Fermez Postcards dans vos autres onglets pour finir de l'ouvrir ici.",
   "common.undo": "Annuler",
   "common.retry": "Réessayer",
   "map.canvasAria": "Carte des lieux visités",

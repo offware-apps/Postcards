@@ -27,6 +27,9 @@ function memKv(): PhotoBlobKV & { store: Map<string, Blob>; puts: number } {
     async get(id: string) {
       return store.get(id);
     },
+    async has(id: string) {
+      return store.has(id);
+    },
     async put(id: string, blob: Blob) {
       kv.puts++;
       store.set(id, blob);
@@ -126,6 +129,16 @@ describe("hot path: re-persisting an unchanged photo writes no new blob", () => 
     expect(kv.store.size).toBe(1);
     expect(stored.photos![0]!.id).toBeTruthy();
   });
+
+  it("stores the blob again when it was deleted under a photo still in memory", async () => {
+    const kv = memKv();
+    const v = visit({ photos: [{ src: DATA_URL, caption: null }] });
+    const first = await dehydrateVisit(v, kv);
+    kv.store.clear(); // the visit was deleted; an undo still holds its photo objects
+    const again = await dehydrateVisit(v, kv);
+    expect(again.photos![0]!.id).toBe(first.photos![0]!.id);
+    expect(kv.store.has(first.photos![0]!.id)).toBe(true);
+  });
 });
 
 describe("migration of pre-split records", () => {
@@ -159,6 +172,35 @@ describe("migration of pre-split records", () => {
     expect(needsMigrate).toBe(true);
     expect((back as { photo?: string }).photo).toBeUndefined();
     expect(back.photos).toEqual([{ src: DATA_URL, caption: null }]);
+  });
+
+  it("keeps the same image stored twice under two captions", async () => {
+    const kv = memKv();
+    const stored = await dehydrateVisit(
+      visit({
+        photos: [
+          { src: DATA_URL, caption: "front" },
+          { src: DATA_URL, caption: "back" },
+        ],
+      }),
+      kv,
+    );
+    const { visit: back } = await hydrateVisit(stored, kv);
+    expect(back.photos).toEqual([
+      { src: DATA_URL, caption: "front" },
+      { src: DATA_URL, caption: "back" },
+    ]);
+  });
+
+  it("keeps a gallery photo's caption when the legacy `photo` is the same image", async () => {
+    const kv = memKv();
+    const legacy = {
+      ...visit(),
+      photo: DATA_URL,
+      photos: [{ src: DATA_URL, caption: "the Louvre" }],
+    } as unknown as StoredVisit;
+    const { visit: back } = await hydrateVisit(legacy, kv);
+    expect(back.photos).toEqual([{ src: DATA_URL, caption: "the Louvre" }]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { useVisits, findByPlace } from "../../lib/store/useVisits";
 import { useStories } from "../../lib/store/useStories";
@@ -26,11 +26,20 @@ function wikipediaSearchUrl(query: string): string {
 }
 
 /** When did you go, and what do you remember? (FR-002 — both optional.)
- *  The note saves on blur so IndexedDB isn't rewritten per keystroke. */
+ *  The note saves on blur so IndexedDB isn't rewritten per keystroke, and on
+ *  leaving: Escape or Back unmounts the page with the note focused, no blur. */
 function VisitDetails({ visitId, date, note }: { visitId: string; date: string | null; note: string | null }) {
   const setDetails = useVisits((s) => s.setDetails);
   const t = useT();
   const [draft, setDraft] = useState(note ?? "");
+  // Typed text not saved yet (null once saved).
+  const unsaved = useRef<string | null>(null);
+  function save(id: string) {
+    if (unsaved.current === null) return;
+    void setDetails(id, { note: unsaved.current });
+    unsaved.current = null;
+  }
+  useEffect(() => () => save(visitId), [visitId]); // eslint-disable-line react-hooks/exhaustive-deps
   // A different visit (or an import) swapped in under the same mount.
   const lastVisit = useRef(visitId);
   if (lastVisit.current !== visitId) {
@@ -59,8 +68,11 @@ function VisitDetails({ visitId, date, note }: { visitId: string; date: string |
           placeholder={t("city.notePlaceholder")}
           maxLength={2000}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => void setDetails(visitId, { note: draft })}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            unsaved.current = e.target.value;
+          }}
+          onBlur={() => save(visitId)}
         />
       </label>
     </div>

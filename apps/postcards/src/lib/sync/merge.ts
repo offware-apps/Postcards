@@ -22,6 +22,19 @@ export interface SyncSnapshot<R> {
   tombstones: Tombstone[];
 }
 
+/**
+ * JSON with every object's keys sorted, so two copies of the same record compare
+ * equal however their keys were ordered (an edit appends keys; a parsed file has
+ * the schema's order).
+ */
+export function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  );
+}
+
 /** Timestamp used to order two versions of the same record. */
 function stamp<R>(r: R, tsOf: (r: R) => string | null | undefined): string {
   return tsOf(r) ?? "";
@@ -29,7 +42,7 @@ function stamp<R>(r: R, tsOf: (r: R) => string | null | undefined): string {
 
 /**
  * Pick the winner between two versions of the SAME record. Newest wins; on an
- * exact timestamp tie we break deterministically by the JSON of the record, so
+ * exact timestamp tie we break deterministically by the canonical JSON, so
  * the outcome never depends on argument order (commutativity).
  */
 function pick<R>(a: R, b: R, tsOf: (r: R) => string | null | undefined): R {
@@ -37,7 +50,7 @@ function pick<R>(a: R, b: R, tsOf: (r: R) => string | null | undefined): R {
   const tb = stamp(b, tsOf);
   if (ta > tb) return a;
   if (tb > ta) return b;
-  return JSON.stringify(a) >= JSON.stringify(b) ? a : b;
+  return canonicalJson(a) >= canonicalJson(b) ? a : b;
 }
 
 /**

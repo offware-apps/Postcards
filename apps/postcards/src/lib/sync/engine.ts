@@ -12,8 +12,9 @@
 // local write land through injected ports. That keeps it pure enough to unit-test
 // with an in-memory remote and keeps zero-lock-in honest (any git remote works).
 
-import { gcTombstones, mergeById, type SyncSnapshot } from "./merge";
+import { canonicalJson, gcTombstones, mergeById, type SyncSnapshot } from "./merge";
 import type { Story, Trip, Visit } from "../schema/models";
+import { MAX_PHOTOS_PER_VISIT, placeKey } from "../schema/helpers";
 import { GitHubTarget, GitPushConflictError } from "../publish/gitTarget";
 
 /** The three synced collections, each as a records+tombstones snapshot. */
@@ -136,10 +137,45 @@ const DEFAULT_GC_HORIZON_DAYS = 90;
 
 const ts = <R extends { updatedAt?: string; addedAt: string }>(r: R): string => r.updatedAt ?? r.addedAt;
 
+/**
+ * One visit per place (FR-015), across devices too: two devices that marked the
+ * same place before syncing hold two visitIds for it, which a merge by id keeps
+ * both of. Keep the newest (ties by visitId, so every device picks the same one),
+ * join the others' photos onto it, and tombstone the others as of their own
+ * stamp so they stay deleted wherever they are still held.
+ */
+function onePerPlace(snap: SyncSnapshot<Visit>): SyncSnapshot<Visit> {
+  const byPlace = new Map<string, Visit[]>();
+  for (const v of snap.records) {
+    const k = placeKey(v.place);
+    byPlace.set(k, [...(byPlace.get(k) ?? []), v]);
+  }
+  if (byPlace.size === snap.records.length) return snap;
+  const records: Visit[] = [];
+  const tombstones = [...snap.tombstones];
+  for (const group of byPlace.values()) {
+    group.sort((a, b) => ts(b).localeCompare(ts(a)) || a.visitId.localeCompare(b.visitId));
+    const [kept, ...rest] = group as [Visit, ...Visit[]];
+    if (!rest.length) {
+      records.push(kept);
+      continue;
+    }
+    const photos = [...(kept.photos ?? [])];
+    for (const v of rest) {
+      for (const p of v.photos ?? []) if (!photos.some((q) => q.src === p.src)) photos.push(p);
+      tombstones.push({ id: v.visitId, deletedAt: ts(v) });
+    }
+    records.push(photos.length ? { ...kept, photos: photos.slice(0, MAX_PHOTOS_PER_VISIT) } : kept);
+  }
+  records.sort((x, y) => x.visitId.localeCompare(y.visitId));
+  tombstones.sort((x, y) => x.id.localeCompare(y.id));
+  return { records, tombstones };
+}
+
 /** Merge every collection newest-wins, honouring tombstones (reuses ./merge). */
 function mergeAll(local: StoreSnapshots, remote: StoreSnapshots): StoreSnapshots {
   return {
-    visits: mergeById(local.visits, remote.visits, (v) => v.visitId, ts),
+    visits: onePerPlace(mergeById(local.visits, remote.visits, (v) => v.visitId, ts)),
     trips: mergeById(local.trips, remote.trips, (t) => t.tripId, ts),
     stories: mergeById(local.stories, remote.stories, (s) => s.storyId, ts),
   };
@@ -154,14 +190,15 @@ function gcAll(s: StoreSnapshots, horizonIso: string): StoreSnapshots {
   };
 }
 
-/** Deterministic string form of a snapshot set (records + tombstones sorted by id),
- *  independent of file metadata like exportedAt — used to detect "nothing to push". */
+/** Deterministic string form of a snapshot set (records + tombstones sorted by id,
+ *  keys sorted), independent of file metadata like exportedAt — used to detect
+ *  "nothing to push". */
 function canonical(s: StoreSnapshots): string {
   const sortSnap = <R>(snap: SyncSnapshot<R>, idOf: (r: R) => string): SyncSnapshot<R> => ({
     records: [...snap.records].sort((a, b) => idOf(a).localeCompare(idOf(b))),
     tombstones: [...snap.tombstones].sort((a, b) => a.id.localeCompare(b.id)),
   });
-  return JSON.stringify({
+  return canonicalJson({
     visits: sortSnap(s.visits, (v) => v.visitId),
     trips: sortSnap(s.trips, (t) => t.tripId),
     stories: sortSnap(s.stories, (s2) => s2.storyId),
@@ -239,11 +276,14 @@ export async function syncOnce(ports: SyncPorts): Promise<SyncResult> {
     }
 
     // If the remote already holds the converged set, there is nothing to push —
-    // idempotent re-sync is a genuine no-op (SC-005).
-    if (pulled.content != null && canonical(merged) === canonical(remoteSnap)) break;
+    // idempotent re-sync is a genuine no-op (SC-005). Compared as the file would
+    // read back once pushed: the import cleans text up, so a local copy it would
+    // change is the same record, not a new one to push on every run.
+    const text = serialize(merged);
+    if (pulled.content != null && canonical(parse(text)) === canonical(remoteSnap)) break;
 
     try {
-      await remote.push(serialize(merged), message, pulled.version);
+      await remote.push(text, message, pulled.version);
       break;
     } catch (err) {
       if (err instanceof SyncConflictError && attempt < maxRetries) {

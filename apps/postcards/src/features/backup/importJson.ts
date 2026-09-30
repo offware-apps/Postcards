@@ -30,6 +30,28 @@ export type ImportResult =
  *  Element-count caps in models.ts bound the record arrays independently. */
 const MAX_IMPORT_CHARS = 128_000_000;
 
+/** How far past this device's clock a stamp read from a file may sit: another
+ *  device's clock can run a little fast, but not by more. */
+const FUTURE_STAMP_MARGIN_MS = 10 * 60 * 1000;
+
+/**
+ * A stamp from a file, as the UTC ISO string this app writes. The schema accepts
+ * an offset, and the sync merge orders stamps as text, which holds for UTC only;
+ * a stamp beyond the margin in the future would win every merge, a deletion
+ * included, so it is brought back to the margin.
+ */
+function readStamp(s: string): string {
+  return new Date(Math.min(Date.parse(s), Date.now() + FUTURE_STAMP_MARGIN_MS)).toISOString();
+}
+
+function readStamps<R extends { addedAt: string; updatedAt?: string }>(r: R): R {
+  return {
+    ...r,
+    addedAt: readStamp(r.addedAt),
+    ...(r.updatedAt ? { updatedAt: readStamp(r.updatedAt) } : {}),
+  };
+}
+
 /**
  * Parse + validate + sanitize an imported file (Constitution VI: data is inert).
  * The content is treated as pure data — parsed, never executed. Malformed,
@@ -83,7 +105,7 @@ export function importFile(text: string): ImportResult {
   // (photos are now the payload — dropping one silently would lose data).
   const byPlace = new Map<string, Visit>();
   for (const rawVisit of parsed.data.visits) {
-    const v = normalizeVisitPhotos(rawVisit);
+    const v = readStamps(normalizeVisitPhotos(rawVisit));
     const key = placeKey(v.place);
     const existing = byPlace.get(key);
     if (!existing) {
@@ -97,22 +119,27 @@ export function importFile(text: string): ImportResult {
     }
     byPlace.set(key, { ...v, visitId: existing.visitId, addedAt: existing.addedAt, photos });
   }
-  const visits = [...byPlace.values()];
+  // And one per visitId: the "visits" store is keyed on it, so two places sharing
+  // an id would be two in memory and one on disk. Last-wins, like trips below.
+  const visitById = new Map<string, Visit>();
+  for (const v of byPlace.values()) visitById.set(v.visitId, v);
+  const visits = [...visitById.values()];
   // Enforce one-record-per-tripId too — the "trips" store is keyed on tripId, so a
   // hand-edited file with a duplicate id would silently drop rows on persist and
   // diverge from the in-memory count. Keep last-wins to match the IndexedDB put order.
   const tripById = new Map<string, Trip>();
-  for (const t of parsed.data.trips) tripById.set(t.tripId, t);
+  for (const t of parsed.data.trips) tripById.set(t.tripId, readStamps(t));
   const trips = [...tripById.values()];
   // Same for stories — the "stories" store is keyed on storyId; last-wins matches
   // the IndexedDB put order.
   const storyById = new Map<string, Story>();
-  for (const s of parsed.data.stories) storyById.set(s.storyId, s);
+  for (const s of parsed.data.stories) storyById.set(s.storyId, readStamps(s));
   const stories = [...storyById.values()];
   // Deletion markers (device sync). Absent for a plain backup; when present, keep
   // the newest deletedAt per (kind,id) so a hand-merged file can't hold stale ones.
   const tombById = new Map<string, SyncTombstone>();
-  for (const t of parsed.data.tombstones ?? []) {
+  for (const raw of parsed.data.tombstones ?? []) {
+    const t = { ...raw, deletedAt: readStamp(raw.deletedAt) };
     const key = `${t.kind}:${t.id}`;
     const cur = tombById.get(key);
     if (!cur || t.deletedAt > cur.deletedAt) tombById.set(key, t);
