@@ -1002,6 +1002,7 @@ export const ko: Messages = {
     "index.html 저장됨 — 어떤 호스트에든 올리거나 폴더에서 바로 여세요.",
   "publish.toast.buildErr": "사이트를 만들 수 없습니다. 데이터는 변경되지 않았습니다.",
   "publish.toast.missingFields": "GitHub로 push하려면 소유자, 저장소, 브랜치, 토큰을 입력하세요.",
+  "publish.toast.syncRepo": "기기 동기화 저장소입니다. 여기에 게시하면 비공개 동기화 파일이 공개 웹사이트에 올라갑니다. 다른 저장소를 선택하세요.",
   "publish.toast.pushed": "{owner}/{repo}로 push됨 — GitHub Pages가 곧 업데이트됩니다.",
   "publish.toast.pushedLive": "게시됨 — GitHub Pages가 켜지고 사이트를 빌드하고 있습니다.",
   "publish.liveSitePrefix": "내 사이트:",

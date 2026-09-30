@@ -10,14 +10,13 @@ import { renderReaderHtml } from "../../lib/publish/renderReader";
 import { encryptJson, MIN_PASSPHRASE_LENGTH } from "../../lib/publish/encrypt";
 import { GitHubTarget } from "../../lib/publish/gitTarget";
 import { GitHubConnectorFields, type GitHubConnectorValue } from "../../ui/GitHubConnectorFields";
-import { HOSTING_README } from "../../lib/publish/hosting";
 import { coordsOf } from "../travel/distance";
 import { download } from "../../lib/download";
 import { countryFlag, formatDate, formatInt, formatKm } from "../../lib/format/format";
 import { MODE_GLYPH } from "../travel/modes";
 import { useT } from "../../lib/i18n";
 import type { Trip } from "../../lib/schema/models";
-import { slugify } from "../../lib/publish/site";
+import { isSyncRepo, lockedSlug, publishTravel, slugify } from "../../lib/publish/site";
 
 type Scope = "all" | "trip" | "folder" | "range";
 
@@ -39,32 +38,6 @@ function saveRepo(g: { owner: string; repo: string; branch: string }): void {
   } catch {
     /* private mode: not remembered */
   }
-}
-
-/** A minimal, inert root landing page listing every published travel folder, so
- *  the repo root isn't a 404 and visitors can browse between journeys. */
-function buildRootIndex(siteTitle: string, folders: string[]): string {
-  const esc = (x: string) =>
-    x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const items = folders
-    .map((f) => `<li><a href="./${esc(f)}/">${esc(f.replace(/-/g, " "))}</a></li>`)
-    .join("\n      ");
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(siteTitle)}</title>
-<style>body{font:16px/1.6 system-ui,sans-serif;max-width:42rem;margin:3rem auto;padding:0 1rem}
-h1{font-size:1.4rem}ul{list-style:none;padding:0}li{margin:.4rem 0}
-a{display:inline-block;padding:.5rem .8rem;border:1px solid #ccc;border-radius:.5rem;text-decoration:none;color:inherit}
-@media(prefers-color-scheme:dark){body{background:#111;color:#eee}a{border-color:#444}}</style>
-</head><body>
-<h1>${esc(siteTitle)}</h1>
-<ul>
-      ${items}
-</ul>
-<p style="opacity:.6;font-size:.85rem">Published with Postcards — a private, local-first travel journal.</p>
-</body></html>
-`;
 }
 
 /** A short human label for a trip in the picker: "✈️ Paris → Rome · 2 May 2026". */
@@ -243,6 +216,12 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
       showToast(t("publish.toast.missingFields"));
       return;
     }
+    // Pages serves the whole branch: publishing into the device-sync repo would
+    // put the private sync file on a public website.
+    if (isSyncRepo(gh.owner.trim(), gh.repo.trim())) {
+      showToast(t("publish.toast.syncRepo"));
+      return;
+    }
     setBusyKind("push");
     try {
       const html = await buildHtml();
@@ -255,39 +234,16 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
 
       // Each travel gets its OWN subdirectory on the same repo, so journeys coexist
       // (…github.io/<repo>/japan-2024/) instead of overwriting the root. The slug
-      // comes from the selected trip/folder, else the site title.
+      // comes from the selected trip/folder, else the site title; a passphrase-
+      // locked travel gets a random folder instead, so its URL names nothing.
       const travelName =
         (scope === "folder" && folderName.trim()) ||
         (scope === "trip" && tripOptions.find((tr) => tr.tripId === tripId)?.name?.trim()) ||
         title.trim() ||
         "journey";
-      const slug = slugify(travelName);
-
-      await target.putFiles(
-        [
-          { path: `${slug}/index.html`, content: html },
-          // Ship the host-facing README beside each travel (FR-015).
-          { path: `${slug}/README.md`, content: HOSTING_README },
-        ],
-        `Publish "${travelName}" via Postcards`,
-      );
-
-      // Refresh the root landing page so the repo root lists every travel folder
-      // (best-effort — a token without read access just skips it).
-      try {
-        const entries = await target.listDir("");
-        const folders = entries
-          .filter((e) => e.type === "dir" && !e.name.startsWith("."))
-          .map((e) => e.name);
-        if (!folders.includes(slug)) folders.push(slug);
-        folders.sort((a, b) => a.localeCompare(b));
-        await target.putFiles(
-          [{ path: "index.html", content: buildRootIndex(repo, folders) }],
-          "Update travels index via Postcards",
-        );
-      } catch {
-        /* listing/root-index is a nicety; the travel itself already published */
-      }
+      const locked = passNorm.length > 0;
+      const slug = locked ? lockedSlug(`${owner}/${repo}`, travelName) : slugify(travelName);
+      await publishTravel(target, { html, name: travelName, slug, locked, siteTitle: repo });
 
       // Best-effort: switch on GitHub Pages so the site goes live without a trip to
       // the repo's Settings. Returns null when the token can't manage Pages.
