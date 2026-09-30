@@ -2138,6 +2138,16 @@ a.btn-ghost {
   align-items: center;
   gap: 12px;
 }
+/* The same nudge as a slim line atop Places. */
+.backup-reminder-line {
+  padding: 7px 12px;
+  gap: 6px 10px;
+}
+.backup-reminder-line .backup-reminder-text {
+  min-width: 0;
+  flex-basis: 220px;
+  font-size: 13px;
+}
 .attribution {
   margin-top: 22px;
   font-size: 12px;
