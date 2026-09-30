@@ -12,6 +12,8 @@ import {
 } from "../../lib/schema/models";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { isDecodableDataUrl } from "../../lib/image/photoBlobs";
+import { MAX_TAG_LEN } from "../../lib/schema/helpers";
+import { sanitizeText } from "../../lib/schema/sanitize";
 
 /** Keep only the photos that decode, and drop an empty `photos` array so a
  *  photo-less record stays lean in the file. A photo that does not decode can sit
@@ -21,6 +23,15 @@ function decodablePhotos<T extends { photos?: Photo[] }>(rec: T): T | Omit<T, "p
   const { photos, ...rest } = rec;
   const kept = photos?.filter((p) => isDecodableDataUrl(p.src));
   return kept && kept.length ? { ...rest, photos: kept } : rest;
+}
+
+/** Drop a stored tag that sanitizes to nothing ("-", a lone bidi mark): the schema
+ *  rejects it, which would block every backup and sync of a device holding one. */
+function dropBlankTags(story: Story): Story {
+  if (!story.tags) return story;
+  const { tags, ...rest } = story;
+  const kept = tags.filter((t) => sanitizeText(t, MAX_TAG_LEN));
+  return kept.length ? { ...rest, tags: kept } : rest;
 }
 
 /** Build the canonical portable file object from the current visits + trips + stories.
@@ -46,7 +57,7 @@ export function buildFile(
     // Keep decodable photos only, and drop empty `photos` arrays (see above).
     visits: visits.map(decodablePhotos),
     trips,
-    stories: stories.map(decodablePhotos),
+    stories: stories.map((s) => decodablePhotos(dropBlankTags(s))),
     ...(tombstones.length ? { tombstones } : {}),
     referenceSources,
   };
