@@ -1358,6 +1358,9 @@ export function MapView({
         });
       } catch {
         setFailed(true);
+        // No map will report a view, so hand the list the whole world: the
+        // fallback below promises the cities list still works.
+        onBoundsRef.current?.({ west: -180, south: -90, east: 180, north: 90 });
         return;
       }
       mapRef.current = map;

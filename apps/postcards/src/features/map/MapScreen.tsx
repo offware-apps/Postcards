@@ -917,7 +917,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
         {!listOnly && <FilterSummary exclude={MAP_HIDDEN_FIELDS} />}
 
         {poi ? (
-          poi.items.length === 0 ? (
+          bounds === null ? (
+            <p className="muted empty">{t("map.loading")}</p>
+          ) : poi.items.length === 0 ? (
             <p className="muted empty">{t("map.list.poiEmpty")}</p>
           ) : (
             <>
