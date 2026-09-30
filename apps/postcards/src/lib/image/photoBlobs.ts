@@ -72,12 +72,19 @@ export function dataUrlToBlob(dataUrl: string): Blob {
  * doesn't churn the portable file.
  */
 export async function blobToDataUrl(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return bytesToDataUrl(
+    new Uint8Array(await blob.arrayBuffer()),
+    blob.type || "application/octet-stream",
+  );
+}
+
+/** Encode raw bytes as an inline base64 data URL of the given mime. */
+export function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
   let bin = "";
   for (let i = 0; i < bytes.length; i += B64_CHUNK) {
     bin += String.fromCharCode(...bytes.subarray(i, i + B64_CHUNK));
   }
-  return `data:${blob.type || "application/octet-stream"};base64,${btoa(bin)}`;
+  return `data:${mime};base64,${btoa(bin)}`;
 }
 
 /**

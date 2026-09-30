@@ -1,5 +1,6 @@
 import type { Story, Trip, Visit } from "../../lib/schema/models";
 import { zipStore, unzipStore, type ZipEntry } from "../../lib/backup/zip";
+import { bytesToDataUrl } from "../../lib/image/photoBlobs";
 import { buildFile } from "./exportJson";
 
 // The "Save everything" archive: one .zip holding a compact JSON manifest plus
@@ -38,8 +39,6 @@ const extForMime = (mime: string): string =>
   EXT_OF[mime] ?? (mime.replace(/^image\//, "").replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin");
 const mimeForExt = (ext: string): string => MIME_OF[ext] ?? `image/${ext}`;
 
-const B64_CHUNK = 0x8000;
-
 /** Decode a `data:<mime>[;base64],<payload>` URL into raw bytes + its (parameter-
  *  stripped) mime. Handles both base64 and percent-encoded/plain payloads so a
  *  schema-valid but non-base64 photo can't throw and abort the whole archive. */
@@ -57,15 +56,6 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; mime: string } {
     return { bytes, mime };
   }
   return { bytes: new TextEncoder().encode(decodeURIComponent(payload)), mime };
-}
-
-/** Re-encode raw image bytes as an inline base64 data URL. */
-function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
-  let bin = "";
-  for (let i = 0; i < bytes.length; i += B64_CHUNK) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + B64_CHUNK));
-  }
-  return `data:${mime};base64,${btoa(bin)}`;
 }
 
 type PhotoLike = { src: string; caption: string | null };
