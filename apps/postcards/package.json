@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "reference": "node scripts/build-reference.mjs",
+    "railways": "node scripts/build-railways.mjs",
     "cap:sync": "cap sync",
     "cap:copy": "cap copy",
     "cap:add:android": "cap add android",

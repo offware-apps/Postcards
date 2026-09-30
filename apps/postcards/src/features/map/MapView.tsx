@@ -19,6 +19,7 @@ import { mapDateMatches, type MapDate } from "../travel/period";
 import {
   airportPoints,
   optimizeVisitedPoints,
+  stationPoints,
   visitedCityPoints,
   wishlistCityPoints,
 } from "./visitedLayers";
@@ -268,6 +269,53 @@ function makeAirportPin(iata: string, wish: boolean, favorite: boolean): ImageDa
   return ctx.getImageData(0, 0, w, h);
 }
 
+/** Browsable station marker: a plain 🚉 chip, one shared image for every station
+ * (the tinted pin below is reserved for stations you've actually logged). */
+function makeStationDot(): ImageData {
+  const s = 34; // 17px on screen
+  const canvas = document.createElement("canvas");
+  canvas.width = s;
+  canvas.height = s;
+  const ctx = canvas.getContext("2d")!;
+  ctx.beginPath();
+  ctx.arc(s / 2, s / 2, s / 2 - 3, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "#0d9488";
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `17px ${EMOJI_FONT}`;
+  ctx.fillText("🚉", s / 2, s / 2 + 1);
+  return ctx.getImageData(0, 0, s, s);
+}
+
+/** Logged-station marker: a 🚉 chip tinted (teal = been, amber = wish), gold ring
+ * when a favourite. No code label — station names are long, so the name shows on
+ * tap; only four image variants exist (been/wish × fav) so they share cheaply. */
+function makeStationPin(wish: boolean, favorite: boolean): ImageData {
+  const s = 30; // 15px on screen
+  const canvas = document.createElement("canvas");
+  canvas.width = s;
+  canvas.height = s;
+  const ctx = canvas.getContext("2d")!;
+  const accent = wish ? "#d97706" : "#0d9488";
+  const bg = wish ? "#fff7ed" : "#f0fdfa";
+  ctx.beginPath();
+  ctx.arc(s / 2, s / 2, s / 2 - 3, 0, Math.PI * 2);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.lineWidth = favorite ? 3 : 2;
+  ctx.strokeStyle = favorite ? "#f59e0b" : accent;
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `15px ${EMOJI_FONT}`;
+  ctx.fillText("🚉", s / 2, s / 2 + 1);
+  return ctx.getImageData(0, 0, s, s);
+}
+
 // Pre-generate the flag/airport marker images for EVERY place currently in a
 // personal source, so a camera move (a zoom-OUT especially) never reveals a
 // symbol whose image hasn't been made yet. Relying on `styleimagemissing`
@@ -301,6 +349,21 @@ function ensureAirImages(map: MlMap, fc: FeatureCollection<Point>): void {
     const id = `air-${iata}-${wish ? 1 : 0}-${fav ? 1 : 0}`;
     if (!map.hasImage(id)) {
       map.addImage(id, makeAirportPin(iata, wish, fav), { pixelRatio: 2 });
+      added = true;
+    }
+  }
+  if (added) map.triggerRepaint();
+}
+
+function ensureStationImages(map: MlMap, fc: FeatureCollection<Point>): void {
+  let added = false;
+  for (const f of fc.features) {
+    const p = f.properties ?? {};
+    const wish = Number(p.wish) === 1;
+    const fav = Number(p.fav) === 1;
+    const id = `sta-${wish ? 1 : 0}-${fav ? 1 : 0}`;
+    if (!map.hasImage(id)) {
+      map.addImage(id, makeStationPin(wish, fav), { pixelRatio: 2 });
       added = true;
     }
   }
@@ -514,12 +577,13 @@ export interface MapFit {
 }
 
 export type Basemap = "simple" | "osm" | "detail";
-type MapMode = "all" | "cities" | "monuments" | "airports";
+type MapMode = "all" | "cities" | "monuments" | "airports" | "stations";
 
 const MODE_LAYERS: Record<Exclude<MapMode, "all">, string[]> = {
   cities: ["cities-visited", "cities-inview", "cities-all", "cities-wishlist"],
   monuments: ["poi-monuments"],
   airports: ["airports"],
+  stations: ["stations"],
 };
 
 // Theme colours for the offline overview base (kept out of the render body).
@@ -640,6 +704,21 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
         "icon-allow-overlap": true,
       },
     },
+    // Every station as a plain 🚉 marker (one shared image), so you can SEE and
+    // tap stations on the map — not only the ones you've logged. Hidden by
+    // default; applyMode reveals it in Stations mode (and All at closer zoom).
+    {
+      id: "stations-all",
+      type: "symbol",
+      source: "stations-all",
+      layout: {
+        visibility: "none",
+        "icon-image": "station-all-dot",
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 7, 0.85, 11, 1],
+        "icon-padding": 0,
+        "icon-allow-overlap": true,
+      },
+    },
     {
       id: "cities-inview",
       type: "circle",
@@ -720,6 +799,23 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
           "air-",
           ["get", "iata"],
           "-",
+          ["to-string", ["get", "wish"]],
+          "-",
+          ["to-string", ["get", "fav"]],
+        ],
+        "icon-size": 1,
+        "icon-padding": 1,
+        "icon-allow-overlap": true,
+      },
+    },
+    {
+      id: "stations",
+      type: "symbol",
+      source: "stations",
+      layout: {
+        "icon-image": [
+          "concat",
+          "sta-",
           ["to-string", ["get", "wish"]],
           "-",
           ["to-string", ["get", "fav"]],
@@ -914,6 +1010,7 @@ export function MapView({
   // empty collection to the worker on every camera stop.
   const monEmptyRef = useRef(false);
   const airEmptyRef = useRef(false);
+  const staEmptyRef = useRef(false);
 
   function applyViewportPoi(map: MlMap) {
     const b = map.getBounds();
@@ -1003,6 +1100,43 @@ export function MapView({
         airEmptyRef.current = true;
       }
     }
+
+    // Browsable stations: in Stations mode always, in All mode past the zoom-gate.
+    const staSrc = map.getSource("stations-all") as GeoJSONSource | undefined;
+    if (staSrc) {
+      if (m === "stations" || (m === "all" && z >= 5)) {
+        const seen = new Set(
+          visitsRef.current
+            .filter(
+              (v) =>
+                v.status !== "wishlist" &&
+                v.place.kind === "station" &&
+                visitMatches(v),
+            )
+            .map((v) => v.place.id),
+        );
+        const all = ref.allStations();
+        const seenFirst: typeof all = [];
+        const rest: typeof all = [];
+        for (const s of all) {
+          if (!inViewport(b, s.lat, s.lon)) continue;
+          (seen.has(s.id) ? seenFirst : rest).push(s);
+        }
+        const inView = seenFirst.concat(rest);
+        staSrc.setData({
+          type: "FeatureCollection",
+          features: inView.slice(0, cap).map((s) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+            properties: { id: s.id, name: s.name, cc: s.countryIso2 },
+          })),
+        });
+        staEmptyRef.current = false;
+      } else if (!staEmptyRef.current) {
+        staSrc.setData(EMPTY_FC);
+        staEmptyRef.current = true;
+      }
+    }
   }
 
   // Change-keys for the expensive layers: rebuilding the viewport POI pipeline
@@ -1021,6 +1155,7 @@ export function MapView({
   const lastCitiesKey = useRef("<init>");
   const lastWishKey = useRef("<init>");
   const lastAirKey = useRef("<init>");
+  const lastStaKey = useRef("<init>");
   function applyVisited(map: MlMap) {
     // The date filter narrows YOUR places to the selected period BEFORE building
     // any source, so the same one selection drives the markers, the country
@@ -1080,11 +1215,26 @@ export function MapView({
       (map.getSource("airports") as GeoJSONSource | undefined)?.setData(fc);
       ensureAirImages(map, fc);
     }
-    // Monuments (and browsable airports) are viewport-capped and depend on
-    // visits only through their heritage/airport "seen" state — period-filtered
-    // too, so applyViewportPoi (which reads yearRef) rebuilds when it changes.
+    const staKey = vis
+      .filter((v) => v.place.kind === "station")
+      .map(markerKey)
+      .sort()
+      .join("|");
+    if (staKey !== lastStaKey.current) {
+      lastStaKey.current = staKey;
+      const fc = stationPoints(vis, ref);
+      (map.getSource("stations") as GeoJSONSource | undefined)?.setData(fc);
+      ensureStationImages(map, fc);
+    }
+    // Monuments (and browsable airports/stations) are viewport-capped and depend
+    // on visits only through their heritage/airport/station "seen" state —
+    // period-filtered too, so applyViewportPoi (which reads yearRef) rebuilds
+    // when it changes.
     const poiKey = vis
-      .filter((v) => v.place.kind === "heritage" || v.place.kind === "airport")
+      .filter(
+        (v) =>
+          v.place.kind === "heritage" || v.place.kind === "airport" || v.place.kind === "station",
+      )
       .map((v) => `${v.place.kind}:${v.place.id}:${v.status}`)
       .sort()
       .join("|");
@@ -1143,6 +1293,13 @@ export function MapView({
       const on = m === "airports" || m === "all";
       map.setLayoutProperty("airports-all", "visibility", on ? "visible" : "none");
       map.setLayerZoomRange("airports-all", m === "airports" ? 0 : 5, 24);
+    }
+    // Browsable stations follow the same rule as airports: always in Stations
+    // mode; in All mode only once zoomed into a region.
+    if (map.getLayer("stations-all")) {
+      const on = m === "stations" || m === "all";
+      map.setLayoutProperty("stations-all", "visibility", on ? "visible" : "none");
+      map.setLayerZoomRange("stations-all", m === "stations" ? 0 : 5, 24);
     }
     // The full-gazetteer dot field is a power view — hidden unless toggled on,
     // and never shown in the monuments/airports modes.
@@ -1328,12 +1485,14 @@ export function MapView({
           rivers: { type: "geojson", data: EMPTY_FC },
           "cities-all": { type: "geojson", data: EMPTY_FC },
           "airports-all": { type: "geojson", data: EMPTY_FC },
+          "stations-all": { type: "geojson", data: EMPTY_FC },
           "trip-arcs": { type: "geojson", data: EMPTY_FC },
           "cities-inview": { type: "geojson", data: EMPTY_FC },
           wishlist: { type: "geojson", data: EMPTY_FC },
           monuments: { type: "geojson", data: EMPTY_FC },
           cities: { type: "geojson", data: EMPTY_FC },
           airports: { type: "geojson", data: EMPTY_FC },
+          stations: { type: "geojson", data: EMPTY_FC },
         },
         layers: [...baseStyle.layers, ...overlayLayers(basemap, dark)],
       };
@@ -1401,6 +1560,11 @@ export function MapView({
           map.addImage(e.id, makeAirportPin(iata ?? "", wish === "1", fav === "1"), {
             pixelRatio: 2,
           });
+        } else if (e.id === "station-all-dot") {
+          map.addImage(e.id, makeStationDot(), { pixelRatio: 2 });
+        } else if (e.id.startsWith("sta-")) {
+          const [, wish, fav] = e.id.split("-");
+          map.addImage(e.id, makeStationPin(wish === "1", fav === "1"), { pixelRatio: 2 });
         }
       });
 
@@ -1636,6 +1800,7 @@ export function MapView({
         "cities-wishlist",
         "poi-monuments",
         "airports-all",
+        "stations-all",
       ];
       map.on("click", (e) => {
         if (!map || !loadedRef.current) return;
@@ -1659,7 +1824,11 @@ export function MapView({
         // blur) cities outrank airports outrank monuments, and among cities
         // the most populous wins.
         const score = (f: maplibregl.MapGeoJSONFeature) =>
-          f.layer.id === "poi-monuments" ? -1 : f.layer.id === "airports-all" ? -0.5 : Number(f.properties?.pop ?? 0);
+          f.layer.id === "poi-monuments"
+            ? -1
+            : f.layer.id === "airports-all" || f.layer.id === "stations-all"
+              ? -0.5
+              : Number(f.properties?.pop ?? 0);
         const dist = (f: maplibregl.MapGeoJSONFeature) => {
           if (f.geometry.type !== "Point") return 0;
           const [lon, lat] = f.geometry.coordinates as [number, number];
@@ -1681,8 +1850,17 @@ export function MapView({
         const p = f.properties ?? {};
         const isMonument = f.layer.id === "poi-monuments";
         const isAirport = f.layer.id === "airports-all";
+        const isStation = f.layer.id === "stations-all";
         const isCustom = Number(p.custom) === 1;
-        const kind = isMonument ? "heritage" : isAirport ? "airport" : isCustom ? "custom" : "city";
+        const kind = isMonument
+          ? "heritage"
+          : isAirport
+            ? "airport"
+            : isStation
+              ? "station"
+              : isCustom
+                ? "custom"
+                : "city";
         const region = p.region ? String(p.region) : "";
         const popN = Number(p.pop);
         const iata = String(p.iata ?? "");
@@ -1691,10 +1869,13 @@ export function MapView({
           ? `Site · ${country}`
           : isAirport
             ? `✈ ${iata} airport · ${country}`
-            : [country, region].filter(Boolean).join(" - ") +
-              (popN > 0 ? ` · ${formatInt(popN)} people` : "");
+            : isStation
+              ? `🚉 Station · ${country}`
+              : [country, region].filter(Boolean).join(" - ") +
+                (popN > 0 ? ` · ${formatInt(popN)} people` : "");
         // Airports are stored with the code in the name (matching the list/search),
-        // so toggling from the map records the same place.
+        // so toggling from the map records the same place. Stations store the bare
+        // name (no code), so it passes through unchanged.
         const displayName = isAirport && iata ? `${String(p.name ?? "")} (${iata})` : String(p.name ?? "");
         openPlacePopup(map, anchor, {
           name: displayName,
@@ -1705,7 +1886,7 @@ export function MapView({
             name: displayName,
             countryId: String(p.cc ?? ""),
           } as PlaceRef,
-          hasPage: kind === "city" || kind === "heritage" || kind === "airport",
+          hasPage: kind === "city" || kind === "heritage" || kind === "airport" || kind === "station",
         },
         // A little preview photo for cities & monuments, but only when the online
         // basemap is active (offline / Offline mode uses "simple" — no network).

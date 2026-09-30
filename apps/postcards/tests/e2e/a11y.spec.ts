@@ -16,6 +16,16 @@ async function assertNoSeriousViolations(page: import("@playwright/test").Page, 
   ).toEqual([]);
 }
 
+test("the postcard composer passes the axe WCAG 2.1 AA gate", async ({ page }) => {
+  await page.goto("/");
+  await gotoTab(page, "Journal");
+  await page.getByRole("button", { name: /Write a postcard/ }).click();
+  await expect(page.locator(".story-composer")).toBeVisible();
+  // Expand the optional "add details" so those controls are audited too.
+  await page.getByText("Add details", { exact: true }).click();
+  await assertNoSeriousViolations(page, "postcard composer");
+});
+
 test("map, stats and places screens pass the axe WCAG 2.1 AA gate", async ({ page }) => {
   await page.goto("/");
 

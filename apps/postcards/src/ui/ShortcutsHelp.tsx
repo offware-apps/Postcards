@@ -39,6 +39,10 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
             <kbd>F</kbd> Passport · <kbd>X</kbd> Moments (inside Places)
           </li>
           <li>
+            <kbd>W</kbd> Write today's postcard — <kbd>Ctrl/⌘</kbd>+<kbd>Enter</kbd> saves,{" "}
+            <kbd>Ctrl/⌘</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> saves &amp; starts another
+          </li>
+          <li>
             <kbd>?</kbd> This help
           </li>
           <li>

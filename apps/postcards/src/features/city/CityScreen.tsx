@@ -4,6 +4,7 @@ import { useVisits, findByPlace } from "../../lib/store/useVisits";
 import { useStories } from "../../lib/store/useStories";
 import { useUi } from "../../lib/store/useUi";
 import { placeKey } from "../../lib/schema/helpers";
+import { placesOf } from "../journal/postcardModel";
 import { countryFlag, formatDate, formatInt, formatKm } from "../../lib/format/format";
 import { haversineKm } from "../travel/distance";
 import { articleUrl, searchUrl } from "../../lib/wikivoyage";
@@ -81,11 +82,13 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
   const selectPlace = useUi((s) => s.selectPlace);
   const openJournalDraft = useUi((s) => s.openJournalDraft);
 
-  // The page serves cities, World Heritage monuments, airports, and your own
-  // custom places (ids don't collide: cities are numeric/slug, airports IATA).
+  // The page serves cities, World Heritage monuments, airports, railway stations,
+  // and your own custom places (ids don't collide: cities are numeric/slug,
+  // airports IATA, stations Wikidata QIDs).
   const city = ref.cityById(cityId);
   const monument = !city ? ref.heritageById(cityId) : undefined;
   const airport = !city && !monument ? ref.airportById(cityId) : undefined;
+  const station = !city && !monument && !airport ? ref.stationById(cityId) : undefined;
   const airportName = airport ? `${airport.name} (${airport.id})` : undefined;
   const visit = city
     ? findByPlace(visits, { kind: "city", id: city.id })
@@ -93,9 +96,13 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
       ? findByPlace(visits, { kind: "heritage", id: monument.id })
       : airport
         ? findByPlace(visits, { kind: "airport", id: airport.id })
-        : findByPlace(visits, { kind: "custom", id: cityId });
+        : station
+          ? findByPlace(visits, { kind: "station", id: station.id })
+          : findByPlace(visits, { kind: "custom", id: cityId });
   const liveCustom =
-    !city && !monument && !airport && visit?.place.kind === "custom" ? visit.place : null;
+    !city && !monument && !airport && !station && visit?.place.kind === "custom"
+      ? visit.place
+      : null;
   // A custom place exists ONLY as its visit's embedded PlaceRef — remember it so
   // unchecking "Been there" on this very page doesn't collapse the header to
   // "Unknown place" and strand the user (the toggles must stay to re-add it).
@@ -105,40 +112,49 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
     liveCustom ?? (lastCustom.current?.id === cityId ? lastCustom.current.place : null);
 
   const name =
-    city?.name ?? monument?.name ?? airportName ?? customPlace?.name ?? t("city.unknownPlace");
+    city?.name ??
+    monument?.name ??
+    airportName ??
+    station?.name ??
+    customPlace?.name ??
+    t("city.unknownPlace");
   const cc =
     city?.countryIso2 ??
     monument?.countryIso2 ??
     airport?.countryIso2 ??
+    station?.countryIso2 ??
     customPlace?.countryId ??
     "";
   const country = ref.countryByIso2(cc);
   const region = city?.subdivisionId ? ref.subdivisionById(city.subdivisionId)?.name : null;
-  const lat = city?.lat ?? (monument && (monument.lat !== 0 || monument.lon !== 0) ? monument.lat : null) ?? airport?.lat ?? customPlace?.lat ?? null;
-  const lon = city?.lon ?? (monument && (monument.lat !== 0 || monument.lon !== 0) ? monument.lon : null) ?? airport?.lon ?? customPlace?.lon ?? null;
+  const lat = city?.lat ?? (monument && (monument.lat !== 0 || monument.lon !== 0) ? monument.lat : null) ?? airport?.lat ?? station?.lat ?? customPlace?.lat ?? null;
+  const lon = city?.lon ?? (monument && (monument.lat !== 0 || monument.lon !== 0) ? monument.lon : null) ?? airport?.lon ?? station?.lon ?? customPlace?.lon ?? null;
   const place = city
     ? { kind: "city" as const, id: city.id, name: city.name, countryId: city.countryIso2 }
     : monument
       ? { kind: "heritage" as const, id: monument.id, name: monument.name, countryId: monument.countryIso2 }
       : airport
         ? { kind: "airport" as const, id: airport.id, name: airportName!, countryId: airport.countryIso2 }
-        : customPlace;
+        : station
+          ? { kind: "station" as const, id: station.id, name: station.name, countryId: station.countryIso2 }
+          : customPlace;
 
   // Outbound reference links use titles from the SOURCE record, not the display
   // `name` (which carries the airport's "(IATA)" suffix). Wikivoyage has CITY
   // guides, not airport pages, so an airport links to its home city. A custom
   // (user-invented) place has no reference article, so we point at SEARCH — never
   // a direct article that would 404 and imply facts we don't hold.
-  const isCustom = !city && !monument && !airport;
-  const wpTitle = city?.name ?? monument?.name ?? airport?.name ?? name;
+  const isCustom = !city && !monument && !airport && !station;
+  const wpTitle = city?.name ?? monument?.name ?? airport?.name ?? station?.name ?? name;
   const wvTitle =
-    city?.name ?? monument?.name ?? (airport ? airport.city || airport.name : name);
+    city?.name ?? monument?.name ?? (airport ? airport.city || airport.name : station?.name ?? name);
   const wikipediaHref = isCustom ? wikipediaSearchUrl(name) : wikipediaUrl(wpTitle);
   const wikivoyageHref = isCustom ? searchUrl(name) : articleUrl(wvTitle);
 
-  // This place's journal stories (already newest-first in the store).
+  // This place's journal stories (already newest-first in the store). A postcard can
+  // span several places (spec 020), so match if ANY of its places is this one.
   const placeStories = useMemo(
-    () => (place ? stories.filter((s) => placeKey(s.place) === placeKey(place)) : []),
+    () => (place ? stories.filter((s) => placesOf(s).some((p) => placeKey(p) === placeKey(place))) : []),
     [stories, place],
   );
 

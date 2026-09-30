@@ -12,6 +12,10 @@ export function coordsOf(place: PlaceRef, ref: ReferenceData): { lon: number; la
     const a = ref.airportById(place.id);
     return a ? { lon: a.lon, lat: a.lat } : null;
   }
+  if (place.kind === "station") {
+    const s = ref.stationById(place.id);
+    return s ? { lon: s.lon, lat: s.lat } : null;
+  }
   if (place.kind === "heritage") {
     const h = ref.heritageById(place.id);
     // Some sites have no coordinate in the source (stored as 0,0) — treat as unknown.

@@ -7,6 +7,7 @@ import { LAND_OUTLINE } from "../../lib/publish/landOutline";
 import type { Story, PlaceRef } from "../../lib/schema/models";
 import type { ReferenceData } from "../../lib/reference/types";
 import { useT } from "../../lib/i18n";
+import { placesOf } from "./postcardModel";
 
 // A self-contained SVG map — the same embedded public-domain land silhouette the
 // published reader draws (offline, nothing fetched), fit to YOUR story places via
@@ -35,6 +36,10 @@ function coordOf(ref: ReferenceData, p: PlaceRef): { lon: number; lat: number } 
     const a = ref.airportById(p.id);
     return a ? { lon: a.lon, lat: a.lat } : null;
   }
+  if (p.kind === "station") {
+    const s = ref.stationById(p.id);
+    return s ? { lon: s.lon, lat: s.lat } : null;
+  }
   if (p.kind === "custom") {
     return p.lat != null && p.lon != null ? { lon: p.lon, lat: p.lat } : null;
   }
@@ -55,22 +60,26 @@ export function StoryMap({ stories }: { stories: Story[] }) {
       string,
       { key: string; name: string; countryId: string; id: string; lon: number; lat: number; count: number }
     >();
+    // A postcard can span several places (and a place-less one plots nowhere): count
+    // an entry once per place it's about.
     for (const s of stories) {
-      const c = coordOf(ref, s.place);
-      if (!c) continue;
-      const k = placeKey(s.place);
-      const g = m.get(k);
-      if (g) g.count++;
-      else
-        m.set(k, {
-          key: k,
-          name: s.place.name,
-          countryId: s.place.countryId,
-          id: s.place.id,
-          lon: c.lon,
-          lat: c.lat,
-          count: 1,
-        });
+      for (const place of placesOf(s)) {
+        const c = coordOf(ref, place);
+        if (!c) continue;
+        const k = placeKey(place);
+        const g = m.get(k);
+        if (g) g.count++;
+        else
+          m.set(k, {
+            key: k,
+            name: place.name,
+            countryId: place.countryId,
+            id: place.id,
+            lon: c.lon,
+            lat: c.lat,
+            count: 1,
+          });
+      }
     }
     return [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [stories, ref]);

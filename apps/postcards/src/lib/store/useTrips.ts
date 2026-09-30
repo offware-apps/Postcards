@@ -19,6 +19,8 @@ interface TripsState {
     mode?: TravelMode;
     /** Per-leg transport (spec 019); omitted when every leg uses `mode`. */
     legModes?: TravelMode[];
+    /** Per-stop dates (spec 021), aligned to `stops`; omitted when none are set. */
+    stopDates?: (string | null)[];
     date?: string | null;
     carrier?: string | null;
     note?: string | null;
@@ -28,7 +30,10 @@ interface TripsState {
   updateTrip: (
     tripId: string,
     changes: Partial<
-      Pick<Trip, "from" | "to" | "stops" | "mode" | "legModes" | "date" | "carrier" | "note" | "name">
+      Pick<
+        Trip,
+        "from" | "to" | "stops" | "mode" | "legModes" | "stopDates" | "date" | "carrier" | "note" | "name"
+      >
     >,
   ) => Promise<void>;
   removeTrip: (tripId: string) => Promise<void>;
@@ -49,6 +54,7 @@ export const useTrips = create<TripsState>((set, get) => ({
     stops,
     mode = "flight",
     legModes,
+    stopDates,
     date = null,
     carrier = null,
     note = null,
@@ -66,6 +72,9 @@ export const useTrips = create<TripsState>((set, get) => ({
       // Only carry per-leg modes when a leg actually differs from `mode` (a
       // uniform trip stays lean and byte-identical to a pre-legModes file).
       ...(legModes && legModes.length ? { legModes } : {}),
+      // Only carry per-stop dates when at least one is set — an all-null/absent
+      // array never persists (stays byte-identical to a pre-stopDates file).
+      ...(stopDates && stopDates.some((d) => d) ? { stopDates } : {}),
       date,
       carrier,
       note,
@@ -93,6 +102,9 @@ export const useTrips = create<TripsState>((set, get) => ({
     // Drop `legModes` when it's cleared (a uniform-mode edit), so the trip never
     // keeps a stale per-leg array and stays lean.
     if ("legModes" in changes && !changes.legModes?.length) delete updated.legModes;
+    // Drop `stopDates` when no date remains, so clearing every per-stop date leaves
+    // the trip byte-identical to one that never had them.
+    if ("stopDates" in changes && !changes.stopDates?.some((d) => d)) delete updated.stopDates;
     set({ trips: get().trips.map((t) => (t.tripId === tripId ? updated : t)) });
     await db.putTrip(updated);
   },

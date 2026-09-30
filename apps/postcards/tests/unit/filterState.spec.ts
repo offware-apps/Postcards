@@ -61,7 +61,7 @@ describe("useFilters store", () => {
     expect(localStorage.getItem("postcards-list-sort")).toBe("az");
   });
 
-  it("persists EVERY value dimension (date/folder/category/country/continent/growth) across sessions", () => {
+  it("persists every PREFERENCE dimension (date/folder/category/continent/growth) across sessions", () => {
     useFilters.getState().set({
       date: { mode: "range", from: "2020-01-01", to: "2020-12-31" },
       folder: "Japan 2019",
@@ -76,17 +76,20 @@ describe("useFilters store", () => {
     expect(blob.date).toEqual({ mode: "range", from: "2020-01-01", to: "2020-12-31" });
     expect(blob.folder).toBe("Japan 2019");
     expect(blob.category).toBe("cultural");
-    expect(blob.country).toBe("FR");
     expect(blob.continent).toBe("Europe");
     expect(blob.favoritesOnly).toBe(true);
     expect(blob.hasPhoto).toBe(true);
     expect(blob.hasNote).toBe(true);
-    // clearAll wipes the persisted blob back to defaults.
+    // country is a transient DRILL-DOWN, never persisted — so the app can't reopen
+    // stuck filtered to one country (it stays in the in-memory store for the session).
+    expect("country" in blob).toBe(false);
+    expect(useFilters.getState().country).toBe("FR"); // still active this session
+
     useFilters.getState().clearAll();
     const cleared = JSON.parse(localStorage.getItem("postcards-filter-extra") ?? "{}");
-    expect(cleared.country).toBe("");
     expect(cleared.folder).toBe("");
     expect(cleared.favoritesOnly).toBe(false);
     expect(cleared.date).toEqual({ mode: "all" });
+    expect(useFilters.getState().country).toBe(""); // clearAll still resets it in-memory
   });
 });
