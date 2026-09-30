@@ -222,5 +222,34 @@ describe("buildJourney (visit photos)", () => {
       "Cairo/ferry",
     ]);
   });
+
+  it("leaves out photos of stories and visits outside the date range", () => {
+    const old: Story = {
+      storyId: "s-old",
+      place: rome,
+      date: "2019-05-05",
+      title: "Years ago",
+      text: "",
+      photos: [{ src: "data:image/png;base64,OLD1", caption: "2019 private" }],
+      addedAt: NOW,
+    };
+    const visit: Visit = {
+      visitId: "v-old",
+      place: rome,
+      status: "visited",
+      favorite: false,
+      photos: [{ src: "data:image/png;base64,OLD2", caption: "visit 2019" }],
+      date: "2019-05-05",
+      note: null,
+      addedAt: NOW,
+    };
+    const trips = [trip("t1", paris, rome, "flight", "2026-05-02")];
+    const input = { visits: [visit], trips, stories: [old], resolveCoords };
+    const captions = (sel: { dateFrom?: string; dateTo?: string }) =>
+      buildJourney(input, { title: "T", ...sel }).steps.flatMap((s) => s.photos.map((p) => p.caption));
+    expect(captions({ dateFrom: "2026-05-01", dateTo: "2026-05-31" })).toEqual([]);
+    // With no range the place's whole gallery still publishes.
+    expect(captions({})).toEqual(["visit 2019", "2019 private"]);
+  });
 });
 

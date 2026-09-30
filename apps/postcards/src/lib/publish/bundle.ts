@@ -94,8 +94,10 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
     for (const p of photos) if (!list.some((q) => q.src === p.src)) list.push(p);
     photosByPlace.set(k, list);
   };
-  for (const v of visits) addPhotos(v.place, v.photos ?? []);
-  for (const s of stories) addPhotos(s.place, s.photos ?? []);
+  // Only photos of records inside the date range: a range is a privacy boundary,
+  // so a 2019 story's photos never ride along on a 2024 journey's step.
+  for (const v of visits) if (inRange(v.date ?? null, sel.dateFrom, sel.dateTo)) addPhotos(v.place, v.photos ?? []);
+  for (const s of stories) if (inRange(s.date, sel.dateFrom, sel.dateTo)) addPhotos(s.place, s.photos ?? []);
 
   // Ordered legs from the selected trips (date first, then a stable original order).
   const wanted = sel.tripIds ? new Set(sel.tripIds) : null;
