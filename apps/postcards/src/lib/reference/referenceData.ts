@@ -486,21 +486,24 @@ async function applyFullGazetteer(impl: ReferenceDataImpl): Promise<boolean> {
 
 /**
  * User-triggered download of the full world city list (~17 MB) — the "rest" that
- * isn't bundled with the app. Records the opt-in (so future launches re-load it
- * from cache), fetches + swaps the set in, and resolves true on success. A no-op
- * that returns true if the full set is already loaded. Never throws.
+ * isn't bundled with the app. Fetches + swaps the set in, resolves true on
+ * success, and only then records it (so future launches re-load it from cache
+ * and Settings shows it downloaded). A no-op that returns true if the full set
+ * is already loaded. Never throws.
  */
 export async function downloadFullCities(): Promise<boolean> {
-  try {
-    localStorage.setItem(FULL_CITIES_KEY, "1");
-  } catch {
-    /* private mode: the download still works this session, just isn't remembered */
-  }
   const impl = instance as ReferenceDataImpl | null;
   if (!impl) return false;
   // Already the full set? (core is 10k; the full set is ~135k.)
-  if (impl.allCities().length >= 100_000) return true;
-  return applyFullGazetteer(impl);
+  const ok = impl.allCities().length >= 100_000 || (await applyFullGazetteer(impl));
+  if (ok) {
+    try {
+      localStorage.setItem(FULL_CITIES_KEY, "1");
+    } catch {
+      /* private mode: the download still works this session, just isn't remembered */
+    }
+  }
+  return ok;
 }
 
 // Bumped when the full gazetteer replaces the core set, so React consumers can
