@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseRoute, routeHash } from "../../src/app/route";
+import { HOME, parseRoute, routeHash } from "../../src/app/route";
 
 describe("app: the screen in the address", () => {
   it("round-trips a tab, a city page and a country page", () => {
     for (const r of [
       { tab: "places" as const, cityPageId: null, countryPageId: null },
+      { tab: "map" as const, cityPageId: null, countryPageId: "JP" },
       { tab: "map" as const, cityPageId: "2988507", countryPageId: null },
       { tab: "stats" as const, cityPageId: null, countryPageId: "FR" },
       { tab: "journal" as const, cityPageId: "custom:a b/c", countryPageId: null },
@@ -13,6 +14,11 @@ describe("app: the screen in the address", () => {
     expect(routeHash({ tab: "stats", cityPageId: null, countryPageId: "FR" })).toBe(
       "#/stats/country/FR",
     );
+  });
+
+  it("keeps the home screen at the bare address", () => {
+    expect(routeHash(HOME)).toBe("");
+    expect(parseRoute("")).toBeNull();
   });
 
   it("names nothing for an empty, foreign or malformed hash", () => {

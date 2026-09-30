@@ -3,7 +3,9 @@ import type { Tab } from "../lib/store/useUi";
 // The screen in the address bar, so a reload lands where you were and a link
 // opens that screen: `#/places`, `#/map/city/2988507`, `#/stats/country/FR`.
 // Hash-based because static hosts (GitHub Pages, the native wrap) serve only
-// the one index.html. The trip composer is an unsaved form, so it stays out.
+// the one index.html. The home screen (the map, no page) is the bare address,
+// and so is any fragment that names no screen. The trip composer is an
+// unsaved form, so it stays out.
 
 export interface Route {
   tab: Tab;
@@ -13,7 +15,11 @@ export interface Route {
 
 const TABS: readonly Tab[] = ["map", "places", "trips", "journal", "stats", "settings"];
 
+export const HOME: Route = { tab: "map", cityPageId: null, countryPageId: null };
+
+/** The hash naming a screen; "" for home. */
 export function routeHash(r: Route): string {
+  if (r.tab === "map" && !r.cityPageId && !r.countryPageId) return "";
   const page = r.cityPageId
     ? `/city/${encodeURIComponent(r.cityPageId)}`
     : r.countryPageId

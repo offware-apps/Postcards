@@ -32,7 +32,7 @@ import { useState } from "react";
 import { useInstallPrompt } from "../lib/hooks/useInstallPrompt";
 import { useAutoSync } from "../lib/hooks/useAutoSync";
 import { useT, type MessageKey } from "../lib/i18n";
-import { parseRoute, routeHash, type Route } from "./route";
+import { HOME, parseRoute, routeHash, type Route } from "./route";
 import { useReferenceExtrasPending } from "../lib/reference/useGazetteer";
 
 // Code-split MapLibre so it loads only when the map is shown.
@@ -244,13 +244,17 @@ export function App() {
     const state = history.state as { pc?: unknown } | null;
     let at = typeof state?.pc === "number" ? state.pc : 0;
     const hashNow = () => routeHash(currentRoute(useUi.getState()));
-    history.replaceState({ ...state, pc: at }, "", hashNow());
+    const onScreen = () => routeHash(parseRoute(location.hash) ?? HOME) === hashNow();
+    // The screen came from the address, so it is left as it is (its query and
+    // a fragment naming no screen included).
+    history.replaceState({ ...state, pc: at }, "");
     // Point the address at the screen: a new entry when the screen moved, and
     // one spare entry above the first, so Back from home has one to consume.
     const sync = () => {
-      if (location.hash === hashNow() && at > 0) return;
+      if (onScreen() && at > 0) return;
       at += 1;
-      history.pushState({ pc: at }, "", hashNow());
+      const url = onScreen() ? undefined : hashNow() || location.pathname + location.search;
+      history.pushState({ pc: at }, "", url);
     };
     sync();
     const unsubscribe = useUi.subscribe((s, prev) => {

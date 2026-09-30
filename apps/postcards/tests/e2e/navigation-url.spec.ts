@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 // reload lands where you were and the browser's Back and Forward walk screens.
 test("a reload keeps the tab and the open page; Back and Forward walk them", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveURL(/#\/map$/);
+  await expect(page.getByText("Cities in view")).toBeVisible();
   await page.getByRole("button", { name: "Places", exact: true }).click();
   await expect(page).toHaveURL(/#\/places$/);
   await page.reload();
@@ -26,6 +26,10 @@ test("a reload keeps the tab and the open page; Back and Forward walk them", asy
   await page.goForward();
   await expect(page).toHaveURL(/#\/places\/country\/FR$/);
   await expect(heading).toBeVisible();
+
+  // Home is the bare address.
+  await page.getByRole("button", { name: "Map", exact: true }).click();
+  await expect(page).toHaveURL(/localhost:4173\/$/);
 });
 
 test("Back at the home screen stays in the app", async ({ page }) => {
@@ -33,6 +37,6 @@ test("Back at the home screen stays in the app", async ({ page }) => {
   await expect(page.getByText("Cities in view")).toBeVisible();
   await page.goBack();
   await page.goBack();
-  await expect(page).toHaveURL(/localhost:4173\/#\/map$/);
+  await expect(page).toHaveURL(/localhost:4173\/$/);
   await expect(page.getByText("Cities in view")).toBeVisible();
 });
