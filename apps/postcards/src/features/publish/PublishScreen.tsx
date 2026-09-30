@@ -17,6 +17,7 @@ import { countryFlag, formatDate, formatInt, formatKm } from "../../lib/format/f
 import { MODE_GLYPH } from "../travel/modes";
 import { useT } from "../../lib/i18n";
 import type { Trip } from "../../lib/schema/models";
+import { slugify } from "../../lib/publish/site";
 
 type Scope = "all" | "trip" | "folder" | "range";
 
@@ -38,20 +39,6 @@ function saveRepo(g: { owner: string; repo: string; branch: string }): void {
   } catch {
     /* private mode: not remembered */
   }
-}
-
-/** A URL-safe subdirectory name for one travel, e.g. "Japan 2024" → "japan-2024".
- *  Each published travel lives in its own folder on the same repo so journeys
- *  coexist instead of overwriting the site root. */
-function slugify(name: string): string {
-  const s = name
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "") // strip combining diacritics
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-  return s || "journey";
 }
 
 /** A minimal, inert root landing page listing every published travel folder, so
