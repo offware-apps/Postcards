@@ -78,9 +78,11 @@ export function computeCoverage(
   const countriesVisited = [...visitedCountryIds(visits)].filter((iso2) =>
     countryInScope(ref, iso2, scope),
   ).length;
+  // Cities honour the scope like their denominator below, so a territory's city
+  // never counts toward a total that leaves the territory out.
   const cityIds = new Set(
     onlyVisited(visits)
-      .filter((v) => v.place.kind === "city")
+      .filter((v) => v.place.kind === "city" && countryInScope(ref, v.place.countryId, scope))
       .map((v) => v.place.id),
   );
   const airportIds = new Set(
