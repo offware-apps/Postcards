@@ -1,21 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // Spec 020, US3 — a postcard can span several places and a date range.
-
-async function mark(page: Page, city: string): Promise<void> {
-  await page.getByLabel("Search a city or country").fill(city);
-  await page.getByRole("button", { name: `Mark ${city} visited` }).first().click();
-  await page.keyboard.press("Escape");
-}
 
 test("a postcard spans two places and a date range; it shows under each place", async ({
   page,
 }: {
   page: Page;
 }) => {
-  await page.goto("/");
-  for (const c of ["Paris", "Lyon"]) await mark(page, c);
+  await openAppWithVisits(page, ["Paris", "Lyon"]);
 
   await gotoTab(page, "Journal");
   await page.keyboard.press("w");

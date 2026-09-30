@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // Per-stop dates (spec 021): each waypoint in a reconstructed journey can carry the
 // day you were there. The date belongs to the stop, so it survives save + reopen and
@@ -9,12 +9,7 @@ test("set a date per stop; it persists across save + reopen", async ({
 }: {
   page: Page;
 }) => {
-  await page.goto("/");
-  for (const c of ["Paris", "Tokyo"]) {
-    await page.getByLabel("Search a city or country").fill(c);
-    await page.getByRole("button", { name: `Mark ${c} visited` }).first().click();
-    await page.keyboard.press("Escape");
-  }
+  await openAppWithVisits(page, ["Paris", "Tokyo"]);
   await gotoTab(page, "Trips");
   await page.getByRole("button", { name: "Reconstruct a journey" }).click();
   await page.getByRole("button", { name: "Add Paris to the trip" }).click();
