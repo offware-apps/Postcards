@@ -36,3 +36,10 @@ jobs:
         run: pnpm --filter postcards exec playwright install --with-deps chromium
       - name: E2E tests (incl. a11y gate)
         run: pnpm --filter postcards test:e2e
+      - name: Upload e2e traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: apps/postcards/test-results/
+          retention-days: 14

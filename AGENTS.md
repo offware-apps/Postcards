@@ -40,8 +40,8 @@ observed working:
 4. `npx playwright test` — e2e green. `smoke`/`photo`/`countryscope`/`import-csv`
    can flake under full-suite CPU load; re-run the file in isolation to confirm,
    CI retry absorbs it.
-5. For any UI change, **screenshot and eyeball it** (Chromium is at
-   `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`).
+5. For any UI change, **screenshot and eyeball it** (Playwright's Chromium,
+   from `npx playwright install chromium` in `apps/postcards`).
 6. Commit with a clear message. **Never** put the model identifier in commits,
    PRs, or code — chat only.
 7. Deploy: push HEAD to the feature branch **and** fast-forward the deployed
