@@ -8,7 +8,9 @@ const FORMULA_PREFIXES = new Set(["=", "+", "-", "@"]);
 /**
  * Remove characters that are invisible or can spoof text direction:
  * - C0 AND C1 control characters (0x00–0x1F, 0x7F, 0x80–0x9F; except tab 9 / LF 10),
- * - zero-width characters (U+200B–200D, U+2060 word joiner, U+FEFF),
+ * - zero-width characters (U+200B space, U+2060 word joiner, U+FEFF), but not
+ *   the joiners U+200C/U+200D, which emoji sequences and Persian or Indic
+ *   spelling need,
  * - directional marks (U+200E LRM, U+200F RLM, U+061C ALM),
  * - Unicode bidirectional overrides/isolates (U+202A–202E, U+2066–2069)
  *   — the "Trojan Source" class of visual-spoofing attacks.
@@ -23,8 +25,7 @@ function stripControlChars(input: string): string {
       (code >= 0 && code <= 31 && code !== 9 && code !== 10) ||
       code === 127 ||
       (code >= 0x80 && code <= 0x9f);
-    const isZeroWidth =
-      code === 0x200b || code === 0x200c || code === 0x200d || code === 0x2060 || code === 0xfeff;
+    const isZeroWidth = code === 0x200b || code === 0x2060 || code === 0xfeff;
     const isDirMark = code === 0x200e || code === 0x200f || code === 0x061c; // LRM / RLM / ALM
     const isBidi = (code >= 0x202a && code <= 0x202e) || (code >= 0x2066 && code <= 0x2069);
     if (!isC0C1 && !isZeroWidth && !isDirMark && !isBidi) out += ch;

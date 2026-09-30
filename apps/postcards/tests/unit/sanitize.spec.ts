@@ -23,6 +23,13 @@ describe("sanitizeText (inert data)", () => {
     expect(sanitizeText("Paris, France")).toBe("Paris, France");
   });
 
+  it("keeps the zero-width joiners that emoji and scripts need", () => {
+    const zwj = "\u200d", zwnj = "\u200c";
+    const coder = `👩${zwj}💻`; // one emoji, not a woman and a laptop
+    const persian = `می${zwnj}خواهم`; // the joiner is part of the spelling
+    expect(sanitizeText(`with ${coder} and ${persian}`)).toBe(`with ${coder} and ${persian}`);
+  });
+
   it("strips zero-width and bidi-override characters (Trojan Source)", () => {
     // zero-width space + right-to-left override embedded in text
     const evil = "ad‮min​ istrator";
