@@ -1,13 +1,29 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { render, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { feature } from "topojson-client";
 import type { FeatureCollection, MultiPolygon, Polygon, Position } from "geojson";
 import { unwrapAntimeridian } from "../../src/features/map/antimeridian";
+import { getLand } from "../../src/features/travel/landGeometry";
+import { CountryCoverageMap } from "../../src/features/stats/CountryCoverageMap";
+import type { Visit } from "../../src/lib/schema/models";
+import { useVisits } from "../../src/lib/store/useVisits";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const GEOMETRY = join(here, "..", "..", "public", "basemap", "countries-50m.json");
+
+// The app fetches the bundled geometry; serve it from disk.
+beforeAll(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => JSON.parse(readFileSync(GEOMETRY, "utf8")) })),
+  );
+});
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 function countries(): FeatureCollection<Polygon | MultiPolygon> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,5 +110,43 @@ describe("map: country shapes across the antimeridian", () => {
   it("leaves a country that does not cross untouched", () => {
     const before = countries().features.find((f) => f.properties?.name === "France")!;
     expect(byName("France").geometry).toEqual(before.geometry);
+  });
+});
+
+describe("route and coverage maps: the land they share", () => {
+  it("arrives with no edge spanning the map", async () => {
+    const land = (await getLand())!;
+    for (const f of land.features) {
+      const g = f.geometry as Polygon | MultiPolygon;
+      expect(widestEdge(rings(g)), f.properties?.name).toBeLessThan(180);
+    }
+  });
+
+  /** Every point of the country silhouette's path, in view-box pixels. */
+  async function coverageLand(iso2: string, name: string): Promise<[number, number][][]> {
+    const { container } = render(<CountryCoverageMap iso2={iso2} name={name} />);
+    await waitFor(() => expect(container.querySelector("path.ccov-land")).toBeTruthy());
+    const d = container.querySelector("path.ccov-land")!.getAttribute("d")!;
+    return d
+      .split("Z")
+      .filter(Boolean)
+      .map((sub) => [...sub.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((m) => [+m[1]!, +m[2]!]));
+  }
+
+  it("draws Fiji with no stroke across the card", async () => {
+    for (const sub of await coverageLand("FJ", "Fiji"))
+      for (let k = 1; k < sub.length; k++) expect(Math.abs(sub[k]![0] - sub[k - 1]![0])).toBeLessThan(160);
+  });
+
+  it("keeps Russia's land and towns east of 180° on the card", async () => {
+    // Provideniya, Chukotka, at 173°W.
+    const place = { kind: "city", id: "4031574", countryId: "RU" };
+    useVisits.setState({ visits: [{ status: "visited", place } as unknown as Visit] });
+    const xs = (await coverageLand("RU", "Russia")).flat().map((p) => p[0]);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(320);
+    const dot = Number(document.querySelector("circle.ccov-visited")!.getAttribute("cx"));
+    expect(dot).toBeGreaterThan(Math.max(...xs) * 0.9);
+    useVisits.setState({ visits: [] });
   });
 });

@@ -1,5 +1,6 @@
-import type { FeatureCollection } from "geojson";
+import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { feature } from "topojson-client";
+import { unwrapAntimeridian } from "../map/antimeridian";
 
 // Bundled, offline land geometry for the composer's route map — the SAME public
 // Natural Earth asset the main map uses (public domain, SW-precached), fetched
@@ -19,7 +20,9 @@ export function getLand(): Promise<FeatureCollection | null> {
         if (!res.ok) return null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const topo: any = await res.json();
-        return feature(topo, topo.objects.countries) as unknown as FeatureCollection;
+        return unwrapAntimeridian(
+          feature(topo, topo.objects.countries) as unknown as FeatureCollection<Polygon | MultiPolygon>,
+        );
       } catch {
         return null;
       }
