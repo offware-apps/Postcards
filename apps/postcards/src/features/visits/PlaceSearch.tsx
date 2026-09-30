@@ -60,7 +60,7 @@ export function PlaceSearch({
   // if the next keystroke lands first). notFound keys on the deferred query so
   // the add-place form doesn't flash while results lag a beat behind.
   const dq = useDeferredValue(q);
-  // Airports and heritage sites land a moment after first paint: search again then.
+  // Airports, heritage sites and stations land a moment after first paint: search again then.
   const gazGen = useGazetteerGeneration();
   const results = useMemo(() => searchPlaces(ref, dq), [ref, dq, gazGen]);
   const notFound = dq.trim().length >= 2 && results.length === 0;

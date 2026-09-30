@@ -46,7 +46,15 @@ describe("strings follow the language", () => {
     const { getByRole } = render(<ShortcutsHelp onClose={() => {}} />);
     const dialog = getByRole("dialog");
     expect(dialog.getAttribute("aria-label")).toBe("Raccourcis clavier");
-    for (const en of ["Keyboard shortcuts", "Search", "switch sections", "This help", "Close"])
+    for (const en of [
+      "Keyboard shortcuts",
+      "Search",
+      "switch sections",
+      "Write today's postcard",
+      "starts another",
+      "This help",
+      "Close",
+    ])
       expect(dialog.textContent).not.toContain(en);
   });
 

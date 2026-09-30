@@ -51,20 +51,20 @@ import { BackupReminder, backUpNow } from "../backup/Backup";
 // STATUS/scope (which of them) — plus a separate COLLECTIONS cluster (Moments /
 // Photos / Passport) for the cross-cutting views that are not a place kind. No
 // concept lives in two controls: each place kind appears only on the kind axis.
-type Kind = "all" | "cities" | "monuments" | "airports" | "countries";
+type Kind = "all" | "cities" | "monuments" | "airports" | "stations" | "countries";
 type Status = "all" | "visited" | "wishlist" | "favorites" | "notVisited";
 type Collection = "moments" | "photos" | "passport";
 
 // Places owns status via its axis, and mode is the map's; neither is a filter here.
 const LIST_EXCLUDE: (keyof FilterState)[] = ["status", "mode"];
-// A world browse (Cities / Monuments / Airports) lists reference places, not your
+// A world browse (Cities / Monuments / Stations / Airports) lists reference places, not your
 // records: date, folder and the favourite / photo / note toggles describe a saved
 // record, and each kind keeps its own order. The panel leaves them out there and no
 // chip counts them, rather than offering controls that do nothing.
 const BROWSE_IGNORED: (keyof FilterState)[] = ["date", "folder", "sort", "favoritesOnly", "hasPhoto", "hasNote"];
 const BROWSE_EXCLUDE: (keyof FilterState)[] = [...LIST_EXCLUDE, ...BROWSE_IGNORED];
 
-const KINDS: readonly Kind[] = ["all", "cities", "monuments", "airports", "countries"];
+const KINDS: readonly Kind[] = ["all", "cities", "monuments", "stations", "airports", "countries"];
 const STATUSES: readonly Status[] = ["all", "visited", "wishlist", "favorites", "notVisited"];
 
 // The three axis/collection selections persist, so returning to Places lands where
@@ -129,6 +129,9 @@ function mapRequest(view: PlacesView): { kind?: Kind; status?: Status; collectio
       // The airports you've actually been through (the count these tiles show),
       // not the whole world of airports.
       return { kind: "airports", status: "visited", collection: null };
+    case "stations":
+      // The stations you've actually passed through, not the whole world of them.
+      return { kind: "stations", status: "visited", collection: null };
     case "moments":
       return { collection: "moments" };
     case "passport":
@@ -150,6 +153,10 @@ function placeMeta(
   if (v.place.kind === "airport") {
     const a = ref.airportById(v.place.id);
     return { coord: a ? { lon: a.lon, lat: a.lat } : null, sub: `${t("places.meta.airport")} · ${country}` };
+  }
+  if (v.place.kind === "station") {
+    const s = ref.stationById(v.place.id);
+    return { coord: s ? { lon: s.lon, lat: s.lat } : null, sub: `${t("places.meta.station")} · ${country}` };
   }
   if (v.place.kind === "heritage") {
     const h = ref.heritageById(v.place.id);
@@ -317,7 +324,9 @@ const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: 
       ? heritageGlyph(ref.heritageById(v.place.id)?.category)
       : v.place.kind === "airport"
         ? "✈️"
-        : countryFlag(v.place.countryId);
+        : v.place.kind === "station"
+          ? "🚉"
+          : countryFlag(v.place.countryId);
 
   return (
     <li className={"city-row compact" + (menuOpen ? " menu-open" : "")}>
@@ -409,7 +418,9 @@ const BrowseRowItem = memo(function BrowseRowItem({ r }: { r: BrowseRow }) {
       ? countryFlag(r.countryIso2)
       : r.kind === "airport"
         ? "✈️"
-        : heritageGlyph(r.category);
+        : r.kind === "station"
+          ? "🚉"
+          : heritageGlyph(r.category);
   // Only a real dataset category becomes a tag — never an invented one (FR-008).
   const cat =
     r.kind === "heritage" &&
@@ -512,7 +523,7 @@ export function PlacesScreen() {
   // map has no country mode), so it leaves the mode untouched.
   useEffect(() => {
     if (kind === "countries") return;
-    const target: FilterMode = kind; // "all" | "cities" | "monuments" | "airports"
+    const target: FilterMode = kind; // "all" | "cities" | "monuments" | "airports" | "stations"
     if (useFilters.getState().mode !== target) useFilters.getState().set({ mode: target });
   }, [kind]);
 
@@ -693,13 +704,13 @@ export function PlacesScreen() {
     return arr;
   }, [groupBy, personalShown, ref, t]);
 
-  // ── World browse (kind = Cities / Monuments / Airports): the whole gazetteer of
-  // the chosen kind, status-overlaid, via the tested pure engine. ────────────────
+  // ── World browse (kind = Cities / Monuments / Airports / Stations): the whole
+  // gazetteer of the chosen kind, status-overlaid, via the tested pure engine. ────
   // Paged: build only the `shown` rows we render, plus a `hasMore` probe — so a
   // visit toggle or filter change never materialises thousands of rows (that was the
   // list lag), and "load more" can page uncapped through the whole set.
   const browse = useMemo(() => {
-    if (kind !== "cities" && kind !== "monuments" && kind !== "airports")
+    if (kind !== "cities" && kind !== "monuments" && kind !== "airports" && kind !== "stations")
       return { rows: [] as BrowseRow[], hasMore: false };
     return browseList(kind, status, currentFilters(filters), ref, visits, deferredFilter.trim(), shown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -738,7 +749,8 @@ export function PlacesScreen() {
   // The active dimensions Places actually acts on (status + map mode are excluded —
   // status is the axis, mode is map-only — and so is what a world browse ignores).
   // Drives the Filter button's badge.
-  const isBrowseKind = kind === "cities" || kind === "monuments" || kind === "airports";
+  const isBrowseKind =
+    kind === "cities" || kind === "monuments" || kind === "airports" || kind === "stations";
   const summaryExclude = isBrowseKind ? BROWSE_EXCLUDE : LIST_EXCLUDE;
   const placesFilterChips = useMemo(
     () => activeChips(currentFilters(filters), t, ref).filter((c) => !summaryExclude.includes(c.field)),

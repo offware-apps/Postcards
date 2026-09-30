@@ -5,6 +5,7 @@ import { StatsView } from "../features/stats/StatsView";
 import { PlacesScreen } from "../features/visits/PlacesScreen";
 import { TravelScreen } from "../features/travel/TravelScreen";
 import { TripComposer } from "../features/travel/TripComposer";
+import { StoryComposer } from "../features/journal/StoryComposer";
 import { JournalScreen } from "../features/journal/JournalScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { CityScreen } from "../features/city/CityScreen";
@@ -29,7 +30,7 @@ import {
   InfoIcon,
   StarIcon,
 } from "../ui/icons";
-import { useState } from "react";
+import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useInstallPrompt } from "../lib/hooks/useInstallPrompt";
 import { useAutoSync } from "../lib/hooks/useAutoSync";
 import { useT, type MessageKey } from "../lib/i18n";
@@ -65,7 +66,7 @@ const DIALOG_LAYER_SELECTOR =
 const initialRoute = typeof location === "undefined" ? null : parseRoute(location.hash);
 if (initialRoute) useUi.setState(initialRoute);
 
-/** What the address shows for the current screen (the trip composer stays out). */
+/** What the address shows for the current screen (the composers stay out). */
 function currentRoute(s: Route): Route {
   return { tab: s.tab, cityPageId: s.cityPageId, countryPageId: s.countryPageId };
 }
@@ -89,6 +90,7 @@ export function App() {
   const cityPageId = useUi((s) => s.cityPageId);
   const countryPageId = useUi((s) => s.countryPageId);
   const tripEditId = useUi((s) => s.tripEditId);
+  const storyEditId = useUi((s) => s.storyEditId);
   const [showHelp, setShowHelp] = useState(false);
   const { canInstall, install } = useInstallPrompt();
   const [showAbout, setShowAbout] = useState(false);
@@ -107,14 +109,27 @@ export function App() {
   // the tab already re-renders on change, so a ref is enough to remember it.
   const mapShown = useRef(false);
   if (tab === "map") mapShown.current = true;
-  const mapVisible = tab === "map" && !cityPageId && !countryPageId && !tripEditId;
-  // Airports and heritage sites land a moment after the first paint. The map,
-  // Places, Stats and country pages refresh when they do; trips (distances),
-  // the journal (story maps) and a place's page read them once, so a reload
-  // straight onto one waits that moment instead of showing it half-resolved.
+  // Journal-nav long-press → "write today" (spec 020). A short tap opens the feed;
+  // a press-and-hold opens the composer. `W` is the keyboard-accessible equivalent.
+  const navPressTimer = useRef<number | null>(null);
+  const navPressStart = useRef<{ x: number; y: number } | null>(null);
+  const navPressFired = useRef(false);
+  const cancelNavPress = () => {
+    if (navPressTimer.current != null) {
+      clearTimeout(navPressTimer.current);
+      navPressTimer.current = null;
+    }
+  };
+  const mapVisible = tab === "map" && !cityPageId && !countryPageId && !tripEditId && !storyEditId;
+  // Airports, heritage sites and stations land a moment after the first paint.
+  // The map, Places, Stats and country pages refresh when they do; trips
+  // (distances), the journal and its composer (story maps) and a place's page
+  // read them once, so a reload straight onto one waits that moment instead of
+  // showing it half-resolved.
   const extrasPending = useReferenceExtrasPending();
   const waitForExtras =
-    extrasPending && (!!cityPageId || !!tripEditId || tab === "trips" || tab === "journal");
+    extrasPending &&
+    (!!cityPageId || !!tripEditId || !!storyEditId || tab === "trips" || tab === "journal");
   const firstRender = useRef(true);
 
   // Scroll memory. <main> is the single scroll container reused across tabs and
@@ -124,14 +139,16 @@ export function App() {
   // you exactly where you were. A CITY page is the exception — it always opens at
   // the TOP (you drilled into a new thing), so its scroll is never saved. A country
   // page IS a long list you open cities from, so it's remembered like a tab.
-  const forceTop = !!cityPageId || !!tripEditId;
+  const forceTop = !!cityPageId || !!tripEditId || !!storyEditId;
   const viewKey = cityPageId
     ? `city:${cityPageId}`
     : countryPageId
       ? `country:${countryPageId}`
       : tripEditId
         ? `trip:${tripEditId}`
-        : `tab:${tab}`;
+        : storyEditId
+          ? `story:${storyEditId}`
+          : `tab:${tab}`;
   const scrollTops = useRef<Map<string, number>>(new Map());
   const viewKeyRef = useRef(viewKey);
   const onMainScroll = () => {
@@ -185,7 +202,7 @@ export function App() {
           // step out of a LOCAL sub-view first (Journal's map/timeline, a Places
           // collection), and only walk tab history if it didn't handle it.
           const ui = useUi.getState();
-          if (ui.cityPageId || ui.countryPageId || ui.tripEditId) ui.closePages();
+          if (ui.cityPageId || ui.countryPageId || ui.tripEditId || ui.storyEditId) ui.closePages();
           else if (!runEscapeInterceptors()) ui.goBack();
         }
         return;
@@ -218,6 +235,14 @@ export function App() {
       }
       if (e.key.toLowerCase() === "x") {
         useUi.getState().openPlaces("moments");
+        e.preventDefault();
+        return;
+      }
+      // "Write today" — open the postcard composer dated today, cursor in content
+      // (spec 020, P1). The keyboard-accessible equivalent of the Journal-nav
+      // long-press. Inherits the input-field / dialog-inert guards above.
+      if (e.key.toLowerCase() === "w") {
+        useUi.getState().openStoryComposer("new");
         e.preventDefault();
         return;
       }
@@ -289,8 +314,8 @@ export function App() {
         // The LAST screen: popped the app's own navigation history.
       } else if (landed) {
         // No history of its own (after a reload): the screen this entry names.
-        useUi.setState({ ...landed, tripEditId: null });
-      } else if (ui.cityPageId || ui.countryPageId || ui.tripEditId) {
+        useUi.setState({ ...landed, tripEditId: null, storyEditId: null });
+      } else if (ui.cityPageId || ui.countryPageId || ui.tripEditId || ui.storyEditId) {
         // A detail page with nothing behind it: close it in place — Back must
         // never fall through and quit the app on a city/country page.
         ui.closePages();
@@ -390,20 +415,52 @@ export function App() {
       </p>
 
       <nav className="bottom-nav" aria-label={t("nav.sectionsAria")}>
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            className={"nav-item" + (tab === id ? " active" : "")}
-            aria-current={tab === id ? "page" : undefined}
-            aria-label={t(label)}
-            title={t(label)}
-            onClick={() => setTab(id)}
-          >
-            <Icon />
-            <span aria-hidden>{t(label)}</span>
-          </button>
-        ))}
+        {TABS.map(({ id, label, Icon }) => {
+          const isJournal = id === "journal";
+          const longPress = isJournal
+            ? {
+                onPointerDown: (e: ReactPointerEvent) => {
+                  navPressStart.current = { x: e.clientX, y: e.clientY };
+                  navPressFired.current = false;
+                  cancelNavPress();
+                  navPressTimer.current = window.setTimeout(() => {
+                    navPressTimer.current = null;
+                    navPressFired.current = true;
+                    useUi.getState().openStoryComposer("new");
+                  }, 500);
+                },
+                onPointerMove: (e: ReactPointerEvent) => {
+                  const s = navPressStart.current;
+                  if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > 10) cancelNavPress();
+                },
+                onPointerUp: cancelNavPress,
+                onPointerCancel: cancelNavPress,
+                onPointerLeave: cancelNavPress,
+              }
+            : {};
+          return (
+            <button
+              key={id}
+              type="button"
+              className={"nav-item" + (tab === id ? " active" : "")}
+              aria-current={tab === id ? "page" : undefined}
+              aria-label={t(label)}
+              title={t(label)}
+              onClick={() => {
+                // A long-press that already opened the composer must not also switch tabs.
+                if (isJournal && navPressFired.current) {
+                  navPressFired.current = false;
+                  return;
+                }
+                setTab(id);
+              }}
+              {...longPress}
+            >
+              <Icon />
+              <span aria-hidden>{t(label)}</span>
+            </button>
+          );
+        })}
       </nav>
 
       <main
@@ -437,6 +494,11 @@ export function App() {
               <TripComposer
                 tripId={tripEditId === "new" ? null : tripEditId}
                 onClose={() => useUi.getState().closeTripComposer()}
+              />
+            ) : storyEditId ? (
+              <StoryComposer
+                storyId={storyEditId === "new" ? null : storyEditId}
+                onClose={() => useUi.getState().closeStoryComposer()}
               />
             ) : (
               <>

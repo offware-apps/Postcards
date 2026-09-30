@@ -4,8 +4,8 @@ import type { Tab } from "../lib/store/useUi";
 // opens that screen: `#/places`, `#/map/city/2988507`, `#/stats/country/FR`.
 // Hash-based because static hosts (GitHub Pages, the native wrap) serve only
 // the one index.html. The home screen (the map, no page) is the bare address,
-// and so is any fragment that names no screen. The trip composer is an
-// unsaved form, so it stays out.
+// and so is any fragment that names no screen. The trip and postcard
+// composers are unsaved forms, so they stay out.
 
 export interface Route {
   tab: Tab;

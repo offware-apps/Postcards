@@ -46,6 +46,15 @@ export function searchPlaces(ref: ReferenceData, query: string, limit = 8): Sear
     };
   });
 
+  // Railway stations — name-only (a QID is not a code), like heritage.
+  const stationResults: SearchResult[] = ref.searchStations(q, limit).map((s) => {
+    const country = ref.countryByIso2(s.countryIso2);
+    return {
+      place: { kind: "station", id: s.id, name: s.name, countryId: s.countryIso2 },
+      detail: country ? `Station · ${country.name}` : "Station",
+    };
+  });
+
   // A query typed as an explicit UPPERCASE 3-letter IATA code (e.g. "LAX", "CDG")
   // means the airport — surface it first, ahead of a like-named city ("Laxou").
   // Lowercase/mixed prefix typing ("por", "san") is treated as a place name, so
@@ -60,7 +69,7 @@ export function searchPlaces(ref: ReferenceData, query: string, limit = 8): Sear
       limit * 2,
     );
   }
-  const grouped = [...countryResults, ...cityResults, ...airportResults, ...heritageResults];
+  const grouped = [...countryResults, ...cityResults, ...airportResults, ...stationResults, ...heritageResults];
   // Rank by HOW a name matches, not by what kind it is: "Ista" must put
   // Istanbul (prefix) above Afghanistan (mid-word hit). The sort is stable, so
   // within a rank the kind order above still breaks ties.
@@ -97,12 +106,19 @@ export function searchPlaces(ref: ReferenceData, query: string, limit = 8): Sear
         place: { kind: "airport", id: a.id, name: `${a.name} (${a.id})`, countryId: iso2 },
         detail: `Airport · ${[a.city, cName].filter(Boolean).join(", ")}`,
       }));
+    const sta: SearchResult[] = ref
+      .stationsOf(iso2)
+      .slice(0, limit)
+      .map((s) => ({
+        place: { kind: "station" as const, id: s.id, name: s.name, countryId: iso2 },
+        detail: `Station · ${cName}`,
+      }));
     const country: SearchResult = {
       place: { kind: "country", id: iso2, name: cName, countryId: iso2 },
       detail: "Country",
     };
     const seen = new Set<string>();
-    return [country, ...her, ...air, ...ranked]
+    return [country, ...her, ...air, ...sta, ...ranked]
       .filter((r) => {
         const k = `${r.place.kind}:${r.place.id}`;
         if (seen.has(k)) return false;

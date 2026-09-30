@@ -1826,8 +1826,19 @@ h1.brand {
 /* Static per-country coverage map: the country silhouette, soft "still to explore"
    region blobs, and a dot per city you've been. Non-interactive (a glance, not a
    control) — the tappable lists live on the country's full page. */
+/* The whole map is a button now: tapping it opens the country's full page.
+   Reset the native button chrome and let the SVG + legend inside carry the look. */
 .country-cov-map {
+  display: block;
+  width: 100%;
   margin: 12px 0 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
 }
 .country-cov-map svg {
   display: block;
@@ -1836,6 +1847,17 @@ h1.brand {
   background: var(--bg-sub);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  transition: border-color 0.12s ease;
+}
+.country-cov-map:hover svg,
+.country-cov-map:focus-visible svg {
+  border-color: var(--accent);
+}
+.country-cov-map:focus-visible {
+  outline: none;
+}
+.country-cov-map:focus-visible svg {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 .ccov-land {
   fill: var(--surface);
@@ -1875,6 +1897,12 @@ h1.brand {
 .ccov-key-missing {
   background: var(--stat-want);
   opacity: 0.4;
+}
+/* The "open full page ↗" affordance, pushed to the end of the legend row. */
+.ccov-open {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
 }
 /* Keep the expanded panel compact — tighter than the standalone continent
    metrics so a country card doesn't grow into a wall when opened. */
@@ -2725,6 +2753,27 @@ a.btn-ghost {
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
+/* The per-stop date (spec 021): a compact day-picker indented under the stop's
+   number, so each waypoint can carry the day you were there. */
+.trip-stop-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 4px 14px;
+  margin-left: 9px;
+  border-left: 2px dashed var(--border-strong);
+}
+.trip-stop-date-label {
+  min-width: 34px;
+}
+.trip-stop-date .search-input {
+  height: 30px;
+  min-height: 0;
+  padding: 0 8px;
+  font-size: 12.5px;
+  width: auto;
+  max-width: 190px;
+}
 /* The leg connector between two stops: a short line + a compact transport picker,
    left-aligned under the stop's number so the route reads top-to-bottom and a run
    of one transport looks like a sub-trip. */
@@ -2798,14 +2847,13 @@ a.btn-ghost {
   font-size: 13px;
   font-weight: 600;
 }
-.trip-when {
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
+/* One plain optional date — a native picker, always visible, no disclosure. */
+.trip-date-field .search-input {
+  max-width: 200px;
 }
-.trip-when .trip-year {
-  max-width: 120px;
+.trip-date-legacy {
+  align-self: flex-start;
+  margin-top: 6px;
 }
 .trip-composer-actions {
   display: flex;
@@ -2821,13 +2869,6 @@ a.btn-ghost {
   justify-content: space-between;
   gap: 8px;
 }
-.trip-date-details > summary {
-  cursor: pointer;
-  padding: 6px 2px;
-  font-size: 13px;
-  font-weight: 600;
-  list-style-position: inside;
-}
 
 /* Pick trip stops from the places you've been (list or map). */
 .myplaces-picker {
@@ -2842,6 +2883,10 @@ a.btn-ghost {
   flex-direction: column;
   gap: 8px;
 }
+/* The city/airport pin filter sits directly above the canvas. */
+.route-map-filter {
+  align-self: flex-start;
+}
 .route-map-canvas {
   position: relative;
   width: 100%;
@@ -2850,6 +2895,38 @@ a.btn-ghost {
   overflow: hidden;
   border: 1px solid var(--border);
   background: #d9e6f1;
+}
+/* The "little box above the point": tap a pin → confirm before adding. */
+.route-popup-wrap .maplibregl-popup-content {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+.route-popup {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  text-align: center;
+}
+.route-popup-name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.route-popup-add {
+  flex: none;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.route-popup-add:hover {
+  filter: brightness(1.08);
 }
 .route-map-canvas .maplibregl-canvas {
   border-radius: var(--radius);
@@ -3826,6 +3903,103 @@ textarea.select {
   padding: 10px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
+}
+/* The focused postcard composer page (spec 020): date + content up front, the
+   optional bits tucked under an "add details" disclosure. */
+.story-compose-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.story-date-field .select {
+  max-width: 200px;
+}
+.story-details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.story-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 2px;
+  list-style-position: inside;
+}
+.story-details > .picker-label {
+  margin-top: 10px;
+}
+/* "Near you" auto-suggestions in the composer. */
+.story-nearby {
+  margin-bottom: 10px;
+}
+.story-nearby-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* Tag chips in the composer + the mood/weather preset row. */
+.story-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+}
+.story-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface, var(--bg));
+  font-size: 12.5px;
+}
+.story-tag-x {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.story-tag-x:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.story-tag-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* Tag chips shown on a feed card (tap to filter by that tag). */
+.journal-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.journal-tag-chip {
+  padding: 1px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.journal-tag-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
 }
 .journal-textarea {
   height: auto;

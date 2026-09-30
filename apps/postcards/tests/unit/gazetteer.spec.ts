@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { getReferenceData } from "../../src/lib/reference/referenceData";
 
 const ref = getReferenceData();
+const here = dirname(fileURLToPath(import.meta.url));
 
 describe("bundled gazetteer integrity (full GeoNames-derived world gazetteer)", () => {
   const cities = ref.allCities();
@@ -72,5 +77,51 @@ describe("bundled gazetteer integrity (full GeoNames-derived world gazetteer)", 
     const tokyoRegion = ref.subdivisionById(tokyo.subdivisionId!);
     expect(tokyoRegion?.name).toBeTruthy();
     expect(tokyoRegion?.name.includes(" region ")).toBe(false);
+  });
+
+  // Both vendored files are one GeoNames day: each city's region code and each code's
+  // name. Mixing days put Hanoi under "Quang Tri" when Vietnam renumbered in 2025.
+  const vendored = (file: string) =>
+    new Map(
+      gunzipSync(readFileSync(join(here, "..", "..", "scripts", "data", file)))
+        .toString("utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => line.split("\t") as [string, string]),
+    );
+
+  it("gives every city GeoNames lists the region code it lists today", () => {
+    const current = vendored("city-admin1.tsv.gz");
+    const wrong = cities
+      .filter((c) => {
+        const code = current.get(c.id);
+        const listed = code?.startsWith(`${c.countryIso2}.`) && !code.endsWith(".");
+        return listed && c.subdivisionId !== code!.replace(".", "-");
+      })
+      .map((c) => `${c.name} ${c.id}: ${c.subdivisionId}`);
+    expect(wrong).toEqual([]);
+  });
+
+  it("names every region by GeoNames' name for its code, France in French", () => {
+    const names = vendored("admin1CodesASCII.txt.gz");
+    const wrong = [...names]
+      .map(([code, name]) => ({ id: code.replace(".", "-"), name }))
+      .map((s) => ({ ...s, ours: ref.subdivisionById(s.id)?.name }))
+      .filter((s) => s.ours !== undefined && !s.id.startsWith("FR-") && s.ours !== s.name)
+      .map((s) => `${s.id}: ${s.ours}`);
+    expect(wrong).toEqual([]);
+  });
+
+  it("puts well-known cities in their own region", () => {
+    const regionOf = (name: string, cc: string) => {
+      const city = cities.find((c) => c.name === name && c.countryIso2 === cc);
+      return ref.subdivisionById(city?.subdivisionId ?? "")?.name;
+    };
+    expect(regionOf("Hanoi", "VN")).toBe("Hanoi");
+    expect(regionOf("Ho Chi Minh City", "VN")).toBe("Ho Chi Minh City (HCMC)");
+    expect(regionOf("Drammen", "NO")).toBe("Buskerud");
+    expect(regionOf("Riyadh", "SA")).toBe("Riyadh Region");
+    expect(regionOf("Casablanca", "MA")).toBe("Casablanca-Settat");
+    expect(regionOf("Brest", "FR")).toBe("Bretagne");
   });
 });

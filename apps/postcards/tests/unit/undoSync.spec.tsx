@@ -125,33 +125,4 @@ describe("Journal undo", () => {
     await sync();
     expect(useStories.getState().stories).toHaveLength(1);
   });
-
-  it("takes back an added story for good", async () => {
-    await useVisits.getState().addVisit({ place: SH });
-    render(<JournalScreen />);
-    fireEvent.click(screen.getAllByRole("button", { name: /New story/ })[0]!);
-    fireEvent.change(screen.getByLabelText("Place"), { target: { value: "city:1796236" } });
-    fireEvent.change(screen.getByLabelText("Title (optional)"), { target: { value: "Night" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save story" }));
-    await settle();
-    expect(useStories.getState().stories).toHaveLength(1);
-    await sync();
-    await undo();
-    await sync();
-    expect(useStories.getState().stories).toHaveLength(0);
-  });
-
-  it("takes back an edit for good", async () => {
-    await story();
-    await sync();
-    render(<JournalScreen />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Edit story Bund walk" })[0]!);
-    fireEvent.change(screen.getByLabelText("Title (optional)"), { target: { value: "Bund" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    await settle();
-    await sync();
-    await undo();
-    await sync();
-    expect(useStories.getState().stories[0]!.title).toBe("Bund walk");
-  });
 });

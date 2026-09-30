@@ -40,3 +40,11 @@ test("Back at the home screen stays in the app", async ({ page }) => {
   await expect(page).toHaveURL(/localhost:4173\/$/);
   await expect(page.getByText("Cities in view")).toBeVisible();
 });
+
+// A station page (spec 021) is a place page like a city's: its address opens
+// it, even though the stations land a moment after the first paint.
+test("a station page opens from its address", async ({ page }) => {
+  await page.goto("/#/map/city/tl-4676");
+  await expect(page.getByRole("heading", { name: /Lyon Part-Dieu/ }).first()).toBeVisible();
+  await expect(page).toHaveURL(/#\/map\/city\/tl-4676$/);
+});

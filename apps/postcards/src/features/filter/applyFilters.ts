@@ -17,7 +17,7 @@ import type { TFunction, MessageKey } from "../../lib/i18n";
 function populationFor(v: Visit, ref: ReferenceData): number | null {
   if (v.place.kind === "city") return ref.cityById(v.place.id)?.population ?? 0;
   if (v.place.kind === "custom") return v.place.population ?? 0;
-  return null; // heritage / airport / country: no population — exempt from the filter
+  return null; // heritage / airport / station / country: no population — exempt from the filter
 }
 
 /** Whether one visit record passes the filter (Places lists). `status` is owned by
@@ -35,6 +35,7 @@ export function placeMatches(v: Visit, ref: ReferenceData, s: FilterState): bool
   if (s.mode === "cities" && v.place.kind !== "city" && v.place.kind !== "custom") return false;
   if (s.mode === "monuments" && v.place.kind !== "heritage") return false;
   if (s.mode === "airports" && v.place.kind !== "airport") return false;
+  if (s.mode === "stations" && v.place.kind !== "station") return false;
   // Monument category (cultural / natural / mixed) — a dataset tag, honoured only
   // for heritage so the Places browse and the personal list agree (FR-008/FR-012).
   // No-op for every other kind and when no category is selected.

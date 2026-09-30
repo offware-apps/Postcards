@@ -2,6 +2,14 @@ import { create } from "zustand";
 import { DEFAULT_SCOPE, type CountryScope } from "../reference/scope";
 import { detectLocale, applyLangAttr, isLocale, type Locale } from "../i18n/core";
 import { setFormatLocale } from "../format/format";
+import {
+  loadStationSource,
+  saveStationSource,
+  stationSourceById,
+  type StationSourceId,
+} from "../reference/stationSources";
+import { setStationData } from "../reference/referenceData";
+import type { Station } from "../reference/types";
 
 // Lasting, cross-screen preferences (persisted to localStorage): the "what
 // counts as a country" scope (honoured by stats, the map's counter strip and the
@@ -179,6 +187,9 @@ interface SettingsState {
   setTheme: (theme: ThemeMode) => void;
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  /** Which railway-station dataset is loaded (Settings → "Railway stations"). */
+  stationSource: StationSourceId;
+  setStationSource: (id: StationSourceId) => void;
 }
 
 export const useSettings = create<SettingsState>((set) => ({
@@ -238,6 +249,24 @@ export const useSettings = create<SettingsState>((set) => ({
     writeLocal(LOCALE_KEY, locale);
     applyLocale(locale);
     set({ locale });
+  },
+  stationSource: loadStationSource(),
+  setStationSource: (stationSource) => {
+    saveStationSource(stationSource);
+    set({ stationSource });
+    // Apply live: fetch the chosen dataset (or clear for "None") and refresh the
+    // map/search/stats via setStationData — no reload needed.
+    const def = stationSourceById(stationSource);
+    if (!def.url) {
+      setStationData([]);
+      return;
+    }
+    void fetch(def.url)
+      .then((r) => (r.ok ? r.json() : { stations: [] }))
+      .then((json: { stations?: Station[] }) => setStationData(json?.stations ?? []))
+      .catch(() => {
+        /* offline / fetch failed: keep whatever set is currently loaded */
+      });
   },
 }));
 

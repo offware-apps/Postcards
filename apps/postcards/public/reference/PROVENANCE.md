@@ -10,7 +10,7 @@ mirrors it for people browsing the repository.
 |------|---------|---------|---------------------|
 | `cities.json` | GeoNames city gazetteer (population ≥ 15,000, via all-the-cities) — <https://www.geonames.org> | CC BY 4.0 | all-the-cities 3.1.0 |
 | `cities-all.json` | GeoNames full world gazetteer (via all-the-cities) — <https://www.geonames.org> | CC BY 4.0 | all-the-cities 3.1.0 |
-| `subdivisions.json` | First-level regions (GeoNames admin-1, named via dr5hn countries-states-cities) — <https://github.com/dr5hn/countries-states-cities-database> | CC BY 4.0 (GeoNames) / ODbL (dr5hn) | all-the-cities 3.1.0 + country-state-city |
+| `subdivisions.json` | First-level regions: each city's GeoNames admin-1 code (<https://download.geonames.org/export/dump/cities500.zip>) and each code's GeoNames name (<https://download.geonames.org/export/dump/admin1CodesASCII.txt>), both retrieved 2026-09-30; France's 13 regions by their French names; a code GeoNames does not name keeps one from dr5hn countries-states-cities — <https://github.com/dr5hn/countries-states-cities-database> | CC BY 4.0 (GeoNames) / ODbL (dr5hn) | all-the-cities 3.1.0 + GeoNames 2026-09-30 + country-state-city |
 | `airports.json` | OpenFlights (IATA-coded, aggregated from OurAirports) — <https://openflights.org/data.html> | ODbL 1.0 / OurAirports public domain | airport-data 1.0.1 |
 | `heritage.json` | UNESCO World Heritage List — all 1,248 sites incl. 47th session (2025) — <https://whc.unesco.org/en/list/> | CC BY-SA 3.0 IGO — © UNESCO World Heritage Centre | 2025 list, retrieved 2026-07-11 |
 | `landmarks.json` | Famous landmarks seed (full set via Wikidata build script) — <https://www.wikidata.org> | CC0 (facts) | seed |

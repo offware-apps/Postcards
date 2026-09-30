@@ -133,3 +133,14 @@ export function PlaneIcon({ size = 15 }: { size?: number }) {
     </svg>
   );
 }
+
+export function TrainIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} strokeWidth={2}>
+      <path d="M9 3h6a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" />
+      <path d="M6 10h12" />
+      <path d="M9.5 13.5v.01M14.5 13.5v.01" />
+      <path d="m8 21 2-4M16 21l-2-4" />
+    </svg>
+  );
+}

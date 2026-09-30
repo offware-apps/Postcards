@@ -22,10 +22,10 @@ const ref = {
 } as unknown as ReferenceData;
 
 const cityRef = (id: string): PlaceRef => ({ kind: "city", id, name: cities[id]!.name, countryId: "FR" });
-const myPlace = (id: string): MyPlace => {
+const myPlace = (id: string, population = 1000): MyPlace => {
   const place = cityRef(id);
   const c = cities[id]!;
-  return { key: placeKey(place), place, name: c.name, countryId: "FR", lon: c.lon, lat: c.lat };
+  return { key: placeKey(place), place, name: c.name, countryId: "FR", lon: c.lon, lat: c.lat, population };
 };
 
 describe("mapFit.fitBounds", () => {
@@ -53,6 +53,12 @@ describe("pickPoints.pickPointsFC", () => {
     expect(fc.features).toHaveLength(2);
     expect(fc.features.every((f) => f.properties!.seq === 0 && f.properties!.added === false)).toBe(true);
     expect(fc.features[0]!.properties!.kind).toBe("city");
+  });
+  it("carries each place's population so a tap can snap to the most populous pin", () => {
+    const fc = pickPointsFC([myPlace("paris", 2_140_000), myPlace("osaka", 2_700_000)], []);
+    const byKey = new Map(fc.features.map((f) => [f.properties!.key, f.properties!.pop]));
+    expect(byKey.get(placeKey(cityRef("paris")))).toBe(2_140_000);
+    expect(byKey.get(placeKey(cityRef("osaka")))).toBe(2_700_000);
   });
   it("labels added stops with their 1-based route index and an added flag", () => {
     const pool = [myPlace("paris"), myPlace("tokyo"), myPlace("osaka")];

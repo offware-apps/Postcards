@@ -19,6 +19,10 @@ function coordOf(ref: ReferenceData, v: Visit): { lat: number; lon: number } | n
     const a = ref.airportById(p.id);
     return a ? { lat: a.lat, lon: a.lon } : null;
   }
+  if (p.kind === "station") {
+    const s = ref.stationById(p.id);
+    return s ? { lat: s.lat, lon: s.lon } : null;
+  }
   if (p.kind === "custom" && p.lat != null && p.lon != null) return { lat: p.lat, lon: p.lon };
   return null;
 }

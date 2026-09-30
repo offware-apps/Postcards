@@ -17,8 +17,8 @@ export function useGazetteerGeneration(): number {
   return useSyncExternalStore(subscribe, gazetteerGeneration, gazetteerGeneration);
 }
 
-/** True until the airports and heritage sites, which follow the first paint,
- *  have landed (initReferenceData). */
+/** True until the airports, heritage sites and stations, which follow the
+ *  first paint, have landed (initReferenceData). */
 export function useReferenceExtrasPending(): boolean {
   return useSyncExternalStore(subscribe, referenceExtrasPending, referenceExtrasPending);
 }

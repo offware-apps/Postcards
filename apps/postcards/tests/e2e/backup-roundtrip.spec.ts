@@ -85,12 +85,13 @@ test("export, erase and import back: every place, photo, trip and story returns"
 
   // A story about Paris.
   await gotoTab(page, "Journal");
-  await page.getByRole("button", { name: /New story/ }).click();
+  await page.getByRole("button", { name: /Write a postcard/ }).click();
+  await page.getByText("Add details", { exact: true }).click();
   const place = page.locator("#story-place");
   const paris = await place.locator("option", { hasText: "Paris" }).getAttribute("value");
   await place.selectOption(paris ?? "");
   await page.getByLabel("Title (optional)").fill(STORY);
-  await page.getByRole("button", { name: "Save story" }).click();
+  await page.getByRole("button", { name: "Save postcard" }).click();
   await expect(page.getByRole("heading", { name: STORY })).toBeVisible();
 
   await page.getByRole("button", { name: "Settings" }).click();

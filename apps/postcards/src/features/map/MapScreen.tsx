@@ -35,7 +35,7 @@ import {
 import { activeChips } from "../filter/applyFilters";
 import { FilterPanel } from "../../ui/FilterPanel";
 import { FilterSummary } from "../../ui/FilterSummary";
-import { CityIcon, MonumentIcon, PlaneIcon } from "../../ui/icons";
+import { CityIcon, MonumentIcon, PlaneIcon, TrainIcon } from "../../ui/icons";
 import { useT, type MessageKey } from "../../lib/i18n";
 
 // Fewer rows, faster everything: the list pages in small steps, and the
@@ -459,7 +459,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
   const poi = useMemo(() => {
     // The header shows totals over EVERYTHING in view (visited counted from
     // your records of this kind), even though the list renders at most 100.
-    const visitedOf = (kind: "heritage" | "airport") =>
+    const visitedOf = (kind: "heritage" | "airport" | "station") =>
       new Set(
         useVisits
           .getState()
@@ -505,6 +505,25 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
           place: { kind: "airport" as const, id: a.id, name: `${a.name} (${a.id})`, countryId: a.countryIso2 },
           page: false,
           seen: seen.has(a.id),
+        })),
+      };
+    }
+    if (mode === "stations") {
+      const all = ref.allStations().filter((s) => inB(s.lat, s.lon));
+      const seen = visitedOf("station");
+      return {
+        total: all.length,
+        visited: all.reduce((n, s) => n + (seen.has(s.id) ? 1 : 0), 0),
+        items: all.slice(0, POI_LIST_CAP).map((s) => ({
+          key: s.id,
+          flag: "🚉",
+          name: s.name,
+          sub: ref.countryByIso2(s.countryIso2)?.name ?? s.countryIso2,
+          lat: s.lat,
+          lon: s.lon,
+          place: { kind: "station" as const, id: s.id, name: s.name, countryId: s.countryIso2 },
+          page: true,
+          seen: seen.has(s.id),
         })),
       };
     }
@@ -713,13 +732,13 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
             </button>
           </div>
         )}
-        {/* Place-kind switch, front and centre. Cities / monuments / airports are
+        {/* Place-kind switch, front and centre. Cities / monuments / stations / airports are
             genuinely DIFFERENT data, not one more filter to bury in the panel — so
             it's a first-class map control (its own prominent pill), never a row in
             the Filter menu. */}
         <div className="map-ctl map-ctl-top">
           <div className="segmented map-mode" role="group" aria-label={t("filter.mode.title")}>
-            {(["all", "cities", "monuments", "airports"] as FilterMode[]).map((m) => {
+            {(["all", "cities", "monuments", "stations", "airports"] as FilterMode[]).map((m) => {
               const label = t(`filter.mode.${m}` as const);
               const Icon =
                 m === "cities"
@@ -728,7 +747,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                     ? MonumentIcon
                     : m === "airports"
                       ? PlaneIcon
-                      : null;
+                      : m === "stations"
+                        ? TrainIcon
+                        : null;
               const active = mode === m;
               return (
                 <button
@@ -905,7 +926,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
       {active && (
       <section className="view-list" aria-label={t("map.list.aria")}>
         <div className="section-head">
-          <h2>{mode === "monuments" ? t("map.list.headingMonuments") : mode === "airports" ? t("map.list.headingAirports") : t("map.list.headingCities")}</h2>
+          <h2>{mode === "monuments" ? t("map.list.headingMonuments") : mode === "airports" ? t("map.list.headingAirports") : mode === "stations" ? t("map.list.headingStations") : t("map.list.headingCities")}</h2>
           <span className="list-head-meta muted">
             {bounds !== null && (
               <span>
