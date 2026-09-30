@@ -3,8 +3,11 @@
 
 export const DEFAULT_LANG = "en";
 
-function host(lang: string): string {
-  return `https://${lang}.wikivoyage.org`;
+/** Wikimedia sister project a summary can come from. */
+export type WikiProject = "wikivoyage" | "wikipedia";
+
+function host(lang: string, project: WikiProject = "wikivoyage"): string {
+  return `https://${lang}.${project}.org`;
 }
 
 /**
@@ -15,9 +18,15 @@ export function titleToPath(title: string): string {
   return encodeURIComponent(title.trim().replace(/\s+/g, "_")).replace(/%2F/g, "/");
 }
 
-/** URL of an article (optionally to a section anchor). */
-export function articleUrl(title: string, lang: string = DEFAULT_LANG, section?: string): string {
-  const base = `${host(lang)}/wiki/${titleToPath(title)}`;
+/** URL of an article (optionally to a section anchor), on Wikivoyage unless
+ *  another project is named (the Wikipedia fallback links to Wikipedia). */
+export function articleUrl(
+  title: string,
+  lang: string = DEFAULT_LANG,
+  section?: string,
+  project: WikiProject = "wikivoyage",
+): string {
+  const base = `${host(lang, project)}/wiki/${titleToPath(title)}`;
   return section ? `${base}#${titleToPath(section)}` : base;
 }
 
@@ -30,9 +39,6 @@ export function phrasebookTitle(languageName: string): string {
 export function searchUrl(query: string, lang: string = DEFAULT_LANG): string {
   return `${host(lang)}/w/index.php?search=${encodeURIComponent(query)}`;
 }
-
-/** Wikimedia sister project a summary can come from. */
-export type WikiProject = "wikivoyage" | "wikipedia";
 
 /** REST summary endpoint for a title (used by the opt-in online fetch). */
 export function summaryEndpoint(

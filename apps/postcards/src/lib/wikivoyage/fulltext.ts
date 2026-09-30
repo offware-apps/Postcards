@@ -122,7 +122,7 @@ export async function fetchFullText(
     const resolvedTitle = page.title ?? title;
     return {
       title: resolvedTitle,
-      url: articleUrl(resolvedTitle, lang),
+      url: articleUrl(resolvedTitle, lang, undefined, project),
       attribution: `${project === "wikipedia" ? "Wikipedia" : "Wikivoyage"} · CC BY-SA 4.0`,
       sections,
     };
