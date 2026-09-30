@@ -50,7 +50,9 @@ const B64_CHUNK = 0x8000;
 
 /** Decode a `data:<mime>[;base64],<payload>` URL into raw bytes + its (parameter-
  *  stripped) mime. A base64 payload is decoded as base64; any other payload is
- *  percent-decoded: its text as UTF-8 bytes, each `%XX` as the byte it names. */
+ *  percent-decoded: its text as UTF-8 bytes, each `%XX` as the byte it names, so a
+ *  schema-valid but non-base64 photo can't throw and abort a write or an archive.
+ *  Shared by the photo store and the "Save everything" archive. */
 export function decodeDataUrl(dataUrl: string): { bytes: Uint8Array<ArrayBuffer>; mime: string } {
   const comma = dataUrl.indexOf(",");
   const meta = dataUrl.slice(5, comma); // between "data:" and ","

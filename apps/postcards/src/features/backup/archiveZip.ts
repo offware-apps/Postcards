@@ -1,6 +1,6 @@
 import type { Story, Trip, Visit } from "../../lib/schema/models";
 import { zipStore, unzipStore, type ZipEntry } from "../../lib/backup/zip";
-import { bytesToDataUrl } from "../../lib/image/photoBlobs";
+import { bytesToDataUrl, decodeDataUrl } from "../../lib/image/photoBlobs";
 import { buildFile } from "./exportJson";
 
 // The "Save everything" archive: one .zip holding a compact JSON manifest plus
@@ -38,25 +38,6 @@ const MIME_OF: Record<string, string> = {
 const extForMime = (mime: string): string =>
   EXT_OF[mime] ?? (mime.replace(/^image\//, "").replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin");
 const mimeForExt = (ext: string): string => MIME_OF[ext] ?? `image/${ext}`;
-
-/** Decode a `data:<mime>[;base64],<payload>` URL into raw bytes + its (parameter-
- *  stripped) mime. Handles both base64 and percent-encoded/plain payloads so a
- *  schema-valid but non-base64 photo can't throw and abort the whole archive. */
-function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; mime: string } {
-  const comma = dataUrl.indexOf(",");
-  const meta = dataUrl.slice(5, comma); // between "data:" and ","
-  const isBase64 = /;base64$/i.test(meta);
-  // Strip the ;base64 flag AND any ;charset=… parameters to get the bare mime.
-  const mime = meta.replace(/;base64$/i, "").split(";")[0] || "application/octet-stream";
-  const payload = dataUrl.slice(comma + 1);
-  if (isBase64) {
-    const bin = atob(payload);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return { bytes, mime };
-  }
-  return { bytes: new TextEncoder().encode(decodeURIComponent(payload)), mime };
-}
 
 type PhotoLike = { src: string; caption: string | null };
 
