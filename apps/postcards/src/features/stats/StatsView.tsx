@@ -24,14 +24,14 @@ import { ScopeToggle } from "../../ui/ScopeToggle";
 import { useT, type MessageKey } from "../../lib/i18n";
 
 /** A record's city name — a button that flies the map to it. */
-function RecordCity({ name, onPick }: { name: string; onPick: (name: string) => void }) {
+function RecordCity({ name, onPick }: { name: string; onPick: () => void }) {
   const t = useT();
   return (
     <button
       type="button"
       className="country-open"
       title={t("stats.records.showOnMap", { name })}
-      onClick={() => onPick(name)}
+      onClick={onPick}
     >
       {name}
     </button>
@@ -258,9 +258,10 @@ export function StatsView() {
   );
   const travel = useMemo(() => travelTotals(trips, ref), [trips, ref]);
 
-  function flyToCity(iso2: string) {
-    return (name: string) => {
-      const c = ref.citiesOf(iso2).find((x) => x.name === name);
+  // By id: a country can hold several cities of one name.
+  function flyToCity(id: string) {
+    return () => {
+      const c = ref.cityById(id);
       // A record tile ("Show X on the map") opens the city's marker card, same
       // as tapping its dot — not just a silent re-centre.
       if (c)
@@ -558,20 +559,20 @@ export function StatsView() {
                   {t("stats.records.northernmost")}{" "}
                   <RecordCity
                     name={records.northernmost.name}
-                    onPick={flyToCity(records.northernmost.iso2)}
+                    onPick={flyToCity(records.northernmost.id)}
                   />{" "}
                   <span className="muted">({records.northernmost.lat.toFixed(1)}°)</span>
                 </span>
               </div>
             )}
-            {distinctCities >= 2 && records.southernmost && records.southernmost.name !== records.northernmost?.name && (
+            {distinctCities >= 2 && records.southernmost && records.southernmost.id !== records.northernmost?.id && (
               <div className="record">
                 <span className="record-emoji" aria-hidden>🐧</span>
                 <span>
                   {t("stats.records.southernmost")}{" "}
                   <RecordCity
                     name={records.southernmost.name}
-                    onPick={flyToCity(records.southernmost.iso2)}
+                    onPick={flyToCity(records.southernmost.id)}
                   />{" "}
                   <span className="muted">({records.southernmost.lat.toFixed(1)}°)</span>
                 </span>
@@ -584,7 +585,7 @@ export function StatsView() {
                   {t("stats.records.biggestCity")}{" "}
                   <RecordCity
                     name={records.biggestCity.name}
-                    onPick={flyToCity(records.biggestCity.iso2)}
+                    onPick={flyToCity(records.biggestCity.id)}
                   />{" "}
                   <span className="muted">
                     {t("stats.records.people", { count: formatInt(records.biggestCity.population) })}
