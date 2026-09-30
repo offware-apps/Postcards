@@ -96,7 +96,7 @@ All world facts come from named, openly-licensed datasets — the app authors no
 | ISO 3166-1 (via `i18n-iso-countries`) | Country list (~250) | MIT / public codes |
 | Natural Earth (via `world-atlas`) | Country boundaries on the map | Public Domain |
 | GeoNames (via `all-the-cities`) | City gazetteer — **24,323** cities, population ≥ 15k, real GeoNames IDs | CC BY 4.0 |
-| GeoNames admin-1, named via `countries-states-cities` | First-level regions (states/provinces) worldwide — **2,661** regions for per-country region coverage | CC BY 4.0 / ODbL 1.0 |
+| GeoNames admin-1 codes and names | First-level regions (states/provinces) worldwide — **3,751** regions for per-country region coverage | CC BY 4.0 / ODbL 1.0 |
 | OpenFlights (via `airport-data`, aggregated from OurAirports) | Airports — **5,609** IATA-coded airports worldwide, real coordinates | ODbL 1.0 / OurAirports public domain |
 | `world-countries` | Country → continent grouping (baked into `continents.json`) | ODbL 1.0 |
 
@@ -129,7 +129,7 @@ Recently shipped:
 - **"What counts as a country" setting** — count only **UN member states** or **include dependent territories** (Hong Kong, Jersey, Puerto Rico, Taiwan…); the stats, the map counter, and the country checklist all honour it. The UN-member/territory split comes from the `world-countries` dataset — the app classifies nothing itself.
 - **Time filter for the travel log** — narrow the trip list *and* its totals to a chosen **year** (and month); a per-year rollup of "trips, kilometres, by mode" falls out for free. The **map/globe trip arcs honour the same filter**, so you can watch just one year's journeys arc across the world.
 - **3D globe view** — one tap turns the flat map into a spinnable 3D globe (MapLibre GL v5), with visited countries, city pills, and great-circle trip arcs all rendered on the sphere. The choice is remembered; still fully offline.
-- **Worldwide region coverage** — per-country **% of first-level regions** now works everywhere (GeoNames admin-1, named via a nearest-centroid crosswalk), not just one country.
+- **Worldwide region coverage** — per-country **% of first-level regions** now works everywhere (GeoNames admin-1 codes and names, from one GeoNames day), not just one country.
 - **Airports as a place type** — log airports you've flown through by name or IATA code; they show as distinct ✈ pills on the map and in your totals, and count toward country coverage (see [`specs/002-place-types/`](specs/002-place-types/)). The place model is now generalized, so further types are drop-in datasets.
 - **Travel log** — a **Trips** tab records past journeys with a derived great-circle distance and totals (see [`specs/003-travel-log/`](specs/003-travel-log/)); trips are drawn as **great-circle arcs on the map**, live in the same portable file, and export to Markdown. **Import a flight from a boarding pass** — scan the barcode or paste the code; the IATA BCBP is decoded on-device (see [`specs/006-boarding-pass/`](specs/006-boarding-pass/)).
 - **Offline street-map seam + downloadable maps** — a street-level **offline** vector basemap via the `pmtiles://` protocol behind a device-global **`OfflineMapStore`** ([`docs/OFFLINE-MAPS.md`](docs/OFFLINE-MAPS.md), [`specs/004-offline-map-seam/`](specs/004-offline-map-seam/)); the online OpenStreetMap basemap can be **saved for offline** area-by-area. Nothing is bundled app-private, per the constitution.
