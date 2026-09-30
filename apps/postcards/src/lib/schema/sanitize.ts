@@ -1,9 +1,8 @@
 // Inert-data helpers (Constitution VI: data is parsed, never executed).
-// These neutralize content that could be dangerous when a data file is later
-// opened in another tool (e.g. a spreadsheet) or rendered.
-
-/** Characters that trigger formula evaluation in spreadsheet software. */
-const FORMULA_PREFIXES = new Set(["=", "+", "-", "@"]);
+// These strip characters that spoof how text reads once rendered. Spreadsheet
+// formula prefixes are neutralized only where a spreadsheet opens the text, in
+// the CSV writer (exportCsv.ts): a leading "-" or "=" is plain text in the JSON
+// file and in the app, and stripping it here rewrote user text on every parse.
 
 /**
  * Remove characters that are invisible or can spoof text direction:
@@ -36,15 +35,11 @@ function stripControlChars(input: string): string {
 /**
  * Sanitize a free-text string from (potentially untrusted) data:
  * - normalize newlines and remove control characters,
- * - neutralize leading formula/command characters,
  * - collapse to a bounded length.
  * Returns plain, inert text. Never evaluates anything.
  */
 export function sanitizeText(input: string, maxLength = 2000): string {
   let out = stripControlChars(input.replace(/\r\n?/g, "\n")).trim();
-  while (out.length > 0 && (FORMULA_PREFIXES.has(out[0]!) || out[0] === "\t")) {
-    out = out.slice(1).trimStart();
-  }
   if (out.length > maxLength) out = out.slice(0, maxLength);
   return out;
 }

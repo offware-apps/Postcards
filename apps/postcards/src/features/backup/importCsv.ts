@@ -110,7 +110,9 @@ export function parsePlacesCsv(text: string, ref: ReferenceData): CsvImportResul
   let skipped = 0;
   for (let r = 1; r < lines.length; r++) {
     const f = splitLine(lines[r]!, delim);
-    const name = (f[idx.name] ?? "").trim();
+    // Our export writes a formula-like name as '=… so spreadsheets keep it inert;
+    // drop that apostrophe so the name round-trips as it was.
+    const name = (f[idx.name] ?? "").trim().replace(/^'(?=[=+\-@])/, "");
     const cc = (f[idx.country] ?? "").trim().toUpperCase();
     if (!name || !/^[A-Z]{2}$/.test(cc) || !ref.countryByIso2(cc)) {
       skipped++;

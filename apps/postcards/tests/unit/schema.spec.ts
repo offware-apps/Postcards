@@ -58,10 +58,10 @@ describe("PostcardsFileSchema", () => {
     expect(r.favorite).toBe(true);
   });
 
-  it("sanitizes note on parse (leading formula char removed)", () => {
+  it("keeps a note's leading formula char (plain text in the file)", () => {
     const v = { ...baseVisit(), note: "=HYPERLINK(evil)" };
     const r = VisitSchema.parse(v);
-    expect(r.note).toBe("HYPERLINK(evil)");
+    expect(r.note).toBe("=HYPERLINK(evil)");
   });
 
   it("keeps an optional folder (sanitized) and never injects the key when absent", () => {

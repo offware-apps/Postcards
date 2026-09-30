@@ -41,9 +41,9 @@ describe("data pack schema", () => {
     ).toBe(false);
   });
 
-  it("sanitizes a formula-like place name instead of executing it", () => {
+  it("keeps a formula-like place name as inert text", () => {
     const r = DataPackSchema.parse(pack({ places: [{ name: "=HYPERLINK(x)", lat: 0, lon: 0, countryIso2: "FR" }] }));
-    expect(r.places[0]!.name).toBe("HYPERLINK(x)");
+    expect(r.places[0]!.name).toBe("=HYPERLINK(x)");
   });
 
   it("rejects unknown top-level keys (strict)", () => {

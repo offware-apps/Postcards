@@ -98,7 +98,7 @@ describe("import security (SC-008, Constitution VI)", () => {
     expect(importFile("[]")).toMatchObject({ ok: false });
   });
 
-  it("rejects a place name that sanitizes to empty (formula-prefix only)", () => {
+  it("rejects a place name that sanitizes to empty (invisible characters only)", () => {
     const text = JSON.stringify({
       format: "postcards",
       schemaVersion: 1,
@@ -106,7 +106,7 @@ describe("import security (SC-008, Constitution VI)", () => {
       visits: [
         {
           visitId: crypto.randomUUID(),
-          place: { kind: "city", id: "x", name: "===", countryId: "FR" },
+          place: { kind: "city", id: "x", name: "\u200b\u202e", countryId: "FR" },
           date: null,
           note: null,
           status: "visited" as const,
@@ -115,7 +115,7 @@ describe("import security (SC-008, Constitution VI)", () => {
         },
       ],
     });
-    // "===" passes min(1) on the raw input but sanitizes to "" — accepting it
+    // A lone U+200B + U+202E passes min(1) on the raw input but sanitizes to "" — accepting it
     // would poison the store with a file that can never round-trip.
     expect(importFile(text)).toMatchObject({ ok: false });
   });
@@ -209,7 +209,7 @@ describe("import security (SC-008, Constitution VI)", () => {
     if (result.ok) expect(result.visits[0]!.visitId).toBe("00000000-0000-0000-0000-000000000001");
   });
 
-  it("sanitizes formula-like content in notes instead of executing it", () => {
+  it("keeps formula-like content in notes as inert text", () => {
     const text = JSON.stringify({
       format: "postcards",
       schemaVersion: 1,
@@ -228,6 +228,6 @@ describe("import security (SC-008, Constitution VI)", () => {
     });
     const result = importFile(text);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.visits[0]!.note).toBe("IMPORTXML(evil)");
+    if (result.ok) expect(result.visits[0]!.note).toBe("=IMPORTXML(evil)");
   });
 });

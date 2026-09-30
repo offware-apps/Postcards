@@ -35,8 +35,8 @@ export const PlaceRefSchema = z
       .min(1)
       .max(200)
       .transform((s) => sanitizeText(s, 200))
-      // min(1) runs on the INPUT; a name of only formula-prefix chars ("===")
-      // sanitizes to "" and would poison the file — reject it clearly instead.
+      // min(1) runs on the INPUT; a name of only invisible characters (a lone
+      // U+200B) sanitizes to "" and would poison the file — reject it clearly instead.
       .refine((s) => s.length > 0, { message: "Name is empty once sanitized" }),
     countryId: isoCountryId,
     // Coordinates carried on the record itself — only used by kind "custom"

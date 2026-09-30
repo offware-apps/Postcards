@@ -52,7 +52,7 @@ finally the portable file that carries the user's data in and out.
 6. [Portable file, validation & sanitization](#6-portable-file-validation--sanitization)
    - 6.1 The versioned portable file: one strict Zod schema, v1→v5
    - 6.2 Import pipeline: guard → parse → refuse-newer → validate → merge
-   - 6.3 Text sanitization: strip invisibles, neutralize formulas, cap length
+   - 6.3 Text sanitization: strip invisibles, cap length
    - 6.4 Photos: bounded, inert, inline data URLs
    - 6.5 Dedupe upsert: at most one visit per (kind, id)
    - 6.6 Published JSON Schema: generated from Zod, kept honest by a test
@@ -1208,7 +1208,7 @@ the file." etc.) rather than failing.
 Sources: `apps/postcards/src/features/backup/importJson.ts`,
 `apps/postcards/src/lib/schema/models.ts`
 
-### 6.3 Text sanitization: strip invisibles, neutralize formulas, cap length
+### 6.3 Text sanitization: strip invisibles, cap length
 
 `sanitizeText(input, maxLength = 2000)` in `apps/postcards/src/lib/schema/sanitize.ts` renders
 untrusted free text inert — it never evaluates anything, only removes. The algorithm:
@@ -1217,14 +1217,18 @@ untrusted free text inert — it never evaluates anything, only removes. The alg
 1. input.replace(/\r\n?/g, "\n")        — normalize CRLF/CR to LF
 2. stripControlChars(...)                — drop, per code point:
      • C0/C1 controls: 0–31 except tab(9)/newline(10), plus DEL(127)
-     • zero-width: U+200B, U+200C, U+200D, U+FEFF
+     • zero-width: U+200B, U+2060, U+FEFF (the joiners U+200C/U+200D stay:
+       emoji sequences and Persian or Indic spelling need them)
+     • directional marks U+200E, U+200F, U+061C
      • bidi overrides/isolates: U+202A–202E, U+2066–2069  ("Trojan Source" spoofing)
 3. .trim()
-4. while first char ∈ {"=", "+", "-", "@"} or is a tab:  drop it, trimStart()
-     — neutralizes spreadsheet formula injection; the loop handles stacked
-       prefixes like "=+@=cmd" and prefixes re-exposed by trimming
-5. slice(0, maxLength)
+4. slice(0, maxLength)
 ```
+
+A leading `=`, `+`, `-` or `@` is left alone: it is plain text in the JSON file and in the app
+("- packed: boots"). Spreadsheet formula injection is handled where a spreadsheet opens the text,
+in the CSV writer (`features/backup/exportCsv.ts`), which prefixes such a field with `'`; the CSV
+importer drops that apostrophe again so the name round-trips.
 
 Note the iteration is over code points (`for (const ch of input)` + `codePointAt`), so astral
 characters (emoji) survive intact rather than being split into surrogates.
@@ -1234,7 +1238,7 @@ app's own export self-validation — never as a separate pass someone could forg
 `PlaceRef.name` 200, `Photo.caption` 300, `Visit.note` 2000, `Trip.carrier` 120, `Trip.note` 2000,
 `Story.title` 200, `Story.text` 8000. Two fields (`PlaceRef.name`, `Story.title`) add a
 `.refine(s => s.length > 0)` *after* the transform because Zod's `min(1)` checks the input: a name
-consisting only of formula prefixes (e.g. `"==="`) sanitizes to `""` and is rejected with an
+consisting only of invisible characters (e.g. a lone U+200B) sanitizes to `""` and is rejected with an
 explicit "empty once sanitized" message instead of poisoning the file. Nullable optional fields
 transform `null | undefined → null` uniformly.
 
