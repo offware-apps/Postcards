@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { serializeFile } from "../../src/features/backup/exportJson";
 import { importFile } from "../../src/features/backup/importJson";
-import { normalizeVisitPhotos, type Visit } from "../../src/lib/schema/models";
+import { normalizeVisitPhotos, type Story, type Visit } from "../../src/lib/schema/models";
 
 function visit(): Visit {
   return {
@@ -229,5 +229,30 @@ describe("import security (SC-008, Constitution VI)", () => {
     const result = importFile(text);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.visits[0]!.note).toBe("IMPORTXML(evil)");
+  });
+});
+
+describe("postcard tags", () => {
+  // A composer that stored tags as typed could save one that sanitizes to nothing
+  // ("-", a lone bidi mark); the file would then fail its own validation.
+  const story = (tags: string[]): Story => ({
+    storyId: "s1",
+    date: "2026-05-02",
+    title: "Lyon",
+    text: "",
+    tags,
+    addedAt: "2026-05-02T10:00:00.000Z",
+  });
+
+  it("still exports and syncs a postcard holding a tag that sanitizes away, without that tag", () => {
+    const result = importFile(serializeFile([], [], [story(["sunny", "-", "\u202e"])]));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.stories[0]!.tags).toEqual(["sunny"]);
+  });
+
+  it("drops the tags key when no tag survives", () => {
+    const result = importFile(serializeFile([], [], [story(["-"])]));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect("tags" in result.stories[0]!).toBe(false);
   });
 });

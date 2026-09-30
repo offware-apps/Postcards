@@ -10,11 +10,22 @@ import {
   type Visit,
 } from "../../lib/schema/models";
 import { getReferenceData } from "../../lib/reference/referenceData";
+import { MAX_TAG_LEN } from "../../lib/schema/helpers";
+import { sanitizeText } from "../../lib/schema/sanitize";
 
 /** Drop an empty `photos` array so a photo-less record stays lean in the file. */
 function dropEmptyPhotos<T extends { photos?: unknown[] }>(rec: T): T | Omit<T, "photos"> {
   const { photos, ...rest } = rec;
   return photos && photos.length ? { ...rest, photos } : rest;
+}
+
+/** Drop a stored tag that sanitizes to nothing ("-", a lone bidi mark): the schema
+ *  rejects it, which would block every backup and sync of a device holding one. */
+function dropBlankTags(story: Story): Story {
+  if (!story.tags) return story;
+  const { tags, ...rest } = story;
+  const kept = tags.filter((t) => sanitizeText(t, MAX_TAG_LEN));
+  return kept.length ? { ...rest, tags: kept } : rest;
 }
 
 /** Build the canonical portable file object from the current visits + trips + stories.
@@ -40,7 +51,7 @@ export function buildFile(
     // Drop empty `photos` arrays so a photo-less export stays lean and readable.
     visits: visits.map(dropEmptyPhotos),
     trips,
-    stories: stories.map(dropEmptyPhotos),
+    stories: stories.map((s) => dropEmptyPhotos(dropBlankTags(s))),
     ...(tombstones.length ? { tombstones } : {}),
     referenceSources,
   };
