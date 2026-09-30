@@ -40,6 +40,10 @@ export function FilterPanel({
   const t = useT();
   const f = useFilters();
   const panelRef = useRef<HTMLDivElement>(null);
+  // Hosts pass an inline onClose, so a filter tap hands a new one; reading it through
+  // a ref keeps the focus effect from re-running (and re-focusing the panel) on it.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // Focus the panel on open; restore focus to the opener on close; Escape closes;
   // Tab is trapped inside the panel (contracts/panel-a11y.md).
@@ -51,7 +55,7 @@ export function FilterPanel({
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !node) return;
@@ -74,7 +78,7 @@ export function FilterPanel({
       document.removeEventListener("keydown", onKey, true);
       opener?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
