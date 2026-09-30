@@ -13,6 +13,10 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
+    // Every test starts a fresh context, so an allowed service worker would
+    // install and precache the whole app in each one. The specs that exercise
+    // the installed app opt back in with test.use({ serviceWorkers: "allow" }).
+    serviceWorkers: "block",
     // Seed the "intro seen" flag so the first-run welcome modal never auto-opens
     // over the app during tests (it would block the very first interaction). The
     // real first-run intro is exercised by users, not the suite.

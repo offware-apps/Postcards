@@ -5,6 +5,10 @@ import { openApp, markVisited } from "./nav-helper";
 // locally-served app stands in for the service-worker-installed one (same
 // role: the shell is on the device); every request that would LEAVE the
 // device is blocked — tiles, fonts, anything.
+
+// Offline is the service worker's job for an installed app, so it runs here.
+test.use({ serviceWorkers: "allow" });
+
 test("core actions work with no network: offline map renders, visits persist", async ({
   page,
   context,
