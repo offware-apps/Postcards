@@ -8,6 +8,62 @@ import { computeCoverage } from "./computeStats";
 import { formatInt, formatPercent, formatPercentFloor } from "../../lib/format/format";
 import { useT } from "../../lib/i18n";
 
+/** One counter. Declared at module scope so a store update re-renders it in place
+ *  instead of remounting the button under the user's focus. */
+function Counter({
+  num,
+  den,
+  pct,
+  label,
+  cls,
+  view,
+}: {
+  num: number;
+  den?: number;
+  /** Optional share (0..1) shown next to the fraction — e.g. "3/50 · 6%". */
+  pct?: number;
+  label: string;
+  cls?: string;
+  view: PlacesView;
+}) {
+  const t = useT();
+  const openPlaces = useUi((s) => s.openPlaces);
+  // A tiny-but-nonzero coverage rounds to "0%", which reads as "none visited"
+  // even after you've been somewhere. Floor it to "<1%" (same as the hero).
+  const pctLabel = pct != null ? formatPercentFloor(pct) : null;
+  const aria =
+    pct != null
+      ? t("statStrip.visitedAria", {
+          num: formatInt(num),
+          den: formatInt(den ?? num),
+          label,
+          pct: pctLabel ?? formatPercent(pct),
+        })
+      : t("statStrip.openAria", { label });
+  return (
+    <button
+      type="button"
+      className="ss-item"
+      onClick={() => {
+        // World-level shortcut — drop the WHOLE country drill-down a stats card
+        // may have set (country AND minPop), so the list matches this counter's
+        // number instead of staying gated at the last tier you opened.
+        useFilters.getState().set({ country: "", minPop: 0 });
+        openPlaces(view);
+      }}
+      title={t("statStrip.openAria", { label })}
+      aria-label={aria}
+    >
+      <span className={"ss-num" + (cls ? ` ${cls}` : "")}>
+        {formatInt(num)}
+        {den != null && <span className="ss-den">/{formatInt(den)}</span>}
+        {pctLabel != null && <span className="ss-pct">{pctLabel}</span>}
+      </span>
+      <span className="ss-label">{label}</span>
+    </button>
+  );
+}
+
 /** Compact counter strip. Every counter is a shortcut: tap it to open the
  *  matching Places view (been → visited, want → wishlist, fav → favourites…). */
 export function StatStrip() {
@@ -15,7 +71,6 @@ export function StatStrip() {
   const ref = useMemo(() => getReferenceData(), []);
   const visits = useVisits((s) => s.visits);
   const scope = useSettings((s) => s.countryScope);
-  const openPlaces = useUi((s) => s.openPlaces);
 
   const stats = useMemo(() => {
     const cov = computeCoverage(visits, ref, scope);
@@ -27,58 +82,6 @@ export function StatStrip() {
     }
     return { cov, want, fav };
   }, [visits, ref, scope]);
-
-  function Counter({
-    num,
-    den,
-    pct,
-    label,
-    cls,
-    view,
-  }: {
-    num: number;
-    den?: number;
-    /** Optional share (0..1) shown next to the fraction — e.g. "3/50 · 6%". */
-    pct?: number;
-    label: string;
-    cls?: string;
-    view: PlacesView;
-  }) {
-    // A tiny-but-nonzero coverage rounds to "0%", which reads as "none visited"
-    // even after you've been somewhere. Floor it to "<1%" (same as the hero).
-    const pctLabel = pct != null ? formatPercentFloor(pct) : null;
-    const aria =
-      pct != null
-        ? t("statStrip.visitedAria", {
-            num: formatInt(num),
-            den: formatInt(den ?? num),
-            label,
-            pct: pctLabel ?? formatPercent(pct),
-          })
-        : t("statStrip.openAria", { label });
-    return (
-      <button
-        type="button"
-        className="ss-item"
-        onClick={() => {
-          // World-level shortcut — drop the WHOLE country drill-down a stats card
-          // may have set (country AND minPop), so the list matches this counter's
-          // number instead of staying gated at the last tier you opened.
-          useFilters.getState().set({ country: "", minPop: 0 });
-          openPlaces(view);
-        }}
-        title={t("statStrip.openAria", { label })}
-        aria-label={aria}
-      >
-        <span className={"ss-num" + (cls ? ` ${cls}` : "")}>
-          {formatInt(num)}
-          {den != null && <span className="ss-den">/{formatInt(den)}</span>}
-          {pctLabel != null && <span className="ss-pct">{pctLabel}</span>}
-        </span>
-        <span className="ss-label">{label}</span>
-      </button>
-    );
-  }
 
   return (
     <div className="stat-strip" aria-label={t("statStrip.totalsAria")}>
