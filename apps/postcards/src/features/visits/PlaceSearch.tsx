@@ -171,6 +171,7 @@ export function PlaceSearch({
         type="search"
         className={"search-input" + (q ? " has-clear" : "")}
         placeholder={narrow ? t("search.placeholderShort") : t("search.placeholder")}
+        title={t("search.aria")}
         aria-label={t("search.aria")}
         role="combobox"
         aria-expanded={results.length > 0}
@@ -216,6 +217,9 @@ export function PlaceSearch({
         >
           {results.map((r, i) => {
             const visited = visitIndex(visits).get(placeKey(r.place))?.status === "visited";
+            const addLabel = visited
+              ? t("states.removeFromVisited", { name: r.place.name })
+              : t("places.row.markVisitedAria", { name: r.place.name });
             return (
               <li
                 key={`${r.place.kind}:${r.place.id}`}
@@ -249,11 +253,8 @@ export function PlaceSearch({
                     type="button"
                     tabIndex={-1}
                     className={"chip result-add" + (visited ? " chip-on" : "")}
-                    aria-label={
-                      visited
-                        ? t("states.removeFromVisited", { name: r.place.name })
-                        : t("places.row.markVisitedAria", { name: r.place.name })
-                    }
+                    title={addLabel}
+                    aria-label={addLabel}
                     onClick={() => toggle(r.place)}
                   >
                     {visited ? `✓ ${t("places.country.visitedChip")}` : `＋ ${t("search.addChip")}`}

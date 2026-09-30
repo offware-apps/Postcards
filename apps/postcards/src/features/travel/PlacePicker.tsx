@@ -85,6 +85,7 @@ export function PlacePicker({
           <button
             type="button"
             className="picker-clear"
+            title={t("placePicker.clearAria", { label })}
             aria-label={t("placePicker.clearAria", { label })}
             onClick={() => {
               onPick(null);
@@ -110,6 +111,7 @@ export function PlacePicker({
           type="search"
           className="search-input"
           placeholder={placeholder ?? t("placePicker.placeholder")}
+          title={label}
           role="combobox"
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
@@ -141,6 +143,7 @@ export function PlacePicker({
                   type="button"
                   tabIndex={-1}
                   className={i === active ? "opt-active" : undefined}
+                  title={r.place.name}
                   // Keep focus on the input so onBlur doesn't close the list before this fires.
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => choose(r.place)}

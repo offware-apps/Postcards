@@ -2205,6 +2205,7 @@ export function MapView({
               <button
                 type="button"
                 className="link"
+                title={t("common.retry")}
                 onClick={() => mapRef.current && loadGeometry(mapRef.current, true)}
               >
                 {t("common.retry")}

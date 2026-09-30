@@ -147,6 +147,7 @@ export function AddPlaceForm({
           value={name}
           maxLength={200}
           placeholder={t("addPlace.namePlaceholder")}
+          title={t("addPlace.namePlaceholder")}
           aria-label={t("addPlace.namePlaceholder")}
           autoFocus
           onChange={(e) => setName(e.target.value)}
@@ -154,6 +155,7 @@ export function AddPlaceForm({
         <select
           className="select"
           value={cc}
+          title={t("addPlace.country")}
           aria-label={t("addPlace.country")}
           onChange={(e) => {
             setCcTouched(true);
@@ -190,13 +192,20 @@ export function AddPlaceForm({
         <button
           className="btn-ghost"
           type="button"
+          title={t("addPlace.useLocation")}
           onClick={useMyLocation}
           disabled={locating}
           aria-busy={locating}
         >
           {locating ? t("addPlace.locating") : t("addPlace.useLocation")}
         </button>
-        <button className="btn" type="button" disabled={!canSave} onClick={() => void save()}>
+        <button
+          className="btn"
+          type="button"
+          title={t("addPlace.addButton")}
+          disabled={!canSave}
+          onClick={() => void save()}
+        >
           {t("addPlace.addButton")}
         </button>
       </div>
@@ -211,13 +220,14 @@ export function AddPlaceForm({
         open={manualOpen}
         onToggle={(e) => setManualOpen((e.target as HTMLDetailsElement).open)}
       >
-        <summary>{t("addPlace.manualToggle")}</summary>
+        <summary title={t("addPlace.manualToggle")}>{t("addPlace.manualToggle")}</summary>
         <div className="add-place-row">
           <input
             className="search-input"
             type="text"
             value={coords}
             placeholder={t("addPlace.coordsPlaceholder")}
+            title={t("addPlace.coordsAria")}
             aria-label={t("addPlace.coordsAria")}
             onChange={(e) => setCoords(e.target.value)}
           />
@@ -230,6 +240,7 @@ export function AddPlaceForm({
             min={0}
             value={population}
             placeholder={t("addPlace.populationPlaceholder")}
+            title={t("addPlace.populationAria")}
             aria-label={t("addPlace.populationAria")}
             onChange={(e) => setPopulation(e.target.value)}
           />
