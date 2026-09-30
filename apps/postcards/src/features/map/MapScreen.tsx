@@ -530,9 +530,11 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
     return null;
     // visits deliberately via getState() — the header count refreshing on a
     // check is fine to defer to the next bounds/mode change. The date window /
-    // folder ARE deps so the "seen" counts re-derive when the selection changes.
+    // folder ARE deps so the "seen" counts re-derive when the selection changes,
+    // and gazGen so the list fills in when the monuments, airports and stations
+    // land after the first paint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, bounds, ref, dateFilter, folder]);
+  }, [mode, bounds, ref, dateFilter, folder, gazGen]);
   // The monument/airport list AFTER the visited/hide-visited filter — hoisted so
   // the list can show an honest empty message when the filter matches nothing
   // (before, the chips floated above a blank void and it read as broken).

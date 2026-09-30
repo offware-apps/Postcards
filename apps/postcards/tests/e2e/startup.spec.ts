@@ -29,3 +29,21 @@ test("a reload onto Trips shows it once the airports have landed", async ({ page
   await expect(page.getByText("Loading…")).toBeHidden();
   await expect(page.locator("main .screen")).toBeVisible();
 });
+
+test("the map's station list fills in when the stations land after the map", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("postcards-intro-seen", "1");
+    localStorage.setItem("postcards-map-mode", "stations");
+  });
+  // Hold the stations back until the map has drawn its (empty) list.
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  await page.route("**/reference/railways.json", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/");
+  await expect(page.getByText("Nothing in this view")).toBeVisible();
+  release();
+  await expect(page.locator(".view-list .city-row").first()).toBeVisible();
+});
