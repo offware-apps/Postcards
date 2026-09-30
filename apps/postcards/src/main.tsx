@@ -52,6 +52,10 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// The module graph ran, so the boot guard (public/boot-guard.js) stands down;
+// from here a failed load shows LoadFailure.
+(window as { __postcardsBootGuard?: { cancel(): void } }).__postcardsBootGuard?.cancel();
+
 const el = document.getElementById("root");
 if (!el) throw new Error("Root element not found");
 
