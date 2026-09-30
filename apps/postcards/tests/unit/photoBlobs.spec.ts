@@ -61,6 +61,25 @@ describe("data URL <-> Blob codec", () => {
   it("preserves the MIME type across the round-trip", async () => {
     expect(await blobToDataUrl(dataUrlToBlob(DATA_URL_2))).toBe(DATA_URL_2);
   });
+
+  it("decodes a percent-encoded payload to its UTF-8 bytes under the bare mime", async () => {
+    for (const url of [
+      "data:image/png;charset=utf-8,%E2%9C%93",
+      "data:image/png;charset=utf-8,✓",
+    ]) {
+      const blob = dataUrlToBlob(url);
+      expect(blob.type).toBe("image/png");
+      expect([...new Uint8Array(await blob.arrayBuffer())]).toEqual([0xe2, 0x9c, 0x93]);
+    }
+  });
+
+  it("keeps the raw byte of a percent-escape that is not UTF-8, and a stray %", async () => {
+    const blob = dataUrlToBlob("data:image/png;charset=utf-8,%89PNG%zz");
+    expect([...new Uint8Array(await blob.arrayBuffer())]).toEqual([
+      0x89,
+      ...new TextEncoder().encode("PNG%zz"),
+    ]);
+  });
 });
 
 describe("dehydrate/hydrate round-trip (blobs off the record)", () => {

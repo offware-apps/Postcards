@@ -48,20 +48,53 @@ const idOf = new WeakMap<object, string>();
 
 const B64_CHUNK = 0x8000;
 
+/** Decode a `data:<mime>[;base64],<payload>` URL into raw bytes + its (parameter-
+ *  stripped) mime. A base64 payload is decoded as base64; any other payload is
+ *  percent-decoded: its text as UTF-8 bytes, each `%XX` as the byte it names. */
+export function decodeDataUrl(dataUrl: string): { bytes: Uint8Array<ArrayBuffer>; mime: string } {
+  const comma = dataUrl.indexOf(",");
+  const meta = dataUrl.slice(5, comma); // between "data:" and ","
+  const isBase64 = /;base64$/i.test(meta);
+  // Strip the ;base64 flag AND any ;charset=… parameters to get the bare mime.
+  const mime = meta.replace(/;base64$/i, "").split(";")[0] || "application/octet-stream";
+  const payload = dataUrl.slice(comma + 1);
+  if (isBase64) {
+    const bin = atob(payload);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return { bytes, mime };
+  }
+  return { bytes: percentDecode(payload), mime };
+}
+
+const isHex = (b: number | undefined) =>
+  b !== undefined &&
+  ((b >= 0x30 && b <= 0x39) || (b >= 0x41 && b <= 0x46) || (b >= 0x61 && b <= 0x66));
+
+/** Percent-decode as the URL standard does: never throws, so an escape that is
+ *  not valid UTF-8 (`%89`) keeps its byte and a stray `%` stays a `%`. */
+function percentDecode(s: string): Uint8Array<ArrayBuffer> {
+  const input = new TextEncoder().encode(s);
+  const out = new Uint8Array(input.length);
+  let n = 0;
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === 0x25 && isHex(input[i + 1]) && isHex(input[i + 2])) {
+      out[n++] = parseInt(String.fromCharCode(input[i + 1]!, input[i + 2]!), 16);
+      i += 2;
+    } else {
+      out[n++] = input[i]!;
+    }
+  }
+  return out.subarray(0, n);
+}
+
 /** Decode an inline `data:...;base64,...` (or text) URL into a Blob. Pure, sync. */
 export function dataUrlToBlob(dataUrl: string): Blob {
-  const comma = dataUrl.indexOf(",");
-  if (!dataUrl.startsWith("data:") || comma === -1) {
+  if (!dataUrl.startsWith("data:") || !dataUrl.includes(",")) {
     // Not a data URL — store the raw text so nothing is silently lost.
     return new Blob([dataUrl], { type: "text/plain" });
   }
-  const meta = dataUrl.slice(5, comma); // between "data:" and ","
-  const base64 = /;base64$/i.test(meta);
-  const mime = meta.replace(/;base64$/i, "") || "application/octet-stream";
-  const payload = dataUrl.slice(comma + 1);
-  const str = base64 ? atob(payload) : decodeURIComponent(payload);
-  const bytes = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+  const { bytes, mime } = decodeDataUrl(dataUrl);
   return new Blob([bytes], { type: mime });
 }
 
