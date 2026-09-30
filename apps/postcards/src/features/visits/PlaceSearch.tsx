@@ -16,7 +16,10 @@ import { SearchIcon } from "../../ui/icons";
  * city/airport/monument or opens a country's page — and never logs anything by
  * itself (an accidental Enter used to silently mark the top match visited).
  * Marking visited is the explicit "Add" chip on the row, or Shift+Enter.
- * Fully keyboard-operable: arrows move the active option, Escape clears.
+ * Fully keyboard-operable: arrows move the active result, Escape clears.
+ * The results are a grid, one row per place with a cell for the place and one
+ * for its Add chip: an option may hold no control, so a listbox would hide the
+ * chip from a screen reader.
  */
 export function PlaceSearch({
   onFocusCity,
@@ -32,7 +35,7 @@ export function PlaceSearch({
   const [q, setQ] = useState("");
   const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const focusNonce = useUi((s) => s.searchFocusNonce);
 
   // On a phone the top-bar field is narrow (it shares the row with the brand and
@@ -174,6 +177,7 @@ export function PlaceSearch({
         title={t("search.aria")}
         aria-label={t("search.aria")}
         role="combobox"
+        aria-haspopup="grid"
         aria-expanded={results.length > 0}
         aria-controls="search-results"
         aria-autocomplete="list"
@@ -208,11 +212,11 @@ export function PlaceSearch({
             : ""}
       </p>
       {results.length > 0 && (
-        <ul
+        <div
           ref={listRef}
           className="results results-split"
           id="search-results"
-          role="listbox"
+          role="grid"
           aria-label={t("search.resultsAria")}
         >
           {results.map((r, i) => {
@@ -221,49 +225,48 @@ export function PlaceSearch({
               ? t("states.removeFromVisited", { name: r.place.name })
               : t("places.row.markVisitedAria", { name: r.place.name });
             return (
-              <li
-                key={`${r.place.kind}:${r.place.id}`}
-                id={`search-opt-${i}`}
-                role="option"
-                aria-selected={i === active}
-              >
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className={"result-open" + (i === active ? " opt-active" : "")}
-                  title={
-                    r.place.kind === "country"
-                      ? t("stats.country.open", { name: r.place.name })
-                      : t("stats.records.showOnMap", { name: r.place.name })
-                  }
-                  onClick={() => pick(r.place)}
-                >
-                  <span className="result-flag" aria-hidden>
-                    {r.place.countryId ? countryFlag(r.place.countryId) : ""}
-                  </span>
-                  <span className="result-main">
-                    <span className="result-name">{r.place.name}</span>
-                    <span className="result-detail">{r.detail}</span>
-                  </span>
-                </button>
-                {/* Logging is ITS OWN button — showing a place never logs it.
-                    Countries have none: they're visited via places inside. */}
-                {r.place.kind !== "country" && (
+              <div key={`${r.place.kind}:${r.place.id}`} role="row">
+                <div id={`search-opt-${i}`} role="gridcell" aria-selected={i === active}>
                   <button
                     type="button"
                     tabIndex={-1}
-                    className={"chip result-add" + (visited ? " chip-on" : "")}
-                    title={addLabel}
-                    aria-label={addLabel}
-                    onClick={() => toggle(r.place)}
+                    className={"result-open" + (i === active ? " opt-active" : "")}
+                    title={
+                      r.place.kind === "country"
+                        ? t("stats.country.open", { name: r.place.name })
+                        : t("stats.records.showOnMap", { name: r.place.name })
+                    }
+                    onClick={() => pick(r.place)}
                   >
-                    {visited ? `✓ ${t("places.country.visitedChip")}` : `＋ ${t("search.addChip")}`}
+                    <span className="result-flag" aria-hidden>
+                      {r.place.countryId ? countryFlag(r.place.countryId) : ""}
+                    </span>
+                    <span className="result-main">
+                      <span className="result-name">{r.place.name}</span>
+                      <span className="result-detail">{r.detail}</span>
+                    </span>
                   </button>
+                </div>
+                {/* Logging is ITS OWN button — showing a place never logs it.
+                    Countries have none: they're visited via places inside. */}
+                {r.place.kind !== "country" && (
+                  <div role="gridcell">
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className={"chip result-add" + (visited ? " chip-on" : "")}
+                      title={addLabel}
+                      aria-label={addLabel}
+                      onClick={() => toggle(r.place)}
+                    >
+                      {visited ? `✓ ${t("places.country.visitedChip")}` : `＋ ${t("search.addChip")}`}
+                    </button>
+                  </div>
                 )}
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
       {/* No "add your own place" here: a custom place is added by tapping its spot
           on the map (long-press / "Add a place here"), which is where coordinates

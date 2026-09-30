@@ -29,9 +29,17 @@ async function openJournalView(page: Page, name: string): Promise<void> {
 }
 
 // Every top-level screen and every dialog or sheet, each opened from the map.
-// The search results list is left out: its rows nest a button in an option.
 const SCREENS: [string, (page: Page) => Promise<void>][] = [
   ["map", async () => {}],
+  [
+    "search results",
+    async (page) => {
+      // Paris is visited in the backup and its airports are not, so both chip states show.
+      await page.getByLabel("Search a city or country").fill("Paris");
+      await expect(page.locator("#search-results")).toBeVisible();
+      await page.keyboard.press("ArrowDown");
+    },
+  ],
   [
     "map filter panel",
     async (page) => {
