@@ -1,7 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
-import { Share } from "@capacitor/share";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
 import { useStories } from "../../lib/store/useStories";
@@ -29,16 +27,8 @@ import { useT } from "../../lib/i18n";
  * Still strictly explicit — this only ever runs from an Export button.
  */
 export async function deliver(filename: string, text: string, type: string): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
-    const { uri } = await Filesystem.writeFile({
-      path: filename,
-      data: text,
-      directory: Directory.Cache,
-      encoding: Encoding.UTF8,
-    });
-    await Share.share({ title: filename, url: uri });
-    return;
-  }
+  // Native: lib/download writes the file and opens the system share sheet.
+  if (Capacitor.isNativePlatform()) return download(filename, text, type);
   if (typeof navigator !== "undefined" && typeof navigator.canShare === "function") {
     const file = new File([text], filename, { type });
     if (navigator.canShare({ files: [file] })) {
@@ -52,20 +42,12 @@ export async function deliver(filename: string, text: string, type: string): Pro
       }
     }
   }
-  download(filename, text, type);
+  await download(filename, text, type);
 }
 
-/** Same delivery, but for a BINARY file (the .zip archive): native writes the
- *  bytes as base64 then shares; the web shares/downloads the Blob directly. */
+/** Same delivery, but for a BINARY file (the .zip archive). */
 async function deliverBlob(filename: string, blob: Blob, type: string): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    let bin = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    const { uri } = await Filesystem.writeFile({ path: filename, data: btoa(bin), directory: Directory.Cache });
-    await Share.share({ title: filename, url: uri });
-    return;
-  }
+  if (Capacitor.isNativePlatform()) return downloadBlob(filename, blob);
   if (typeof navigator !== "undefined" && typeof navigator.canShare === "function") {
     const file = new File([blob], filename, { type });
     if (navigator.canShare({ files: [file] })) {
@@ -77,7 +59,7 @@ async function deliverBlob(filename: string, blob: Blob, type: string): Promise<
       }
     }
   }
-  downloadBlob(filename, blob);
+  await downloadBlob(filename, blob);
 }
 
 export function Backup() {

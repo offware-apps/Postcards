@@ -1019,9 +1019,9 @@ export function JournalScreen() {
     showToast(t("journal.toast.removed", { title: s.title || s.place.name }), () => setAll(prev));
   }
 
-  function exportMd() {
+  async function exportMd() {
     try {
-      download(JOURNAL_EXPORT_FILENAME, journalToMarkdown(stories, ref), "text/markdown");
+      await download(JOURNAL_EXPORT_FILENAME, journalToMarkdown(stories, ref), "text/markdown");
     } catch {
       showToast(t("journal.toast.exportErr"));
     }
@@ -1050,7 +1050,7 @@ export function JournalScreen() {
           </button>
         )}
         {stories.length > 0 && (
-          <button className="btn-ghost" type="button" onClick={exportMd}>
+          <button className="btn-ghost" type="button" onClick={() => void exportMd()}>
             {t("journal.exportMd")}
           </button>
         )}
