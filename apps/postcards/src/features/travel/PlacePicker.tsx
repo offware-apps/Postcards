@@ -133,26 +133,23 @@ export function PlacePicker({
         {open && (
           <ul className="results" id={listId} role="listbox" aria-label={label}>
             {results.map((r, i) => (
+              // The option itself takes the click: an option may hold no control,
+              // so a button inside it would be hidden from a screen reader.
               <li
                 key={`${r.place.kind}:${r.place.id}`}
                 id={`${listId}-opt-${i}`}
                 role="option"
                 aria-selected={i === active}
+                className={i === active ? "opt-active" : undefined}
+                title={r.place.name}
+                // Keep focus on the input so onBlur doesn't close the list before this fires.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choose(r.place)}
               >
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className={i === active ? "opt-active" : undefined}
-                  title={r.place.name}
-                  // Keep focus on the input so onBlur doesn't close the list before this fires.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => choose(r.place)}
-                >
-                  <span className="result-main">
-                    <span className="result-name">{r.place.name}</span>
-                    <span className="result-detail">{r.detail}</span>
-                  </span>
-                </button>
+                <span className="result-main">
+                  <span className="result-name">{r.place.name}</span>
+                  <span className="result-detail">{r.detail}</span>
+                </span>
               </li>
             ))}
           </ul>

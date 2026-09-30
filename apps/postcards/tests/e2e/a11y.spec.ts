@@ -155,6 +155,16 @@ const SCREENS: [string, (page: Page) => Promise<void>][] = [
     },
   ],
   [
+    "trip form place list",
+    async (page) => {
+      await gotoTab(page, "Trips");
+      await page.getByRole("button", { name: "New trip" }).click();
+      await page.getByLabel("From", { exact: true }).fill("Paris");
+      await expect(page.getByRole("listbox", { name: "From" })).toBeVisible();
+      await page.keyboard.press("ArrowDown");
+    },
+  ],
+  [
     "trip composer",
     async (page) => {
       await gotoTab(page, "Trips");
