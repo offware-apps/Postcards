@@ -5,8 +5,10 @@ import type { FeatureCollection, MultiPolygon, Polygon, Position } from "geojson
 // coast wraps the whole globe around the pole. MapLibre draws them on a plane,
 // so that jump becomes an edge spanning the whole map and a visited Russia or
 // Fiji paints a horizontal band across it. Each ring is therefore unwrapped
-// into continuous longitudes, closed through the pole when it circles one, and
-// cut into the [-180, 180] world it belongs to — once, when the geometry loads.
+// into continuous longitudes and closed through the pole when it circles one —
+// once, when the geometry loads. The rings are not cut at ±180: MapLibre wraps
+// a shape running past the edge into the next world copy itself, where a cut
+// would be drawn as a border line down the 180th meridian.
 
 type Ring = Position[];
 
@@ -23,32 +25,6 @@ function unwrap(ring: Ring): Ring {
     prev = lon! + off;
     out.push([prev, lat!]);
   }
-  // A ring around a pole ends 360° from where it started: close it along the
-  // pole's latitude so it encloses the cap instead of a sliver.
-  const first = out[0]!;
-  const last = out[out.length - 1]!;
-  if (Math.abs(last[0]! - first[0]!) > 180) {
-    const poleLat = out.reduce((s, p) => s + p[1]!, 0) < 0 ? -90 : 90;
-    out.push([last[0]!, poleLat], [first[0]!, poleLat], [first[0]!, first[1]!]);
-  }
-  return out;
-}
-
-/** Sutherland-Hodgman against one vertical line; `keepLeft` keeps x <= x0. */
-function clipX(ring: Ring, x0: number, keepLeft: boolean): Ring {
-  const inside = (p: Position) => (keepLeft ? p[0]! <= x0 : p[0]! >= x0);
-  const out: Ring = [];
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i]!;
-    const b = ring[(i + 1) % ring.length]!;
-    const ia = inside(a);
-    const ib = inside(b);
-    if (ia) out.push(a);
-    if (ia !== ib) {
-      const t = (x0 - a[0]!) / (b[0]! - a[0]!);
-      out.push([x0, a[1]! + t * (b[1]! - a[1]!)]);
-    }
-  }
   return out;
 }
 
@@ -62,45 +38,41 @@ function area(ring: Ring): number {
   return s / 2;
 }
 
-/** The part of `ring` inside the world copy starting at `west`, shifted into
- *  [-180, 180] and closed; null when nothing with an area is left. */
-function ringInWorld(ring: Ring, west: number): Ring | null {
-  const clipped = clipX(clipX(ring, west, false), west + 360, true);
-  if (clipped.length < 3 || Math.abs(area(clipped)) < 1e-9) return null;
-  const shift = -180 - west;
-  const out = clipped.map(([x, y]) => [x! + shift, y!]);
-  out.push([...out[0]!]);
-  return out;
+/** A ring around a pole ends 360° from where it started: close it along the
+ *  pole's latitude so it encloses the cap instead of a sliver. */
+function closePole(ring: Ring): Ring {
+  const first = ring[0]!;
+  const last = ring[ring.length - 1]!;
+  if (Math.abs(last[0]! - first[0]!) <= 180) return ring;
+  const poleLat = ring.reduce((s, p) => s + p[1]!, 0) < 0 ? -90 : 90;
+  return [...ring, [last[0]!, poleLat], [first[0]!, poleLat], [first[0]!, first[1]!]];
 }
 
-/** Split a polygon's rings at the antimeridian; untouched when it does not cross. */
-function splitPolygon(rings: Ring[]): Ring[][] {
-  const unwrapped = rings.map(unwrap);
-  let min = Infinity;
-  let max = -Infinity;
-  for (const r of unwrapped)
-    for (const [x] of r) {
-      if (x! < min) min = x!;
-      if (x! > max) max = x!;
-    }
-  if (min >= -180 && max <= 180 && unwrapped.every((r, i) => r.length === rings[i]!.length))
-    return [rings];
-  const parts: Ring[][] = [];
-  for (let west = Math.floor((min + 180) / 360) * 360 - 180; west < max; west += 360) {
-    const kept = unwrapped.map((r) => ringInWorld(r, west)).filter((r): r is Ring => r !== null);
-    if (kept.length) parts.push(kept);
-  }
-  return parts;
+const minLon = (ring: Ring) => ring.reduce((m, p) => Math.min(m, p[0]!), Infinity);
+
+/** Shift `ring` by whole turns so its westernmost point lies in [west, west + 360). */
+function shiftInto(ring: Ring, west: number): Ring {
+  const turns = Math.floor((minLon(ring) - west) / 360);
+  return turns === 0 ? ring : ring.map(([x, y]) => [x! - turns * 360, y!]);
 }
 
-/** Country outlines safe to draw on a plane: no ring crosses ±180°. */
-export function splitAntimeridian<T extends FeatureCollection<Polygon | MultiPolygon>>(fc: T): T {
+/** Unwrap a polygon's rings, its holes kept in the same world copy as its
+ *  outline. A ring with no area on the plane goes: Antarctica's outline is a
+ *  circle just off the south pole, with its coast as the hole around it. */
+function unwrapPolygon(rings: Ring[]): Ring[] {
+  const kept = rings.map(unwrap).filter((r) => Math.abs(area(r)) > 1e-6);
+  if (!kept.length) return rings;
+  const outer = shiftInto(closePole(kept[0]!), -180);
+  const west = minLon(outer);
+  return [outer, ...kept.slice(1).map((r) => shiftInto(closePole(r), west))];
+}
+
+/** Country outlines safe to draw on a plane: no edge jumps across ±180°. */
+export function unwrapAntimeridian<T extends FeatureCollection<Polygon | MultiPolygon>>(fc: T): T {
   for (const f of fc.features) {
     const g = f.geometry;
-    const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
-    const split = polys.flatMap(splitPolygon);
-    if (split.length === polys.length && split.every((p, i) => p === polys[i])) continue;
-    f.geometry = { type: "MultiPolygon", coordinates: split };
+    if (g.type === "Polygon") g.coordinates = unwrapPolygon(g.coordinates);
+    else g.coordinates = g.coordinates.map(unwrapPolygon);
   }
   return fc;
 }
