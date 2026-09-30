@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { useTrips } from "../../lib/store/useTrips";
 import { useVisits } from "../../lib/store/useVisits";
@@ -67,6 +67,34 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
   );
 
   const addedKeys = useMemo(() => new Set(stops.map((s) => placeKey(s))), [stops]);
+  // Rows keyed by place and which repeat of it this is (a round trip lists a place
+  // twice), so a move re-orders the rows instead of remounting them.
+  const rowKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return stops.map((s) => {
+      const k = placeKey(s);
+      const n = seen.get(k) ?? 0;
+      seen.set(k, n + 1);
+      return `${k}:${n}`;
+    });
+  }, [stops]);
+  // A moved row's arrow keeps keyboard focus: moving the row in the DOM can drop
+  // it, and at either end the pressed arrow turns disabled, so hand it to the other.
+  const listRef = useRef<HTMLOListElement>(null);
+  const focusAfterMove = useRef<{ index: number; dir: "up" | "down" } | null>(null);
+  useEffect(() => {
+    const want = focusAfterMove.current;
+    if (!want) return;
+    focusAfterMove.current = null;
+    const row = listRef.current?.children[want.index];
+    const [up, down] = row?.querySelectorAll<HTMLButtonElement>(".trip-stop-actions button") ?? [];
+    const [pressed, other] = want.dir === "up" ? [up, down] : [down, up];
+    (pressed && !pressed.disabled ? pressed : other)?.focus();
+  }, [stops]);
+  const move = (from: number, to: number) => {
+    focusAfterMove.current = { index: to, dir: to < from ? "up" : "down" };
+    applyChain(moveStopTo({ stops, legModes }, from, to, nextFill()));
+  };
   const { km, unresolvedLegs } = useMemo(() => tripPathKm(stops, ref), [stops, ref]);
   const canSave = stops.length >= 2;
 
@@ -126,9 +154,9 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
       {stops.length === 0 ? (
         <p className="muted small">{t("trip.compose.emptyStops")}</p>
       ) : (
-        <ol className="trip-stops">
+        <ol className="trip-stops" ref={listRef}>
           {stops.map((s, i) => (
-            <li key={`${s.kind}:${s.id}:${i}`} className="trip-stop-row">
+            <li key={rowKeys[i]} className="trip-stop-row">
               <div className="trip-stop-main">
                 <span className="trip-stop-index" aria-hidden>
                   {i + 1}
@@ -145,7 +173,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                     className="icon-btn"
                     disabled={i === 0}
                     aria-label={t("trip.compose.moveUp", { name: s.name })}
-                    onClick={() => applyChain(moveStopTo({ stops, legModes }, i, i - 1, nextFill()))}
+                    onClick={() => move(i, i - 1)}
                   >
                     ↑
                   </button>
@@ -154,7 +182,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                     className="icon-btn"
                     disabled={i === stops.length - 1}
                     aria-label={t("trip.compose.moveDown", { name: s.name })}
-                    onClick={() => applyChain(moveStopTo({ stops, legModes }, i, i + 1, nextFill()))}
+                    onClick={() => move(i, i + 1)}
                   >
                     ↓
                   </button>
