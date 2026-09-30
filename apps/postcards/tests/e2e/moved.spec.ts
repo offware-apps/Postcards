@@ -9,18 +9,15 @@ const NEW = "http://localhost:4173";
 test("the old address hands its places to the new one", async ({ page, context }) => {
   // Seed the old origin's store directly: served from there, the app redirects
   // straight away when it holds nothing. A static file keeps the app from booting.
+  // The seed is a first-version database holding visits alone; the app upgrades
+  // it to its current version, as it does for anyone who installed early.
   await page.goto(`${OLD}/manifest.webmanifest`);
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open("postcards", 5);
+        const req = indexedDB.open("postcards", 1);
         req.onupgradeneeded = () => {
-          const db = req.result;
-          db.createObjectStore("visits", { keyPath: "visitId" });
-          db.createObjectStore("trips", { keyPath: "tripId" });
-          db.createObjectStore("stories", { keyPath: "storyId" });
-          db.createObjectStore("tombstones", { keyPath: "key" });
-          db.createObjectStore("photos", { keyPath: "id" });
+          req.result.createObjectStore("visits", { keyPath: "visitId" });
         };
         req.onsuccess = () => {
           const tx = req.result.transaction("visits", "readwrite");

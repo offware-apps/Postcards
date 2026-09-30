@@ -1,37 +1,30 @@
-import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
-
-async function addDatedTrip(page: Page, from: string, to: string, date: string) {
-  // The add form is collapsed by default — open it for each trip.
-  await page.getByRole("button", { name: "New trip" }).click();
-  await page.getByLabel("From", { exact: true }).fill(from);
-  await page.getByRole("option").filter({ hasText: from }).first().click();
-  await page.getByLabel("To", { exact: true }).fill(to);
-  await page.getByRole("option").filter({ hasText: to }).first().click();
-  await page.locator("#trip-date").fill(date);
-  await page.getByRole("button", { name: "Add trip" }).click();
-  await expect(page.getByText(/Added .*→/)).toBeVisible(); // undo toast
-}
+import { test, expect } from "@playwright/test";
+import { gotoTab, openApp, addTrip } from "./nav-helper";
 
 // Log trips in two different years, then filter the Travel log by year and see
 // the list + totals narrow to the chosen period.
 test("filter the travel log by year", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await gotoTab(page, "Trips");
 
-  await addDatedTrip(page, "CDG", "JFK", "2024-08-14");
-  await addDatedTrip(page, "LHR", "SFO", "2023-05-01");
+  await addTrip(page, "CDG", "JFK", "2024-08-14");
+  await addTrip(page, "LHR", "SFO", "2023-05-01");
 
   // No filter yet → both trips counted.
   await expect(page.locator(".travel-totals")).toContainText("2 trips");
 
   // Filter to 2024 → one trip; the month sub-filter appears.
+  const trip = (label: string) => page.locator("li.city-row", { hasText: label });
   await page.locator("#trip-filter-year").selectOption("2024");
   await expect(page.locator(".travel-totals")).toContainText("1 trip");
+  await expect(trip("CDG → JFK")).toBeVisible();
+  await expect(trip("LHR → SFO")).toHaveCount(0);
   await expect(page.locator("#trip-filter-month")).toBeVisible();
 
-  // Switch to 2023 → the other trip.
+  // Switch to 2023 → the other trip, with the same count as before.
   await page.locator("#trip-filter-year").selectOption("2023");
+  await expect(trip("LHR → SFO")).toBeVisible();
+  await expect(trip("CDG → JFK")).toHaveCount(0);
   await expect(page.locator(".travel-totals")).toContainText("1 trip");
 
   // Back to all years → both again.
@@ -43,11 +36,11 @@ test("filter the travel log by year", async ({ page }) => {
 // chips built from your dated content. Picking a year narrows the trip arcs and
 // tags the map's Trips toggle with that period.
 test("the map's own date filter tags the trip arcs by period", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await gotoTab(page, "Trips");
 
-  await addDatedTrip(page, "CDG", "JFK", "2024-08-14");
-  await addDatedTrip(page, "LHR", "SFO", "2023-05-01");
+  await addTrip(page, "CDG", "JFK", "2024-08-14");
+  await addTrip(page, "LHR", "SFO", "2023-05-01");
 
   await page.getByRole("button", { name: "Map", exact: true }).click();
   // Open the ONE Filter panel and pick 2024 in its Date section (chips derive
@@ -67,11 +60,11 @@ test("the map's own date filter tags the trip arcs by period", async ({ page }) 
 // stored period is reconciled back to "all" — no phantom <select> value, no
 // silently-empty map.
 test("filtering to a year whose trips are all deleted resets to all years", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await gotoTab(page, "Trips");
 
-  await addDatedTrip(page, "CDG", "JFK", "2024-08-14");
-  await addDatedTrip(page, "LHR", "SFO", "2023-05-01");
+  await addTrip(page, "CDG", "JFK", "2024-08-14");
+  await addTrip(page, "LHR", "SFO", "2023-05-01");
 
   await page.locator("#trip-filter-year").selectOption("2024");
   await expect(page.locator(".travel-totals")).toContainText("1 trip");

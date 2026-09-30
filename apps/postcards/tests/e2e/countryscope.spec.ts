@@ -1,18 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openApp, markVisited } from "./nav-helper";
 
 // "What counts as a country" — switching the scope changes both the count of
 // visited countries and the world denominator, dropping dependent territories.
 test("count with or without dependent territories", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
 
   // Countries are visited via places inside them: a city in a UN member
   // (Paris → France) and one in a territory (Hong Kong city → Hong Kong).
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: "Mark Paris visited" }).first().click();
-  await page.getByLabel("Search a city or country").fill("Hong Kong");
-  await page.getByRole("button", { name: "Mark Hong Kong visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Paris");
+  await markVisited(page, "Hong Kong");
 
   await gotoTab(page, "Stats");
 

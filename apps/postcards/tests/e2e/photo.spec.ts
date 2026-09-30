@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openApp, markVisited } from "./nav-helper";
 
 // A small valid 8×8 PNG — enough for the browser to decode + downscale on-device.
 const PNG = Buffer.from(
@@ -7,10 +8,8 @@ const PNG = Buffer.from(
 );
 
 test("attach photos to a place, caption one, view and remove", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: "Mark Paris visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await openApp(page);
+  await markVisited(page, "Paris");
 
   await page.getByRole("button", { name: "Places", exact: true }).click();
 

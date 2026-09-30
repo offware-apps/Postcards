@@ -1,17 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openApp, markVisited } from "./nav-helper";
 
 // End-to-end smoke: the app mounts with the real gazetteer, a place can be
 // added via search, and it shows up in statistics and the Places list.
 test("add a place via search and see it in stats + places", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByText("Postcards")).toBeVisible();
+  await openApp(page);
 
   // Map screen is default: search and add Paris (top result = Paris, France).
   // Adding is the row's explicit chip — picking the row only shows the place.
-  await page.getByLabel("Search a city or country").fill("Paris");
-  await page.getByRole("button", { name: "Mark Paris visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Paris");
   // Adds are silent (no toast noise); the result is verified in Stats + Places below.
 
   // Stats reflects it, including the continent section.
@@ -26,10 +23,8 @@ test("add a place via search and see it in stats + places", async ({ page }) => 
 });
 
 test("undo reverts a removal", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Search a city or country").fill("Tokyo");
-  await page.getByRole("button", { name: "Mark Tokyo visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await openApp(page);
+  await markVisited(page, "Tokyo");
 
   // Removing a place (which can drop photos/notes) is the one action with an
   // undoable toast. Remove Tokyo, then undo — it comes back.
@@ -46,10 +41,8 @@ test("undo reverts a removal", async ({ page }) => {
 test("a visited city lights up its country — countries can't be checked off directly", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByLabel("Search a city or country").fill("Tokyo");
-  await page.getByRole("button", { name: "Mark Tokyo visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await openApp(page);
+  await markVisited(page, "Tokyo");
 
   // The checklist shows Japan as visited (derived), with no direct check-off.
   await page.getByRole("button", { name: "Places", exact: true }).click();

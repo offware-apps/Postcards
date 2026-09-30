@@ -1,15 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openApp, markVisited, addTrip } from "./nav-helper";
 
 // Spec 019 — Trip Reconstruction. Fast reconstruction: tap the places you've BEEN
 // (list or map, with flags) to build an ordered chain of stops; the date is
 // optional. Plus the Travel back-navigation fix.
-
-async function markVisited(page: Page, city: string): Promise<void> {
-  await page.getByLabel("Search a city or country").fill(city);
-  await page.getByRole("button", { name: `Mark ${city} visited` }).first().click();
-  await page.keyboard.press("Escape");
-}
 
 async function openComposer(page: Page): Promise<void> {
   await gotoTab(page, "Trips");
@@ -23,7 +17,7 @@ function kmOf(text: string | null): number {
 
 // US1 — build a multi-stop trip by tapping your visited places; save (no date); reopen.
 test("build a multi-stop trip from your visited places", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   for (const city of ["Paris", "Tokyo", "London"]) await markVisited(page, city);
   await openComposer(page);
 
@@ -55,7 +49,7 @@ test("build a multi-stop trip from your visited places", async ({ page }) => {
 // US1 — airports are reachable by search even with nothing logged yet (flights are
 // central to reconstruction, and airports are rarely logged as visits).
 test("airports are reachable by search with no prior visits", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await openComposer(page); // fresh profile — no visited places
 
   const search = page.getByRole("searchbox");
@@ -70,33 +64,28 @@ test("airports are reachable by search with no prior visits", async ({ page }) =
 
 // US2 — the total distance shows and grows as stops are added.
 test("distance is shown and updates live as stops change", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   for (const city of ["Paris", "Tokyo", "Berlin"]) await markVisited(page, city);
   await openComposer(page);
 
   await page.getByRole("button", { name: "Add Paris to the trip" }).click();
   await page.getByRole("button", { name: "Add Tokyo to the trip" }).click();
-  const two = kmOf(await page.locator(".trip-distance-km").textContent());
-  expect(two).toBeGreaterThan(4000); // Paris↔Tokyo ≈ 9,700 km
+  const km = page.locator(".trip-distance-km");
+  await expect.poll(async () => kmOf(await km.textContent())).toBeGreaterThan(4000); // Paris↔Tokyo ≈ 9,700 km
+  const two = kmOf(await km.textContent());
 
   await page.getByRole("button", { name: "Add Berlin to the trip" }).click();
-  const three = kmOf(await page.locator(".trip-distance-km").textContent());
-  expect(three).toBeGreaterThan(two); // adding a leg only grows the great-circle path
+  await expect.poll(async () => kmOf(await km.textContent())).toBeGreaterThan(two); // adding a leg only grows the great-circle path
 });
 
 // US3 — opening an airport from the Travel screen and pressing Back returns to the
 // Travel list (not a dead-end on the map). Seeded via the quick single-leg form.
 test("Back from a Travel airport returns to the Travel list", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await gotoTab(page, "Trips");
 
   // Quick single-leg trip between two airports → seeds the most-visited roll-up.
-  await page.getByRole("button", { name: "New trip" }).click();
-  await page.getByLabel("From", { exact: true }).fill("CDG");
-  await page.getByRole("option").filter({ hasText: "CDG" }).first().click();
-  await page.getByLabel("To", { exact: true }).fill("JFK");
-  await page.getByRole("option").filter({ hasText: "JFK" }).first().click();
-  await page.getByRole("button", { name: "Add trip" }).click();
+  await addTrip(page, "CDG", "JFK");
   await expect(page.locator(".travel-totals")).toContainText("1 trip");
 
   // Open an airport from the roll-up → its detail page (a page layer covers Travel).

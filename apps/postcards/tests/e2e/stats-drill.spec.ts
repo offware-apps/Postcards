@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openApp, markVisited } from "./nav-helper";
 
 // A Stats country-card tier (cities / big / mega / sites) drills into Places,
 // scoped to THAT country + tier via the ONE shared filter — and because the
@@ -7,11 +7,9 @@ import { gotoTab } from "./nav-helper";
 test("a country tier opens Places filtered, and the filter persists across pages", async ({
   page,
 }) => {
-  await page.goto("/");
+  await openApp(page);
   for (const q of ["Paris", "Lyon", "Tokyo"]) {
-    await page.getByLabel("Search a city or country").fill(q);
-    await page.getByRole("button", { name: `Mark ${q} visited` }).first().click();
-    await page.keyboard.press("Escape");
+    await markVisited(page, q);
   }
 
   await gotoTab(page, "Stats");
@@ -35,10 +33,11 @@ test("a country tier opens Places filtered, and the filter persists across pages
   await page.getByRole("button", { name: "Places", exact: true }).click();
   await expect(page.locator(".filter-chip", { hasText: "France" })).toBeVisible();
 
-  // Clearing the country chip widens the list back out (Tokyo can return).
+  // Clearing the country chip widens the list back out: Tokyo returns.
   await page
     .locator(".filter-chip", { hasText: "France" })
     .getByRole("button")
     .click();
   await expect(page.locator(".filter-chip", { hasText: "France" })).toHaveCount(0);
+  await expect(page.getByText("Tokyo", { exact: false }).first()).toBeVisible();
 });

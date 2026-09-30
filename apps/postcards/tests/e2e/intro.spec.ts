@@ -16,7 +16,9 @@ test("first run shows the intro page (skippable, once)", async ({ page }) => {
   await skip.click();
   await expect(page.getByRole("button", { name: "Skip" })).toHaveCount(0);
 
-  // …and it never comes back (the choice is remembered).
+  // …and it never comes back (the choice is remembered). The intro would open
+  // with the app's first render, so wait for the map before looking for it.
   await page.reload();
+  await expect(page.getByText("Cities in view")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Skip" })).toHaveCount(0);
 });

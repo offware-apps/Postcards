@@ -1,10 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { openApp } from "./nav-helper";
 
 // Spec 016 follow-on — the want-list ("I want to go") is now first-class on the map:
 // the same flag pill as visited (fixed elsewhere), and — proven here — removal via
 // the shared StateToggles is UNDOABLE, so an accidental tap is never a silent loss.
 test("removing a want-list city is undoable (shared toggle)", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
 
   // Add London to the want-list from the search results' ⚑.
   await page.getByLabel("Search a city or country").fill("London");
