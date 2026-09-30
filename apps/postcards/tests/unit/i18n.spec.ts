@@ -105,7 +105,7 @@ describe("useT() plural helper", () => {
 
     act(() => useSettings.getState().setLocale("fr"));
     expect(t()("moved.received", countPhrases(t(), one))).toBe(
-      "1 lieu, 0 voyages et 2 récits transférés depuis l'ancienne adresse.",
+      "1 lieu, 0 voyage et 2 récits transférés depuis l'ancienne adresse.",
     );
     expect(t().plural("backup.msg.merged", 1, { updated: 0, skip: "" })).toMatch(/^1 lieu ajouté, /);
 
