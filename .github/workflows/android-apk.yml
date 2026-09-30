@@ -1,8 +1,12 @@
-# Build an installable Android debug APK and upload it as a downloadable
-# artifact — so an APK can be obtained with NO local Android toolchain: push (or
-# run this workflow manually), open the run, and download `postcards-debug-apk`.
+# Build an installable Android APK and upload it as a downloadable artifact — so
+# an APK can be obtained with NO local Android toolchain: push (or run this
+# workflow manually), open the run, and download `postcards-apk`. On main it is
+# also published at a permanent download URL (the release step below).
+# With the signing secrets set (docs/NATIVE-BUILDS.md) the APK is a release build
+# signed with one stable key, so each one installs as an update over the last;
+# without them (forks) it is the debug build, signed with a throwaway key.
 # Local headless build: `pnpm --filter postcards apk:debug` (see docs/NATIVE-BUILDS.md).
-name: Android APK (debug)
+name: Android APK
 
 on:
   push:
@@ -46,31 +50,72 @@ jobs:
       - name: Sync the Android project
         # Copies the fresh dist/ into the committed android/ project + updates plugins.
         run: pnpm --filter postcards exec cap sync android
-      - name: Assemble the debug APK
+      - name: Assemble the APK
+        id: apk
         working-directory: apps/postcards/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          POSTCARDS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          POSTCARDS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          POSTCARDS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon assembleDebug
+          # The run number only grows, so every APK has a higher versionCode than
+          # the one it replaces.
+          version="$(node -p "require('../package.json').version")-${GITHUB_SHA::7}"
+          props=(-PversionCode="$GITHUB_RUN_NUMBER" -PversionName="$version")
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            export POSTCARDS_KEYSTORE_FILE="$RUNNER_TEMP/postcards.jks"
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$POSTCARDS_KEYSTORE_FILE"
+            ./gradlew --no-daemon assembleRelease "${props[@]}"
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/postcards.apk"
+            echo "signing=release" >> "$GITHUB_OUTPUT"
+          else
+            ./gradlew --no-daemon assembleDebug "${props[@]}"
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/postcards.apk"
+            echo "signing=debug" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
-          name: postcards-debug-apk
-          path: apps/postcards/android/app/build/outputs/apk/debug/app-debug.apk
+          name: postcards-apk
+          path: ${{ runner.temp }}/postcards.apk
           if-no-files-found: error
 
       # Also publish it to the Releases page so it's downloadable without opening
-      # the Actions run. One rolling prerelease ("debug-latest") holds the newest
-      # build: delete + recreate so its tag always points at the current commit.
+      # the Actions run. One rolling release ("android-latest") holds the newest
+      # build: delete + recreate so its tag always points at the current commit,
+      # while the download URL stays the same:
+      #   https://github.com/<owner>/<repo>/releases/download/android-latest/postcards.apk
       # main only — feature-branch pushes still get the run artifact above.
-      - name: Publish the APK to the rolling debug release
+      - name: Publish the APK to the rolling release
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.apk.outputs.version }}
+          SIGNING: ${{ steps.apk.outputs.signing }}
         run: |
-          gh release delete debug-latest --yes --cleanup-tag 2>/dev/null || true
-          gh release create debug-latest \
-            "apps/postcards/android/app/build/outputs/apk/debug/app-debug.apk#postcards-debug.apk" \
-            --title "Latest debug APK" \
-            --notes "Automated debug build from ${{ github.sha }}. Debug/unsigned — not for production." \
-            --prerelease \
-            --target "${{ github.sha }}"
+          if [ "$SIGNING" = release ]; then
+            updates="Each new version installs over the previous one and keeps your places."
+          else
+            updates="This is a debug build signed with a one-off key: to install a newer one, export your data (Settings, Your data), uninstall this one, install the new APK and import the file."
+          fi
+          cat > "$RUNNER_TEMP/notes.md" <<EOF
+          Postcards for Android, version $VERSION, built from $GITHUB_SHA.
+
+          **Download:** [postcards.apk](https://github.com/$GITHUB_REPOSITORY/releases/download/android-latest/postcards.apk) — this link always points to the newest build.
+
+          **Install**
+          1. Open the link above on your Android phone (Android 5.1 or newer) and download the APK.
+          2. Open the downloaded file. If Android asks, allow your browser or file manager to *install unknown apps*, then go back and tap **Install**.
+          3. $updates
+
+          Your places stay on your phone: no account, no server, no tracking.
+          EOF
+          gh release delete android-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create android-latest "$RUNNER_TEMP/postcards.apk" \
+            --title "Postcards for Android" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest \
+            --target "$GITHUB_SHA"

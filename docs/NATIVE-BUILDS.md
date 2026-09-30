@@ -15,20 +15,60 @@ thin shells that load it.
 
 ## Android — get an APK
 
-### Easiest: download a debug APK from CI (no local Android toolchain)
+### Easiest: download the APK
 
-The [`Android APK (debug)`](../.github/workflows/android-apk.yml) workflow builds an installable debug
-APK on every push (and on demand) and uploads it as an artifact:
+The newest build of `main` is always at one permanent URL:
 
-1. Push to `main` or any `claude/**` branch — or run the workflow manually (Actions → **Android APK
-   (debug)** → *Run workflow*).
-2. Open the finished run and download the **`postcards-debug-apk`** artifact.
-3. Unzip and install: `adb install app-debug.apk` (or copy to the phone and open it; you'll need
-   "install unknown apps" enabled since it's a debug build).
+**<https://github.com/offware-apps/Postcards/releases/download/android-latest/postcards.apk>**
 
-The APK is **debug-signed** with the auto-generated Android debug keystore (fine for sideloading, not
-for the Play Store) — the signing cert differs per machine/run, so uninstall an older copy if Android
-refuses to update over it.
+Open it on the phone, open the downloaded file, and allow "install unknown apps" for the browser if
+Android asks. The [`Android APK`](../.github/workflows/android-apk.yml) workflow builds it on every
+push to `main` and republishes the rolling `android-latest` release, so the tag always points at the
+current commit while the URL never changes. It links to the tag rather than to
+`releases/latest/download/…`, which follows whichever release GitHub marks latest and breaks the day
+a versioned release without a `postcards.apk` asset is published.
+
+Every push (to `main`, any `claude/**` branch, or a manual run from Actions → **Android APK** →
+*Run workflow*) also uploads the APK as the run's **`postcards-apk`** artifact.
+
+Each build carries `versionCode` = the workflow run number (it only grows) and `versionName` =
+`<package.json version>-<short sha>`. Locally both default to `1` / `1.0`; pass
+`-PversionCode=… -PversionName=…` to `gradlew` to set them.
+
+### Signing: one key, so updates install over the previous app
+
+Android installs an APK as an update only when it is signed with the same key as the installed app
+and its `versionCode` is not lower; otherwise the user must uninstall first, and uninstalling deletes the
+app's data (`allowBackup` is off). The debug keystore is generated fresh on every CI runner, so debug
+builds cannot update one another.
+
+When the four repository secrets below exist, CI builds `assembleRelease` signed with that key.
+Without them (forks, or before the secrets are set) it builds the debug APK, as before. Create the
+key once, keep the `.jks` file and its password somewhere safe outside the repo (losing it means
+every user has to uninstall to get the next version), and set the secrets:
+
+```bash
+# PKCS12 keystores use one password for the store and the key.
+read -rs -p "Keystore password: " KS_PASS; echo
+keytool -genkeypair -v -storetype PKCS12 -keystore postcards-release.jks \
+  -alias postcards -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=Postcards, O=offware-apps" \
+  -storepass "$KS_PASS" -keypass "$KS_PASS"
+
+base64 -w0 postcards-release.jks | gh secret set ANDROID_KEYSTORE_BASE64 -R offware-apps/Postcards
+printf '%s' "$KS_PASS" | gh secret set ANDROID_KEYSTORE_PASSWORD -R offware-apps/Postcards
+printf '%s' "$KS_PASS" | gh secret set ANDROID_KEY_PASSWORD -R offware-apps/Postcards
+printf '%s' postcards | gh secret set ANDROID_KEY_ALIAS -R offware-apps/Postcards
+unset KS_PASS
+```
+
+(`base64 -w0` is GNU; on macOS use `base64 -i postcards-release.jks`.) The first signed APK cannot
+install over a debug build already on a phone: export your data (Settings → Your data), uninstall,
+install the signed APK, import the file. Every later build updates in place.
+
+To sign a release build locally with the same key, export `POSTCARDS_KEYSTORE_FILE` (path to the
+`.jks`), `POSTCARDS_KEYSTORE_PASSWORD`, `POSTCARDS_KEY_ALIAS` and `POSTCARDS_KEY_PASSWORD`, then run
+`./gradlew assembleRelease` in `android/`.
 
 ### Build the APK locally, headless (no Android Studio)
 
@@ -81,7 +121,7 @@ pnpm --filter postcards native:ios
 - **Shared Offline Map Store.** The `OfflineMapStore` seam (see
   [`OFFLINE-MAPS.md`](OFFLINE-MAPS.md)) is where a native `SharedOfflineMapStore` plugin (iOS App
   Group / Android SAF) plugs in, so map packs are device-global across the ecosystem.
-- **CI.** The `Android APK (debug)` workflow produces an installable **debug** APK on GitHub's
-  Ubuntu runners (JDK 17 + the runner's Android SDK; `gradlew` self-bootstraps Gradle). A **release**
-  AAB/APK still needs a signing key (store it as an encrypted secret) and, for iOS, a macOS runner
-  with an Apple signing team — out of scope for the debug artifact above.
+- **CI.** The `Android APK` workflow builds on GitHub's Ubuntu runners (JDK 17 + the runner's
+  Android SDK; `gradlew` self-bootstraps Gradle): a signed release APK when the signing secrets are
+  set, the debug APK otherwise. A Play Store AAB and iOS (a macOS runner with an Apple signing team)
+  are out of scope.
