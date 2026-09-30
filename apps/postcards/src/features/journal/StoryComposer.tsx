@@ -3,7 +3,8 @@ import { useStories } from "../../lib/store/useStories";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
 import { useUi } from "../../lib/store/useUi";
-import { placeKey, MAX_PHOTOS_PER_STORY, MAX_TAGS_PER_STORY } from "../../lib/schema/helpers";
+import { useToast } from "../../lib/store/useToast";
+import { placeKey, MAX_PHOTOS_PER_STORY, MAX_TAGS_PER_STORY, MAX_TAG_LEN } from "../../lib/schema/helpers";
 import { sanitizeText } from "../../lib/schema/sanitize";
 import type { Photo, PlaceRef } from "../../lib/schema/models";
 import { fileToPostcard } from "../../lib/image/downscale";
@@ -67,6 +68,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
   const stories = useStories((s) => s.stories);
   const addStory = useStories((s) => s.addStory);
   const updateStory = useStories((s) => s.updateStory);
+  const showToast = useToast((s) => s.show);
   const visits = useVisits((s) => s.visits);
 
   const existing = useMemo(
@@ -232,13 +234,18 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
         added.push({ src: await fileToPostcard(file), caption: null });
       }
       setPhotos((prev) => [...prev, ...added]);
+      if (files.length > room) showToast(t("journal.toast.addedRoom", { count: room }));
+    } catch {
+      showToast(t("journal.toast.readImgErr"));
     } finally {
       setBusy(false);
     }
   }
 
   function addTag(raw: string): void {
-    const tag = raw.trim();
+    // The same cleaning the portable file applies, so a tag exports as shown; one
+    // that cleans away ("-", a lone bidi mark) would make the export invalid.
+    const tag = sanitizeText(raw, MAX_TAG_LEN);
     if (!tag) return;
     setTags((prev) => (prev.includes(tag) || prev.length >= MAX_TAGS_PER_STORY ? prev : [...prev, tag]));
     setTagInput("");
@@ -252,6 +259,12 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
     const tripLink = tripId || undefined;
     const end = endDate && endDate > date ? endDate : undefined;
     const extras = extraPlaces.length ? extraPlaces : undefined;
+    // Store the SANITIZED text (the transform the portable-file schema applies), so
+    // an export/import or a sync gives back exactly what was saved.
+    const cleanTitle = sanitizeText(title, 200);
+    const cleanText = sanitizeText(text, 8000);
+    const cleanFolder = sanitizeText(folder, 80);
+    const cleanPhotos = photos.map((p) => ({ ...p, caption: sanitizeText(p.caption ?? "", 300) || null }));
     if (storyId && existing) {
       // `place: undefined` with the key present tells the store to CLEAR a removed place.
       await updateStory(storyId, {
@@ -259,15 +272,26 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
         extraPlaces: extras ?? [],
         date,
         endDate: end,
-        title,
-        text,
-        folder,
-        photos,
+        title: cleanTitle,
+        text: cleanText,
+        folder: cleanFolder,
+        photos: cleanPhotos,
         tags,
         tripId: tripLink,
       });
     } else {
-      await addStory({ place, extraPlaces: extras, date, endDate: end, title, text, folder, photos, tags, tripId: tripLink });
+      await addStory({
+        place,
+        extraPlaces: extras,
+        date,
+        endDate: end,
+        title: cleanTitle,
+        text: cleanText,
+        folder: cleanFolder,
+        photos: cleanPhotos,
+        tags,
+        tripId: tripLink,
+      });
     }
     clearDraft();
     if (keepOpen && !storyId) resetToNew();
