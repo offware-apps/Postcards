@@ -20,6 +20,7 @@ import { journalToMarkdown, JOURNAL_EXPORT_FILENAME } from "./exportJournalMd";
 import { download } from "../../lib/download";
 import { useT, useLocale, type MessageKey } from "../../lib/i18n";
 import { folderSuggestions, distinctFolders, matchesFolder } from "./folders";
+import { ListPager } from "../../ui/ListPager";
 import {
   addMonths,
   hexToRgba,
@@ -1455,18 +1456,12 @@ export function JournalScreen() {
             ))}
           </div>
           {filtered.length > feedShown && (
-            <div className="list-pager">
-              <span className="muted small">
-                {t("journal.showingCount", { shown: feedShown, total: filtered.length })}
-              </span>
-              <button
-                className="mini-btn"
-                type="button"
-                onClick={() => setFeedShown((n) => n + FEED_PAGE)}
-              >
-                {t("journal.showMore", { count: Math.min(FEED_PAGE, filtered.length - feedShown) })}
-              </button>
-            </div>
+            <ListPager
+              shown={feedShown}
+              total={filtered.length}
+              step={Math.min(FEED_PAGE, filtered.length - feedShown)}
+              onMore={() => setFeedShown((n) => n + FEED_PAGE)}
+            />
           )}
           </>
           )}

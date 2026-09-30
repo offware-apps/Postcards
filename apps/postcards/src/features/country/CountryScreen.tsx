@@ -8,6 +8,7 @@ import { countryFlag, formatInt, formatPercent } from "../../lib/format/format";
 import { StateToggles } from "../visits/StateToggles";
 import { GuideSection } from "../guides/GuideButton";
 import { CityLine } from "../../ui/CityLine";
+import { ListPager } from "../../ui/ListPager";
 import { useT } from "../../lib/i18n";
 
 const PAGE = 50;
@@ -145,18 +146,12 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
             ))}
           </ul>
           {sites.length > shownSites && (
-            <div className="list-pager">
-              <span className="muted small">
-                {t("journal.showingCount", { shown: shownSites, total: formatInt(sites.length) })}
-              </span>
-              <button
-                className="mini-btn"
-                type="button"
-                onClick={() => setShownSites((n) => n + PAGE)}
-              >
-                {t("journal.showMore", { count: Math.min(PAGE, sites.length - shownSites) })}
-              </button>
-            </div>
+            <ListPager
+              shown={shownSites}
+              total={sites.length}
+              step={Math.min(PAGE, sites.length - shownSites)}
+              onMore={() => setShownSites((n) => n + PAGE)}
+            />
           )}
         </section>
       )}
@@ -194,14 +189,13 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
           })}
         </ul>
         {cities.length > shown && (
-          <div className="list-pager">
-            <span className="muted small">
-              {t("map.pagerMostPopulous", { shown, total: formatInt(cities.length) })}
-            </span>
-            <button className="mini-btn" type="button" onClick={() => setShown((n) => n + PAGE)}>
-              {t("journal.showMore", { count: Math.min(PAGE, cities.length - shown) })}
-            </button>
-          </div>
+          <ListPager
+            shown={shown}
+            total={cities.length}
+            step={Math.min(PAGE, cities.length - shown)}
+            onMore={() => setShown((n) => n + PAGE)}
+            label={t("map.pagerMostPopulous", { shown, total: formatInt(cities.length) })}
+          />
         )}
       </section>
     </div>
