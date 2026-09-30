@@ -7,6 +7,7 @@ import { useToast } from "../../lib/store/useToast";
 import { placeKey } from "../../lib/schema/helpers";
 import type { PlaceRef } from "../../lib/schema/models";
 import { useT } from "../../lib/i18n";
+import { countryFlag } from "../../lib/format/format";
 
 /**
  * Global place search. Picking a result NAVIGATES — it flies the map to a
@@ -229,6 +230,9 @@ export function PlaceSearch({
                   }
                   onClick={() => pick(r.place)}
                 >
+                  <span className="result-flag" aria-hidden>
+                    {r.place.countryId ? countryFlag(r.place.countryId) : ""}
+                  </span>
                   <span className="result-main">
                     <span className="result-name">{r.place.name}</span>
                     <span className="result-detail">{r.detail}</span>

@@ -578,9 +578,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
     if (place.kind === "city") {
       const c = ref.cityById(place.id);
       const region = c?.subdivisionId ? ref.subdivisionById(c.subdivisionId)?.name : null;
-      return `· ${country}${region ? ` - ${region}` : ""}`;
+      return `${country}${region ? ` - ${region}` : ""}`;
     }
-    return `· ${country}`;
+    return country;
   }
 
   // Fly to a place AND open its preview card — the SAME result as tapping the
@@ -943,7 +943,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                           lon: x.lon,
                           lat: x.lat,
                           name: x.name,
-                          sub: `· ${x.sub}`,
+                          sub: x.sub,
                           place: x.place,
                           hasPage: true,
                         })
@@ -1022,7 +1022,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                         lon: c.lon,
                         lat: c.lat,
                         name: c.name,
-                        sub: `· ${country}${region ? ` - ${region}` : ""}`,
+                        sub: `${country}${region ? ` - ${region}` : ""}`,
                         place,
                         hasPage: true,
                       })

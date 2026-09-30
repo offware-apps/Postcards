@@ -425,7 +425,14 @@ function openPlacePopup(
   body.type = "button";
   body.className = "map-popup-main";
   const name = document.createElement("strong");
-  name.textContent = info.name;
+  // The country's flag leads the name, as in every place list.
+  if (info.place.countryId) {
+    const flag = document.createElement("span");
+    flag.className = "map-popup-flag";
+    flag.setAttribute("aria-hidden", "true");
+    flag.textContent = countryFlag(info.place.countryId);
+    name.append(flag, info.name);
+  } else name.textContent = info.name;
   body.appendChild(name);
   if (info.sub) {
     const sub = document.createElement("span");

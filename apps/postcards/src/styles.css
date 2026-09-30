@@ -609,6 +609,12 @@ h1.brand {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.map-popup strong .map-popup-flag {
+  display: inline;
+  margin: 0 6px 0 0;
+  font-size: 15px;
+  color: inherit;
+}
 
 /* Search */
 .search {
@@ -713,6 +719,15 @@ h1.brand {
   flex: 1;
   min-width: 0;
   width: auto;
+  justify-content: flex-start;
+}
+/* The country's flag leads each option, as in every other place list. */
+.result-flag {
+  flex: none;
+  width: 1.25em;
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
 }
 .results-split .result-add {
   flex: none;
