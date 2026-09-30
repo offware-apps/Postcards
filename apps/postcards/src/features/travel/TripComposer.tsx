@@ -74,7 +74,12 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
   function composeDate(): string | null {
     const y = year.trim();
     if (!/^\d{4}$/.test(y)) return null;
-    return month ? `${y}-${month}` : y;
+    if (!month) return y;
+    // The composer picks a year and a month only: a trip saved with a full day
+    // keeps it while that year and month are left as they were.
+    const kept = existing?.date;
+    if (kept && kept.length === 10 && kept.startsWith(`${y}-${month}-`)) return kept;
+    return `${y}-${month}`;
   }
 
   async function save() {
