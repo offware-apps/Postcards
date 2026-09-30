@@ -133,7 +133,7 @@ export const ko: Messages = {
   "settings.offline.toast.reset": "지도 캐시와 보기 설정이 초기화되었습니다.",
   "settings.guides.title": "여행 가이드",
   "settings.guides.desc":
-    "장소를 열면 Wikivoyage와 Wikipedia에서 짧은 개요와 사진을 불러올 수 있습니다. 장소를 여는 것은 사용자의 행동이므로 기본으로 켜져 있습니다. 끄면 누를 때만 가이드를 불러옵니다. 그 외에는 아무것도 기기를 떠나지 않습니다.",
+    "장소를 열면 Wikivoyage와 Wikipedia에서 짧은 개요와 사진을 불러올 수 있고, 지도의 장소 카드에 Wikipedia 사진이 표시될 수 있습니다. 불러올 때마다 어떤 장소를 열었는지 해당 사이트에 전달되므로 기본으로 꺼져 있습니다. 켜기 전에는 누를 때만 가이드를 불러오고 지도 카드에는 사진이 표시되지 않습니다.",
   "settings.guides.toggle": "온라인일 때 가이드 개요 자동으로 불러오기",
   "settings.packs.title": "커뮤니티 데이터 팩",
   "settings.packs.desc":

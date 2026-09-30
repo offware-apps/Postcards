@@ -13,6 +13,7 @@ import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { bundledMapSource } from "../../lib/map-source/bundledMapSource";
 import { useVisits, findByPlace } from "../../lib/store/useVisits";
 import { useUi } from "../../lib/store/useUi";
+import { useSettings } from "../../lib/store/useSettings";
 import { useT } from "../../lib/i18n";
 import { visitedCountryIds } from "../stats/computeStats";
 import { mapDateMatches, type MapDate } from "../travel/period";
@@ -336,10 +337,10 @@ function inViewPoints(cities: City[]): FeatureCollection<Point> {
  * Popup for any tappable place marker: name, region · population, and actions —
  * check/uncheck visited right from the map, plus the city detail page.
  */
-/** Load a small Wikipedia thumbnail of the place into the popup's photo slot,
- *  online only. Never touches the network offline (the caller gates on the live
- *  basemap, which Offline mode forces to the no-network "simple" base). Removes
- *  the slot if there's no image or the request fails — no empty gap, no spinner. */
+/** Load a small Wikipedia thumbnail of the place into the popup's photo slot.
+ *  The request sends the place's name to Wikipedia, so openPlacePopup calls this
+ *  only on the guides opt-in and outside Offline mode. Removes the slot if
+ *  there's no image or the request fails — no empty gap, no spinner. */
 async function loadPopupThumb(name: string, fig: HTMLElement): Promise<void> {
   try {
     const { fetchSummary } = await import("../../lib/wikivoyage");
@@ -383,9 +384,12 @@ function openPlacePopup(
 ): void {
   const el = document.createElement("div");
   el.className = "map-popup";
-  // Online-only preview image (cities & monuments): a little Wikipedia photo of
-  // what the place is, loaded lazily at the top of the card once it opens.
-  if (showImage) {
+  // Preview image (cities & monuments): a little Wikipedia photo of what the
+  // place is, loaded lazily at the top of the card once it opens. It names the
+  // place to Wikipedia, so it waits for the same opt-in as the guides (off by
+  // default) and never runs in Offline mode, whichever basemap is showing.
+  const { autoLoadGuides, offlineMode } = useSettings.getState();
+  if (showImage && autoLoadGuides && !offlineMode) {
     const fig = document.createElement("div");
     fig.className = "map-popup-photo";
     el.appendChild(fig);
@@ -1708,9 +1712,9 @@ export function MapView({
           } as PlaceRef,
           hasPage: kind === "city" || kind === "heritage" || kind === "airport",
         },
-        // A little preview photo for cities & monuments, but only when the online
-        // basemap is active (offline / Offline mode uses "simple" — no network).
-        basemap !== "simple" && (kind === "city" || kind === "heritage"));
+        // A little preview photo for cities & monuments (openPlacePopup gates it
+        // on the guides opt-in).
+        kind === "city" || kind === "heritage");
         suppressBoundsRef.current = true;
         const tapZoom = Math.max(map.getZoom(), 6.5);
         if (basemap === "osm") prefetchAroundPoint(anchor.lng, anchor.lat, tapZoom);

@@ -132,7 +132,7 @@ export const fr: Messages = {
   "settings.offline.toast.reset": "Les caches de carte et les réglages d'affichage ont été réinitialisés.",
   "settings.guides.title": "Guides de voyage",
   "settings.guides.desc":
-    "Lorsque vous ouvrez un lieu, un court aperçu et une photo peuvent être chargés depuis Wikivoyage et Wikipédia. Ouvrir un lieu est votre propre action, donc c'est activé par défaut ; désactivez-le pour ne charger les guides que sur appui. Rien d'autre ne quitte votre appareil.",
+    "Lorsque vous ouvrez un lieu, un court aperçu et une photo peuvent être chargés depuis Wikivoyage et Wikipédia, et la fiche du lieu sur la carte peut afficher une photo de Wikipédia. Chaque chargement indique à ces sites quel lieu vous avez ouvert, donc c'est désactivé par défaut : tant que vous ne l'activez pas, les guides ne se chargent que sur appui et la fiche de la carte n'affiche pas de photo.",
   "settings.guides.toggle": "Charger les aperçus des guides automatiquement en ligne",
   "settings.packs.title": "Packs de données communautaires",
   "settings.packs.desc":

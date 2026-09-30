@@ -139,7 +139,7 @@ export const en = {
   "settings.offline.toast.reset": "Map caches and view settings were reset.",
   "settings.guides.title": "Travel guides",
   "settings.guides.desc":
-    "When you open a place, a short overview and photo can load from Wikivoyage and Wikipedia. Opening a place is your own action, so this is on by default; turn it off to load guides only when you tap. Nothing else leaves your device.",
+    "When you open a place, a short overview and photo can load from Wikivoyage and Wikipedia, and the map's place card can show a Wikipedia photo. Each load tells those sites which place you opened, so this is off by default: until you turn it on, guides load only when you tap and the map card shows no photo.",
   "settings.guides.toggle": "Load guide overviews automatically when online",
   "settings.packs.title": "Community data packs",
   "settings.packs.desc":

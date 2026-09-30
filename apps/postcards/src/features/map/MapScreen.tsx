@@ -606,11 +606,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
         sub: info.sub,
         place: info.place,
         hasPage: info.hasPage,
-        // A photo only for cities & monuments on a live base — matches the
-        // marker-tap card; airports and the offline base carry none.
-        showImage:
-          effectiveBasemap !== "simple" &&
-          (info.place.kind === "city" || info.place.kind === "heritage"),
+        // A photo only for cities & monuments — matches the marker-tap card;
+        // airports carry none (MapView gates it on the guides opt-in).
+        showImage: info.place.kind === "city" || info.place.kind === "heritage",
       },
     }));
   }

@@ -58,7 +58,14 @@ vi.mock("maplibre-gl", () => {
     NavigationControl: Ctl,
     GeolocateControl: Ctl,
     AttributionControl: Ctl,
-    Popup: class {},
+    // A chainable popup: the place card builds one on every open.
+    Popup: class {
+      setLngLat() { return this; }
+      setDOMContent() { return this; }
+      addTo() { return this; }
+      on() { return this; }
+      remove() {}
+    },
     LngLat: class {},
     addProtocol() {},
   };
@@ -66,6 +73,7 @@ vi.mock("maplibre-gl", () => {
 });
 
 import { MapView } from "../../src/features/map/MapView";
+import { useSettings } from "../../src/lib/store/useSettings";
 import { RouteMap } from "../../src/features/travel/RouteMap";
 import type { MyPlace } from "../../src/features/travel/myPlaces";
 
@@ -110,5 +118,33 @@ describe("props that change before the map's load event", () => {
     const arcs = map.calls.find((c) => c[0] === "addSource" && c[1] === "arcs")?.[2] as { data: { features: unknown[] } };
     expect(pins.data.features.map((f) => f.properties.added)).toEqual([true, true]);
     expect(arcs.data.features.length).toBe(1);
+  });
+});
+
+describe("the map's place card photo", () => {
+  const kyoto = { kind: "city", id: "1857910", name: "Kyoto", countryId: "JP" } as const;
+  async function openCard(): Promise<string[]> {
+    const { rerender } = render(<MapView basemap="osm" mode="all" dark={false} />);
+    await act(async () => {});
+    const map = maps[0]! as FakeMap;
+    await act(async () => map.fire("load"));
+    const popup = { name: "Kyoto", sub: "Japan", place: kyoto, hasPage: true, showImage: true };
+    rerender(<MapView basemap="osm" mode="all" dark={false} focus={{ lon: 135.75, lat: 35.01, key: 1, popup }} />);
+    // The photo loader imports the guides module first: give it time to fetch.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 200));
+    });
+    const fetchMock = globalThis.fetch as unknown as { mock: { calls: unknown[][] } };
+    return fetchMock.mock.calls.map((c) => String(c[0]));
+  }
+
+  it("never asks Wikipedia while guides are off, even on the online map", async () => {
+    useSettings.setState({ autoLoadGuides: false, offlineMode: false });
+    expect((await openCard()).filter((u) => u.includes("wikipedia.org"))).toEqual([]);
+  });
+
+  it("loads once guides are on", async () => {
+    useSettings.setState({ autoLoadGuides: true, offlineMode: false });
+    expect((await openCard()).some((u) => u.includes("wikipedia.org"))).toBe(true);
   });
 });
