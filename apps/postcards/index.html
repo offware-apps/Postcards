@@ -56,8 +56,8 @@
     <!-- The first render waits for the city gazetteer and its regions only
          (initReferenceData): preload those two so they download alongside the
          bundle instead of after it. Nothing else is preloaded — airports,
-         heritage sites and the basemap geometry are fetched right after the
-         first render, and preloading them made them compete with it (on a
+         heritage sites, railway stations and the basemap geometry are fetched
+         right after the first render, and preloading them made them compete with it (on a
          throttled phone, dropping them brought the app up a second sooner and
          the map too). %BASE_URL% matches the import.meta.env.BASE_URL the code
          fetches with; `crossorigin` (anonymous) matches fetch()'s default
