@@ -44,7 +44,7 @@ export function formatTripDate(s: TripDate, locale: string): string {
   if (!p) return "";
   if (p.month == null) return String(p.year);
   if (p.day == null) {
-    return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short" }).format(
+    return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", timeZone: "UTC" }).format(
       new Date(Date.UTC(p.year, p.month - 1, 1)),
     );
   }
