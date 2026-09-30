@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab, openApp, markVisited } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // A Stats country-card tier (cities / big / mega / sites) drills into Places,
 // scoped to THAT country + tier via the ONE shared filter — and because the
@@ -7,10 +7,7 @@ import { gotoTab, openApp, markVisited } from "./nav-helper";
 test("a country tier opens Places filtered, and the filter persists across pages", async ({
   page,
 }) => {
-  await openApp(page);
-  for (const q of ["Paris", "Lyon", "Tokyo"]) {
-    await markVisited(page, q);
-  }
+  await openAppWithVisits(page, ["Paris", "Lyon", "Tokyo"]);
 
   await gotoTab(page, "Stats");
   await page.locator(".country-summary", { hasText: "France" }).click();

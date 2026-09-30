@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab, openApp, markVisited } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // The composer's real map picker (RouteMap): switching to the Map segment mounts an
 // actual MapLibre canvas (not the old SVG), and the companion list beneath it — the
@@ -10,8 +10,7 @@ test("Map segment shows a real MapLibre map; the companion list builds the route
 }: {
   page: Page;
 }) => {
-  await openApp(page);
-  for (const city of ["Paris", "Tokyo", "Osaka"]) await markVisited(page, city);
+  await openAppWithVisits(page, ["Paris", "Tokyo", "Osaka"]);
 
   await gotoTab(page, "Trips");
   await page.getByRole("button", { name: "Reconstruct a journey" }).click();

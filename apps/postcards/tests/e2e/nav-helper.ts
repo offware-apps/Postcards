@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -22,6 +23,59 @@ export async function openApp(page: Page): Promise<void> {
   // Booting parses MapLibre and starts WebGL, the heaviest step of any test
   // when workers run side by side.
   await expect(page.getByText("Cities in view")).toBeVisible({ timeout: 15_000 });
+}
+
+interface City {
+  id: string;
+  name: string;
+  countryIso2: string;
+  population: number;
+}
+let cities: City[] | undefined;
+
+/** The most populous bundled city of that name, the one search lists first. */
+function cityNamed(name: string): City {
+  cities ??= JSON.parse(
+    readFileSync(new URL("../../public/reference/cities.json", import.meta.url), "utf8"),
+  ) as City[];
+  const found = cities
+    .filter((c) => c.name === name)
+    .sort((a, b) => b.population - a.population)[0];
+  if (!found) throw new Error(`No bundled city named ${name}`);
+  return found;
+}
+
+/**
+ * Open the app with these cities already visited, for a test whose subject is
+ * not marking them. The records go into a first-version database before the app
+ * opens it, so the app's own upgrade carries them, as for anyone who installed
+ * early.
+ */
+export async function openAppWithVisits(page: Page, names: string[]): Promise<void> {
+  const addedAt = new Date().toISOString();
+  const visits = names.map((name) => {
+    const c = cityNamed(name);
+    return {
+      visitId: `e2e-seed-${c.id}`,
+      place: { kind: "city", id: c.id, name: c.name, countryId: c.countryIso2 },
+      date: null,
+      note: null,
+      status: "visited",
+      favorite: false,
+      addedAt,
+    };
+  });
+  // Runs on every load; after the first the database is past version 1, the
+  // open fails with a VersionError, and nothing is written again.
+  await page.addInitScript((records) => {
+    const req = indexedDB.open("postcards", 1);
+    req.onupgradeneeded = () => {
+      const store = req.result.createObjectStore("visits", { keyPath: "visitId" });
+      for (const r of records) store.put(r);
+    };
+    req.onsuccess = () => req.result.close();
+  }, visits);
+  await openApp(page);
 }
 
 /**

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openApp, markVisited } from "./nav-helper";
+import { openApp, openAppWithVisits, markVisited } from "./nav-helper";
 
 // Spec 016 — the ONE Filter panel. Every slicing dimension the map used to
 // scatter across its header (status segmented, population row, sort, place-kind
@@ -198,11 +198,8 @@ test("Places shares the same Filter panel; population gates cities only (D4)", a
 });
 
 test("Places grows: Favorites-only narrows to starred places (spec 016 US4)", async ({ page }) => {
-  await openApp(page);
-
   // Two visited cities.
-  await markVisited(page, "Paris");
-  await markVisited(page, "Tokyo");
+  await openAppWithVisits(page, ["Paris", "Tokyo"]);
 
   await page.getByRole("button", { name: "Places", exact: true }).click();
   const list = page.locator(".city-list").first();

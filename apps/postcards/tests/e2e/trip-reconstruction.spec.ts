@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab, openApp, markVisited, addTrip } from "./nav-helper";
+import { gotoTab, openApp, openAppWithVisits, addTrip } from "./nav-helper";
 
 // Spec 019 — Trip Reconstruction. Fast reconstruction: tap the places you've BEEN
 // (list or map, with flags) to build an ordered chain of stops; the date is
@@ -17,8 +17,7 @@ function kmOf(text: string | null): number {
 
 // US1 — build a multi-stop trip by tapping your visited places; save (no date); reopen.
 test("build a multi-stop trip from your visited places", async ({ page }) => {
-  await openApp(page);
-  for (const city of ["Paris", "Tokyo", "London"]) await markVisited(page, city);
+  await openAppWithVisits(page, ["Paris", "Tokyo", "London"]);
   await openComposer(page);
 
   // Tap three places from the list of where you've been.
@@ -64,8 +63,7 @@ test("airports are reachable by search with no prior visits", async ({ page }) =
 
 // US2 — the total distance shows and grows as stops are added.
 test("distance is shown and updates live as stops change", async ({ page }) => {
-  await openApp(page);
-  for (const city of ["Paris", "Tokyo", "Berlin"]) await markVisited(page, city);
+  await openAppWithVisits(page, ["Paris", "Tokyo", "Berlin"]);
   await openComposer(page);
 
   await page.getByRole("button", { name: "Add Paris to the trip" }).click();

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab, openApp, markVisited, assertNoSeriousViolations } from "./nav-helper";
+import { gotoTab, openApp, openAppWithVisits, markVisited, assertNoSeriousViolations } from "./nav-helper";
 
 // WCAG 2.1 AA gate (SC-005): no serious/critical axe violations on any screen.
 test("map, stats and places screens pass the axe WCAG 2.1 AA gate", async ({ page }) => {
@@ -39,11 +39,8 @@ test("map, stats and places screens pass the axe WCAG 2.1 AA gate", async ({ pag
 // Spec 019: the multi-stop trip composer must pass the same gate, with its place
 // picker, stop list, reorder controls, and distance readout all present.
 test("the trip composer passes the axe WCAG 2.1 AA gate", async ({ page }) => {
-  await openApp(page);
   // Seed visited places so the picker has something to tap.
-  for (const city of ["Paris", "Tokyo"]) {
-    await markVisited(page, city);
-  }
+  await openAppWithVisits(page, ["Paris", "Tokyo"]);
   await gotoTab(page, "Trips");
   await page.getByRole("button", { name: "Reconstruct a journey" }).click();
   await expect(page.getByRole("heading", { name: "New trip" })).toBeVisible();

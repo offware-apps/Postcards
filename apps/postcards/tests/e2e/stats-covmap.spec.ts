@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab, openApp, markVisited, assertNoSeriousViolations } from "./nav-helper";
+import { gotoTab, openAppWithVisits, assertNoSeriousViolations } from "./nav-helper";
 
 // Expanding a country card in Stats shows a STATIC coverage map (not the old text
 // lists): the country silhouette with visited-city dots and "still to explore"
@@ -9,10 +9,7 @@ test("a country card shows a static coverage map that passes the a11y gate", asy
 }: {
   page: Page;
 }) => {
-  await openApp(page);
-  for (const c of ["Paris", "Lyon", "Marseille"]) {
-    await markVisited(page, c);
-  }
+  await openAppWithVisits(page, ["Paris", "Lyon", "Marseille"]);
   await gotoTab(page, "Stats");
   await page.locator(".country-summary", { hasText: "France" }).click();
 

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab, openApp, markVisited } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // A backup is only a backup if it comes back whole. Build one of everything the
 // file carries (a place with a captioned photo, a multi-stop trip, a story),
@@ -60,8 +60,7 @@ async function expectEverything(page: Page): Promise<void> {
 test("export, erase and import back: every place, photo, trip and story returns", async ({ page }) => {
   // Builds three kinds of record through the UI and restores twice.
   test.slow();
-  await openApp(page);
-  for (const city of ["Paris", "Tokyo", "London"]) await markVisited(page, city);
+  await openAppWithVisits(page, ["Paris", "Tokyo", "London"]);
 
   // A captioned photo on Paris.
   await page.getByRole("button", { name: "Places", exact: true }).click();

@@ -1,15 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab, openApp, markVisited } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // "What counts as a country" — switching the scope changes both the count of
 // visited countries and the world denominator, dropping dependent territories.
 test("count with or without dependent territories", async ({ page }) => {
-  await openApp(page);
-
   // Countries are visited via places inside them: a city in a UN member
   // (Paris → France) and one in a territory (Hong Kong city → Hong Kong).
-  await markVisited(page, "Paris");
-  await markVisited(page, "Hong Kong");
+  await openAppWithVisits(page, ["Paris", "Hong Kong"]);
 
   await gotoTab(page, "Stats");
 
