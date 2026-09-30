@@ -41,7 +41,7 @@ export const useTrips = create<TripsState>((set, get) => ({
   loaded: false,
   async load() {
     // Backfill `updatedAt` from `addedAt` for trips made before sync existed.
-    const trips = (await db.getAllTrips()).map(backfillUpdatedAt);
+    const trips = (await visitsDb.loadOrEmpty(db.getAllTrips)).map(backfillUpdatedAt);
     set({ trips, loaded: true });
   },
   async addTrip({

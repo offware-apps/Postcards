@@ -42,7 +42,9 @@ export const useStories = create<StoriesState>((set, get) => ({
   loaded: false,
   async load() {
     // Backfill `updatedAt` from `addedAt` for stories made before sync existed.
-    const stories = sortStories((await db.getAllStories()).map(backfillUpdatedAt));
+    const stories = sortStories(
+      (await visitsDb.loadOrEmpty(db.getAllStories)).map(backfillUpdatedAt),
+    );
     set({ stories, loaded: true });
   },
   async addStory({ place, date, title, text, photos = [], folder = null }) {

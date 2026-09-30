@@ -104,7 +104,9 @@ export const useVisits = create<VisitsState>((set, get) => ({
   async load() {
     // Migrate any legacy single-photo records into the `photos` gallery, and
     // backfill `updatedAt` from `addedAt` for records made before sync existed.
-    const dbVisits = (await db.getAllVisits()).map(normalizeVisitPhotos).map(backfillUpdatedAt);
+    const dbVisits = (await db.loadOrEmpty(db.getAllVisits))
+      .map(normalizeVisitPhotos)
+      .map(backfillUpdatedAt);
     // Don't clobber optimistic writes that landed DURING this async read: marking a
     // place and immediately opening a list would otherwise blank it (the snapshot
     // predated the in-flight putVisit). Merge by id, newest `updatedAt` winning —

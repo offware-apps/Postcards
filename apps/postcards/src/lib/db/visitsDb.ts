@@ -44,8 +44,25 @@ const tombstoneKey = (kind: TombstoneKind, id: string): string => `${kind}:${id}
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
+// Set when reading the stores at startup failed (IndexedDB would not open, e.g. a
+// private window or blocked storage). The session then runs in memory, as it does
+// with no IndexedDB at all: writing to the device store later, were it to open,
+// would rewrite whole tables (a sync, an import) from stores that never loaded.
+let unavailable = false;
+
 export function hasIndexedDB(): boolean {
-  return typeof indexedDB !== "undefined";
+  return !unavailable && typeof indexedDB !== "undefined";
+}
+
+/** A store's startup read. A failure switches the session to memory (see
+ *  `unavailable`) and reads as empty, so the app still opens and settles loaded. */
+export async function loadOrEmpty<T>(read: () => Promise<T[]>): Promise<T[]> {
+  try {
+    return await read();
+  } catch {
+    unavailable = true;
+    return [];
+  }
 }
 
 /**
