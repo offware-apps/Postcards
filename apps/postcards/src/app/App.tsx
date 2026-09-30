@@ -18,7 +18,16 @@ import { UpdateBanner } from "../ui/UpdateBanner";
 import { handoffRequested } from "../lib/moved/moved";
 import { followOtherTabs, loadPortable } from "../lib/store/portable";
 import { ConnectionStatus } from "../ui/ConnectionStatus";
-import { MapIcon, ChartIcon, ListIcon, RouteIcon, BookIcon, GearIcon, InfoIcon } from "../ui/icons";
+import {
+  MapIcon,
+  ChartIcon,
+  ListIcon,
+  RouteIcon,
+  BookIcon,
+  GearIcon,
+  InfoIcon,
+  StarIcon,
+} from "../ui/icons";
 import { useState } from "react";
 import { useInstallPrompt } from "../lib/hooks/useInstallPrompt";
 import { useAutoSync } from "../lib/hooks/useAutoSync";
@@ -300,7 +309,7 @@ export function App() {
                 aria-label={t("topbar.githubStar")}
               >
                 <span className="star-glyph" aria-hidden>
-                  ⭐
+                  <StarIcon />
                 </span>
                 <span>{t("topbar.github")}</span>
               </a>

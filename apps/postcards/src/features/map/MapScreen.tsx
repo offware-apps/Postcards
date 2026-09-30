@@ -35,6 +35,7 @@ import {
 import { activeChips } from "../filter/applyFilters";
 import { FilterPanel } from "../../ui/FilterPanel";
 import { FilterSummary } from "../../ui/FilterSummary";
+import { CityIcon, MonumentIcon, PlaneIcon } from "../../ui/icons";
 import { useT, type MessageKey } from "../../lib/i18n";
 
 // Fewer rows, faster everything: the list pages in small steps, and the
@@ -720,7 +721,14 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
           <div className="segmented map-mode" role="group" aria-label={t("filter.mode.title")}>
             {(["all", "cities", "monuments", "airports"] as FilterMode[]).map((m) => {
               const label = t(`filter.mode.${m}` as const);
-              const icon = m === "cities" ? "🏙" : m === "monuments" ? "🏛" : m === "airports" ? "✈" : "";
+              const Icon =
+                m === "cities"
+                  ? CityIcon
+                  : m === "monuments"
+                    ? MonumentIcon
+                    : m === "airports"
+                      ? PlaneIcon
+                      : null;
               const active = mode === m;
               return (
                 <button
@@ -737,8 +745,8 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                       dataset is legible in words, not just by the highlight. "All"
                       has no glyph, so it always shows its word. aria-label carries
                       the full name on every segment (screen readers + e2e). */}
-                  {icon}
-                  {active || !icon ? (icon ? " " : "") + label : ""}
+                  {Icon && <Icon />}
+                  {active || !Icon ? label : ""}
                 </button>
               );
             })}

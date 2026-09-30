@@ -633,6 +633,12 @@ h1.brand {
 .search-input::placeholder {
   color: var(--muted);
 }
+/* The field draws its own ✕ (.search-clear); Chromium's built-in one sat
+   beside it as a second clear button. */
+.search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
 /* Inputs that carry a trailing ✕ clear button reserve room so typed text never
    slides under it. */
 .search-input.has-clear {
@@ -4119,6 +4125,9 @@ textarea.select {
   padding: 2px;
 }
 .map-ctl-top .map-mode button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 4px 10px;
   font-size: 13px;
   line-height: 1.15;
@@ -4196,6 +4205,25 @@ textarea.select {
     height: 38px;
   }
 }
+/* A phone bar holds the brand, the search and four action buttons: the
+   wordmark alone left the field 85px wide at 375px, clipping its placeholder
+   to "Sea". Below 480px the brand keeps its pin mark (the text stays the
+   button's accessible name) and the search takes the room. */
+@media (max-width: 479.98px) {
+  .topbar .brand-wrap {
+    display: flex;
+  }
+  .topbar button.brand {
+    font-size: 0;
+    min-width: 32px;
+    min-height: 32px;
+    justify-content: center;
+  }
+  .topbar .brand::before {
+    width: 14px;
+    height: 14px;
+  }
+}
 /* Mid-width: icon-only tabs so the left-anchored row stays clear of the search. */
 @media (min-width: 900px) and (max-width: 1299.98px) {
   .bottom-nav .nav-item span {
@@ -4231,7 +4259,7 @@ button.brand:focus-visible {
    even when narrow-screen rules hide the action labels — without this the
    button collapsed to an empty pill. */
 .topbar-star .star-glyph {
-  display: inline;
+  display: inline-flex;
   color: #f5b301;
   font-size: 15px;
   line-height: 1;

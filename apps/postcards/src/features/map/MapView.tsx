@@ -131,6 +131,24 @@ function getRivers(): Promise<FeatureCollection | null> {
 
 const PILL_FONT = '600 21px "Inter Variable", system-ui, sans-serif';
 
+/** Gold favourite star, drawn as a shape: a ⭐ emoji drew nothing on systems
+ *  without a colour emoji font. White rim so it reads on any flag. */
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+  }
+  ctx.closePath();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineJoin = "round";
+  ctx.stroke();
+  ctx.fillStyle = "#f5b301";
+  ctx.fill();
+}
+
 /**
  * City marker, at ONE size for both states so a want-list city is never bigger
  * than a visited one. VISITED is the bare country flag. WANT-LIST is a distinct
@@ -163,10 +181,7 @@ function makeCityPill(iso2: string, favorite: boolean, wish: boolean): ImageData
     ctx.font = `32px ${FLAG_FONT}`;
     ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 5);
   }
-  if (favorite) {
-    ctx.font = `14px ${FLAG_FONT}`;
-    ctx.fillText("⭐", w - 9, 9);
-  }
+  if (favorite) drawStar(ctx, w - 9, 9, 7);
   return ctx.getImageData(0, 0, w, h);
 }
 
