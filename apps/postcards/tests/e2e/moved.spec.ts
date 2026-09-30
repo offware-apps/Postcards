@@ -35,12 +35,16 @@ function storedPlaces(page: Page) {
 }
 
 test("the old address hands its places to the new one", async ({ page, context }) => {
-  // Seed the old origin's store directly: served from there, the app redirects
-  // straight away when it holds nothing. A static file keeps the app from booting.
+  // Seed the old origin's store and sync settings directly: served from there,
+  // the app redirects straight away when it holds nothing. A static file keeps
+  // the app from booting.
   await page.goto(`${OLD}/manifest.webmanifest`);
   await page.evaluate(
     (visit) =>
       new Promise<void>((resolve, reject) => {
+        localStorage.setItem("postcards-sync-owner", "someone");
+        localStorage.setItem("postcards-sync-repo", "places");
+        localStorage.setItem("postcards-sync-token", "github_pat_e2e");
         const req = indexedDB.open("postcards", 5);
         req.onupgradeneeded = () => {
           const db = req.result;
@@ -87,6 +91,16 @@ test("the old address hands its places to the new one", async ({ page, context }
   ).toBeVisible();
   await tab.getByRole("button", { name: "Places", exact: true }).click();
   await expect(tab.getByText("Paris", { exact: true })).toBeVisible();
+
+  // The old address kept neither the sync settings nor the places.
+  expect(
+    await page.evaluate(() =>
+      ["owner", "repo", "branch", "token", "last"].filter((k) =>
+        localStorage.getItem(`postcards-sync-${k}`),
+      ),
+    ),
+  ).toEqual([]);
+  await expect.poll(() => storedPlaces(page)).toBe(0);
 
   // Moved once: the old address now forwards instead of offering the move again.
   await page.goto(`${OLD}/`);

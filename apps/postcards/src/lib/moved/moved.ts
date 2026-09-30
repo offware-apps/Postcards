@@ -13,9 +13,11 @@
 //                               ◀── ready ───     (only for VITE_HANDOFF_FROM)
 //                ─── the portable file ──▶        restoreFromJson
 //                         ◀── done/failed ───
+//   done → clear places + sync settings, flag
 //
 // Only the portable file crosses — the same inert, validated JSON as a manual
-// backup, never localStorage, so the sync token stays on the old device origin.
+// backup, never localStorage, so the sync token never reaches the new origin;
+// the old one drops it once the move is done.
 // Both env vars unset (local dev, the native wrap) turns all of this off.
 
 export const HANDOFF_PARAM = "handoff";
