@@ -70,6 +70,30 @@ To sign a release build locally with the same key, export `POSTCARDS_KEYSTORE_FI
 `.jks`), `POSTCARDS_KEYSTORE_PASSWORD`, `POSTCARDS_KEY_ALIAS` and `POSTCARDS_KEY_PASSWORD`, then run
 `./gradlew assembleRelease` in `android/`.
 
+### Launcher icon
+
+The launcher icons in `android/app/src/main/res/mipmap-*` are generated once from the PWA's
+maskable icon, whose pin already sits inside Android's 66 dp adaptive-icon safe zone: the
+adaptive foreground (108 dp, 108–432 px) is that icon full-bleed, and the legacy square and round
+icons (48–192 px, Android 7.1 and older) are it cut to a rounded square and a circle. The adaptive
+background, `values/ic_launcher_background.xml`, is the icon's own indigo `#4338CA`. After changing
+`public/icons/maskable-512.png`, re-run from `apps/postcards` (ImageMagick 7; the output is
+byte-identical on a re-run):
+
+```bash
+src=public/icons/maskable-512.png
+res=android/app/src/main/res
+png="-strip -define png:exclude-chunks=date,time"
+for d in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+  IFS=: read -r name legacy fg <<< "$d"
+  magick "$src" -resize "${fg}x${fg}" $png "$res/mipmap-$name/ic_launcher_foreground.png"
+  magick "$src" -alpha set \( -size 512x512 xc:none -fill white -draw "roundrectangle 0,0 511,511 88,88" \) \
+    -compose DstIn -composite -resize "${legacy}x${legacy}" $png "PNG32:$res/mipmap-$name/ic_launcher.png"
+  magick "$src" -alpha set \( -size 512x512 xc:none -fill white -draw "circle 256,256 256,0" \) \
+    -compose DstIn -composite -resize "${legacy}x${legacy}" $png "PNG32:$res/mipmap-$name/ic_launcher_round.png"
+done
+```
+
 ### Build the APK locally, headless (no Android Studio)
 
 Needs **JDK 17** + the **Android SDK / command-line tools** with `ANDROID_HOME` (or
