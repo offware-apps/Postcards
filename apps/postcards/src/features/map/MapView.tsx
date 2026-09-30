@@ -840,6 +840,12 @@ export function MapView({
   showCountriesRef.current = showCountries;
   const modeRef = useRef(mode);
   modeRef.current = mode;
+  // The map builds its style after an async resolve and loads later still, so the
+  // style and the load handler read the theme and projection current by then.
+  const darkRef = useRef(dark);
+  darkRef.current = dark;
+  const globeRef = useRef(globe);
+  globeRef.current = globe;
   const maxMarkersRef = useRef(maxMarkers);
   maxMarkersRef.current = maxMarkers;
   const optimizeMarkersRef = useRef(optimizeMarkers);
@@ -1311,13 +1317,14 @@ export function MapView({
         basemap === "osm" ? "osm-raster" : basemap === "detail" ? "world-detail" : "world-overview";
       const { style: baseStyle, attribution } = await bundledMapSource.resolveStyle(pack);
       if (cancelled || !containerRef.current) return;
+      const builtGlobe = globeRef.current;
 
       // Build the COMPLETE style up front — base + overlay sources + overlay
       // layers + projection — so the map is never a blank canvas waiting on an
       // async setStyle. Overlay sources start empty and are filled on load.
       const fullStyle: StyleSpecification = {
         ...baseStyle,
-        projection: { type: globe ? "globe" : "mercator" },
+        projection: { type: builtGlobe ? "globe" : "mercator" },
         sources: {
           ...baseStyle.sources,
           // tolerance 0: never simplify the country polygons — per-zoom
@@ -1335,7 +1342,7 @@ export function MapView({
           cities: { type: "geojson", data: EMPTY_FC },
           airports: { type: "geojson", data: EMPTY_FC },
         },
-        layers: [...baseStyle.layers, ...overlayLayers(basemap, dark)],
+        layers: [...baseStyle.layers, ...overlayLayers(basemap, darkRef.current)],
       };
 
       try {
@@ -1404,7 +1411,10 @@ export function MapView({
       map.on("load", () => {
         if (cancelled || !map) return;
         loadedRef.current = true;
-        applyTheme(map, dark);
+        // The globe effect skips a change made before load: catch it up here.
+        if (globeRef.current !== builtGlobe)
+          map.setProjection({ type: globeRef.current ? "globe" : "mercator" });
+        applyTheme(map, darkRef.current);
         applyVisited(map);
         if (map.getLayer("countries-visited-fill")) {
           map.setLayoutProperty(
@@ -1417,7 +1427,7 @@ export function MapView({
         applyTripArcs(map);
         loadGeometry(map);
         loadPhysicalWater(map);
-        applyMode(map, mode);
+        applyMode(map, modeRef.current);
         applyPersonalMarkerFilter(map);
         applyMarkerOverlap(map); // honour "show every place at once" from the start
         // The full-gazetteer dot field: built only if the Towns toggle is
