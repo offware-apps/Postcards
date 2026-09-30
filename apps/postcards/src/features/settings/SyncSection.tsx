@@ -4,6 +4,7 @@ import { useT, type MessageKey } from "../../lib/i18n";
 import { useSettings } from "../../lib/store/useSettings";
 import { useSyncStatus } from "../../lib/store/useSyncStatus";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
 import { useStories } from "../../lib/store/useStories";
@@ -50,6 +51,10 @@ export function SyncSection() {
   useModalKeys(guardRef, () => setGuard(null), { enabled: guard !== null });
 
   const connected = isConfigured({ ...cfg, branch: cfg.branch.trim() || "main" });
+  // Disconnect and the guard's buttons remove themselves, so focus returns to Sync now.
+  const syncNowRef = useRef<HTMLButtonElement>(null);
+  useFocusHandoff(connected, null, syncNowRef);
+  useFocusHandoff(guard !== null, null, syncNowRef);
 
   function update(next: GitHubConnectorValue) {
     setCfg(next);
@@ -141,14 +146,33 @@ export function SyncSection() {
       <GitHubConnectorFields idPrefix="sync-gh" value={cfg} onChange={update} />
 
       <div className="btn-row sync-actions">
-        <button className="btn" type="button" onClick={() => void onSync()} disabled={busy}>
+        <button
+          ref={syncNowRef}
+          className="btn"
+          type="button"
+          title={t("sync.now")}
+          onClick={() => void onSync()}
+          disabled={busy}
+        >
           {busy ? t("sync.syncing") : t("sync.now")}
         </button>
-        <button className="btn-ghost" type="button" onClick={() => void onDownloadData()} disabled={busy}>
+        <button
+          className="btn-ghost"
+          type="button"
+          title={t("sync.downloadData")}
+          onClick={() => void onDownloadData()}
+          disabled={busy}
+        >
           {t("sync.downloadData")}
         </button>
         {connected && (
-          <button className="link-danger" type="button" onClick={disconnect} disabled={busy}>
+          <button
+            className="link-danger"
+            type="button"
+            title={t("sync.disconnect")}
+            onClick={disconnect}
+            disabled={busy}
+          >
             {t("sync.disconnect")}
           </button>
         )}
@@ -166,6 +190,7 @@ export function SyncSection() {
         <input
           type="checkbox"
           checked={autoSync}
+          title={t("sync.auto.toggle")}
           onChange={(e) => setAutoSync(e.target.checked)}
         />
         <span>{t("sync.auto.toggle")}</span>
@@ -184,7 +209,7 @@ export function SyncSection() {
 
       {/* Sync log — transparency: exactly what each recent run did. */}
       <details className="guide-full-section sync-log-wrap">
-        <summary>{t("sync.log.title")}</summary>
+        <summary title={t("sync.log.title")}>{t("sync.log.title")}</summary>
         {log.length === 0 ? (
           <p className="muted small sync-log-empty">{t("sync.log.empty")}</p>
         ) : (
@@ -200,7 +225,7 @@ export function SyncSection() {
           </ul>
         )}
         {log.length > 0 && (
-          <button className="link" type="button" onClick={resetStatus}>
+          <button className="link" type="button" title={t("sync.log.clear")} onClick={resetStatus}>
             {t("sync.log.clear")}
           </button>
         )}
@@ -223,10 +248,21 @@ export function SyncSection() {
               {t("sync.guard.body", { removed: guard.removed, local: guard.local })}
             </p>
             <div className="trip-form-actions">
-              <button className="btn" type="button" autoFocus onClick={() => void onApplyAnyway()}>
+              <button
+                className="btn"
+                type="button"
+                title={t("sync.guard.apply")}
+                autoFocus
+                onClick={() => void onApplyAnyway()}
+              >
                 {t("sync.guard.apply")}
               </button>
-              <button className="btn-ghost" type="button" onClick={() => setGuard(null)}>
+              <button
+                className="btn-ghost"
+                type="button"
+                title={t("sync.guard.skip")}
+                onClick={() => setGuard(null)}
+              >
                 {t("sync.guard.skip")}
               </button>
             </div>

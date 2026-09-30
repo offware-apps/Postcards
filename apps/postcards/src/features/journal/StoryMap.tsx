@@ -161,7 +161,12 @@ export function StoryMap({ stories }: { stories: Story[] }) {
       <ul className="storymap-legend">
         {layout.dots.map((p) => (
           <li key={p.key}>
-            <button type="button" className="link" onClick={() => open(p.id)}>
+            <button
+              type="button"
+              className="link"
+              title={t("places.row.openAria", { name: p.name })}
+              onClick={() => open(p.id)}
+            >
               {countryFlag(p.countryId)} {p.name}{" "}
               <span className="muted small">· {p.count}</span>
             </button>

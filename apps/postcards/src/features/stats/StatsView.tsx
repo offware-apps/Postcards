@@ -123,7 +123,7 @@ function CountryRow({ c }: { c: CountryCoverage }) {
 
   return (
     <details className="country-card" onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="country-summary">
+      <summary className="country-summary" title={c.name}>
         {/* Flag + name shown ONCE here (the expanded body no longer repeats them). */}
         <span className="country-name">
           <span className="flag" aria-hidden>
@@ -155,6 +155,7 @@ function CountryRow({ c }: { c: CountryCoverage }) {
         <button
           type="button"
           className="country-open-page link"
+          title={t("stats.country.openPage")}
           onClick={() => useUi.getState().openCountry(c.iso2)}
         >
           {t("stats.country.openPage")} <span aria-hidden>↗</span>
@@ -675,6 +676,7 @@ export function StatsView() {
           <span className="sr-only">{t("stats.byCountry.sortAria")}</span>
           <select
             className="sort-select"
+            title={t("stats.byCountry.sortAria")}
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as CountrySort)}
           >

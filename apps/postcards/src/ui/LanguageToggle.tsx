@@ -21,6 +21,7 @@ export function LanguageToggle() {
           lang={l}
           aria-pressed={locale === l}
           className={locale === l ? "seg-on" : ""}
+          title={LOCALE_LABELS[l]}
           onClick={() => setLocale(l)}
         >
           {LOCALE_LABELS[l]}

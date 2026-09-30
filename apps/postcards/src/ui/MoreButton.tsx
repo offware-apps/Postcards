@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * "Show more" that also AUTO-REPEATS while held down: tap for one page,
@@ -10,7 +10,7 @@ export function MoreButton({
   children,
 }: {
   onMore: () => void;
-  children: ReactNode;
+  children: string;
 }) {
   const timer = useRef<number | null>(null);
   const repeated = useRef(false);
@@ -38,6 +38,7 @@ export function MoreButton({
     <button
       type="button"
       className="mini-btn"
+      title={children}
       onPointerDown={start}
       onPointerUp={stop}
       onPointerLeave={stop}

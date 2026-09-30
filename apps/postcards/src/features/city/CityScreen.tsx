@@ -54,6 +54,7 @@ function VisitDetails({ visitId, date, note }: { visitId: string; date: string |
         <input
           type="date"
           className="select"
+          title={t("city.visitDate")}
           value={date ?? ""}
           onChange={(e) => void setDetails(visitId, { date: e.target.value || null })}
         />
@@ -66,6 +67,7 @@ function VisitDetails({ visitId, date, note }: { visitId: string; date: string |
         <textarea
           className="select journal-textarea"
           rows={3}
+          title={t("city.note")}
           placeholder={t("city.notePlaceholder")}
           maxLength={2000}
           value={draft}
@@ -195,7 +197,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
 
   return (
     <div className="screen city-page">
-      <button className="mini-btn back-btn" type="button" onClick={onBack}>
+      <button className="mini-btn back-btn" type="button" title={t("city.back")} onClick={onBack}>
         ← {t("city.back")}
       </button>
 
@@ -238,6 +240,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
             <button
               className="mini-btn"
               type="button"
+              title={t("city.showOnMap")}
               onClick={() => {
                 // "Show on map" opens the place's marker card (been-there /
                 // Details), not just a silent re-centre — same as tapping its dot.
@@ -265,6 +268,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
           <button
             className="mini-btn"
             type="button"
+            title={t("city.searchOnMap")}
             onClick={() => {
               useUi.getState().setTab("map");
               useUi.getState().focusSearch();
@@ -305,6 +309,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
             className="mini-btn"
             type="button"
             style={placeStories.length ? { marginTop: 6 } : undefined}
+            title={t("city.addStory")}
             onClick={() => openJournalDraft(place)}
           >
             ＋ {t("city.addStory")}
@@ -321,6 +326,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
             <a
               className="mini-btn"
               href={wikipediaHref}
+              title="Wikipedia"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -329,6 +335,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
             <a
               className="mini-btn"
               href={wikivoyageHref}
+              title="Wikivoyage"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -338,6 +345,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
               <a
                 className="mini-btn"
                 href={`https://www.openstreetmap.org/#map=12/${lat}/${lon}`}
+                title="OpenStreetMap"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -362,6 +370,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
                   type="button"
                   onClick={() => useUi.getState().openCity(h.id)}
                   aria-label={t("places.row.openAria", { name: h.name })}
+                  title={t("places.row.openAria", { name: h.name })}
                 >
                   <CityLine flag="🏛️" name={h.name} sub={<>· {t("city.away", { km: formatKm(h.km) })}</>} multiline />
                 </button>
@@ -385,6 +394,7 @@ export function CityScreen({ cityId, onBack }: { cityId: string; onBack: () => v
                   type="button"
                   onClick={() => useUi.getState().openCity(a.id)}
                   aria-label={t("places.row.openAria", { name: `${a.name} (${a.id})` })}
+                  title={t("places.row.openAria", { name: `${a.name} (${a.id})` })}
                 >
                   <CityLine
                     flag="✈️"

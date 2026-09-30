@@ -35,6 +35,7 @@ export function Toast() {
         <button
           className="toast-undo"
           type="button"
+          title={t("common.undo")}
           onClick={() => {
             void toast.undo?.();
             dismiss();
@@ -43,7 +44,13 @@ export function Toast() {
           {t("common.undo")}
         </button>
       )}
-      <button className="toast-close" type="button" aria-label={t("toast.dismiss")} onClick={dismiss}>
+      <button
+        className="toast-close"
+        type="button"
+        aria-label={t("toast.dismiss")}
+        title={t("toast.dismiss")}
+        onClick={dismiss}
+      >
         ×
       </button>
     </div>
