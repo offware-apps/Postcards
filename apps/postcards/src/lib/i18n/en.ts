@@ -139,7 +139,7 @@ export const en = {
   "settings.offline.toast.reset": "Map caches and view settings were reset.",
   "settings.guides.title": "Travel guides",
   "settings.guides.desc":
-    "When you open a place, a short overview and photo can load from Wikivoyage and Wikipedia. Opening a place is your own action, so this is on by default; turn it off to load guides only when you tap. Nothing else leaves your device.",
+    "When you open a place, a short overview and photo can load from Wikivoyage and Wikipedia, and the map's place card can show a Wikipedia photo. Each load tells those sites which place you opened, so this is off by default: until you turn it on, guides load only when you tap and the map card shows no photo.",
   "settings.guides.toggle": "Load guide overviews automatically when online",
   "settings.packs.title": "Community data packs",
   "settings.packs.desc":
@@ -206,6 +206,7 @@ export const en = {
   "stats.travel.trips_other": "trips",
   "stats.travel.travelled": "travelled",
   "stats.travel.modeTitle": "{count} by {mode}",
+  "stats.datasetsNote": "Computed against the loaded reference datasets: all countries & territories (ISO 3166-1), a GeoNames gazetteer of cities with 15,000+ people, and first-level regions (states/provinces) worldwide.",
   "stats.byCountry.title": "By country",
   "stats.byCountry.sortAria": "Sort countries",
   "stats.byCountry.sortCities": "Most cities",
@@ -1038,6 +1039,15 @@ export const en = {
     "Everything works offline out of the box. In Settings you can opt into more: the detailed online map, offline map regions to save for a trip, the full world city list (small towns and villages), and community place packs. All optional, all removable — nothing downloads on its own.",
   "about.footPre": "Press ",
   "about.footPost": " to see keyboard shortcuts.",
+  "shortcuts.title": "Keyboard shortcuts",
+  "shortcuts.search": "Search",
+  "shortcuts.searchShow": "shows the place",
+  "shortcuts.searchMark": "marks it visited",
+  "shortcuts.sections": "switch sections",
+  "shortcuts.inPlaces": "(inside Places)",
+  "shortcuts.help": "This help",
+  "shortcuts.escape": "Close / clear search",
+  "attribution.label": "Data sources:",
   "about.version": "Version {version}",
   "about.gotIt": "Got it",
 

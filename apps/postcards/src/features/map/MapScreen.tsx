@@ -58,6 +58,8 @@ const MAP_HIDDEN_FIELDS: (keyof FilterState)[] = [
   // One-country drill-down is a lists action (set from the Stats card); on the map
   // you just pan to the country, so it neither filters the markers nor shows a chip.
   "country",
+  // Monument category is a Places list dimension; the map's markers ignore it.
+  "category",
   // Place-kind mode is its own prominent pill now, not a filter — its state is
   // visible in the pill itself, so it must not double up as a summary chip or
   // light the Filter badge.
@@ -604,11 +606,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
         sub: info.sub,
         place: info.place,
         hasPage: info.hasPage,
-        // A photo only for cities & monuments on a live base — matches the
-        // marker-tap card; airports and the offline base carry none.
-        showImage:
-          effectiveBasemap !== "simple" &&
-          (info.place.kind === "city" || info.place.kind === "heritage"),
+        // A photo only for cities & monuments — matches the marker-tap card;
+        // airports carry none (MapView gates it on the guides opt-in).
+        showImage: info.place.kind === "city" || info.place.kind === "heritage",
       },
     }));
   }

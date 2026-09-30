@@ -133,4 +133,8 @@ describe("activeChips", () => {
     expect(fields).toContain("favoritesOnly");
     expect(chips.find((c) => c.field === "minPop")!.label).toBe("1M+");
   });
+  it("names a monument category, so a persisted one can be seen and cleared", () => {
+    const chips = activeChips(st({ category: "natural" }), t);
+    expect(chips).toEqual([{ field: "category", label: "filter.category.natural" }]);
+  });
 });

@@ -141,3 +141,15 @@ describe("coverage statistics (real gazetteer)", () => {
     expect(jp.citiesVisited).toBe(0);
   });
 });
+
+describe("coverage under a country scope", () => {
+  it("counts a territory's city in neither the cities numerator nor its denominator", () => {
+    const hk = ref.citiesOf("HK")[0]!;
+    const all = computeCoverage([visitOf(hk), visitOf(paris)], ref, "all");
+    const un = computeCoverage([visitOf(hk), visitOf(paris)], ref, "un");
+    expect(all.citiesVisited).toBe(2);
+    expect(un.countriesVisited).toBe(1);
+    expect(un.citiesVisited).toBe(1);
+    expect(un.worldCityCount).toBeLessThan(all.worldCityCount);
+  });
+});

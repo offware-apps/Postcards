@@ -78,9 +78,11 @@ export function computeCoverage(
   const countriesVisited = [...visitedCountryIds(visits)].filter((iso2) =>
     countryInScope(ref, iso2, scope),
   ).length;
+  // Cities honour the scope like their denominator below, so a territory's city
+  // never counts toward a total that leaves the territory out.
   const cityIds = new Set(
     onlyVisited(visits)
-      .filter((v) => v.place.kind === "city")
+      .filter((v) => v.place.kind === "city" && countryInScope(ref, v.place.countryId, scope))
       .map((v) => v.place.id),
   );
   const airportIds = new Set(
@@ -304,19 +306,19 @@ export function countryDetail(visits: Visit[], ref: ReferenceData, iso2: string)
 }
 
 export interface TravelRecords {
-  northernmost: { name: string; iso2: string; lat: number } | null;
-  southernmost: { name: string; iso2: string; lat: number } | null;
-  biggestCity: { name: string; iso2: string; population: number } | null;
+  northernmost: { id: string; name: string; iso2: string; lat: number } | null;
+  southernmost: { id: string; name: string; iso2: string; lat: number } | null;
+  biggestCity: { id: string; name: string; iso2: string; population: number } | null;
   firstVisit: { name: string; date: string } | null;
   latestVisit: { name: string; date: string } | null;
 }
 
 /** Fun superlatives across visited cities (dates use the visit's own date field).
- *  City records carry their country's iso2 so the UI can fly the map to them. */
+ *  City records carry their gazetteer id so the UI can fly the map to them. */
 export function computeRecords(visits: Visit[], ref: ReferenceData): TravelRecords {
-  let north: { name: string; iso2: string; lat: number } | null = null;
-  let south: { name: string; iso2: string; lat: number } | null = null;
-  let biggest: { name: string; iso2: string; population: number } | null = null;
+  let north: TravelRecords["northernmost"] = null;
+  let south: TravelRecords["southernmost"] = null;
+  let biggest: TravelRecords["biggestCity"] = null;
   let first: { name: string; date: string } | null = null;
   let latest: { name: string; date: string } | null = null;
   for (const v of onlyVisited(visits)) {
@@ -327,10 +329,10 @@ export function computeRecords(visits: Visit[], ref: ReferenceData): TravelRecor
     if (v.place.kind !== "city") continue;
     const c = ref.cityById(v.place.id);
     if (!c) continue;
-    if (!north || c.lat > north.lat) north = { name: c.name, iso2: c.countryIso2, lat: c.lat };
-    if (!south || c.lat < south.lat) south = { name: c.name, iso2: c.countryIso2, lat: c.lat };
+    if (!north || c.lat > north.lat) north = { id: c.id, name: c.name, iso2: c.countryIso2, lat: c.lat };
+    if (!south || c.lat < south.lat) south = { id: c.id, name: c.name, iso2: c.countryIso2, lat: c.lat };
     if (c.population != null && (!biggest || c.population > biggest.population)) {
-      biggest = { name: c.name, iso2: c.countryIso2, population: c.population };
+      biggest = { id: c.id, name: c.name, iso2: c.countryIso2, population: c.population };
     }
   }
   return { northernmost: north, southernmost: south, biggestCity: biggest, firstVisit: first, latestVisit: latest };

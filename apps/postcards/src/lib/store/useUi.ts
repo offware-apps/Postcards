@@ -5,12 +5,14 @@ export type Tab = "map" | "stats" | "places" | "trips" | "journal" | "settings";
 // Passport and Moments live INSIDE Places now (fewer top-level buttons) — they
 // are views of the same screen, reachable via openPlaces.
 export type PlacesView =
-  | "visited"
   | "favorites"
   | "wishlist"
   | "countries"
   | "cities"
   | "monuments"
+  // The cities / monuments you've visited — what the stats tiles count.
+  | "visitedCities"
+  | "visitedMonuments"
   | "airports"
   | "moments"
   | "passport";

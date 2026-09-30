@@ -25,8 +25,8 @@ export interface TFunction {
   (key: MessageKey, params?: TParams): string;
   /**
    * Plural-aware lookup: picks `${base}_one` / `${base}_other` for the count and
-   * injects it as {count}. Korean has no plural inflection, so it always uses
-   * `_other`; English/French use `_one` only when count === 1.
+   * injects it as {count}, by the locale's CLDR rule: English takes `_one` for 1
+   * alone, French for 0 and 1, and Korean, which does not inflect, never.
    */
   plural(base: string, count: number, params?: TParams): string;
 }
@@ -36,8 +36,9 @@ export function useT(): TFunction {
   const locale = useSettings((s) => s.locale);
   return useMemo<TFunction>(() => {
     const fn = ((key, params) => translate(locale, key, params)) as TFunction;
+    const rules = new Intl.PluralRules(locale);
     fn.plural = (base, count, params) => {
-      const suffix = locale !== "ko" && count === 1 ? "_one" : "_other";
+      const suffix = rules.select(count) === "one" ? "_one" : "_other";
       return translate(locale, `${base}${suffix}`, { count, ...params });
     };
     return fn;

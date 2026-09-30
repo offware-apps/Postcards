@@ -58,6 +58,14 @@ export function RouteMap({
 
   const pins = useMemo(() => pickPointsFC(pool, stops), [pool, stops]);
   const arcs = useMemo(() => stopsArcs(stops, ref, mode), [stops, ref, mode]);
+  // The load handler seeds the layers: stops picked from the list before the
+  // canvas loaded must be drawn from the start, not from the mount-time route.
+  const pinsRef = useRef(pins);
+  pinsRef.current = pins;
+  const arcsRef = useRef(arcs);
+  arcsRef.current = arcs;
+  const poolRef = useRef(pool);
+  poolRef.current = pool;
 
   // Create the map once. Offline base style (no sources → no tiles); land, arcs
   // and pins are added on load. Torn down on unmount (map.remove()).
@@ -111,7 +119,7 @@ export function RouteMap({
         if (map.getLayer("pins")) map.moveLayer("pins");
       });
 
-      map.addSource("arcs", { type: "geojson", data: arcs });
+      map.addSource("arcs", { type: "geojson", data: arcsRef.current });
       map.addLayer({
         id: "arcs",
         type: "line",
@@ -119,7 +127,7 @@ export function RouteMap({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#6366f1", "line-width": 2.5, "line-opacity": 0.9 },
       });
-      map.addSource("pins", { type: "geojson", data: pins });
+      map.addSource("pins", { type: "geojson", data: pinsRef.current });
       map.addLayer({
         id: "pins",
         type: "circle",
@@ -133,7 +141,7 @@ export function RouteMap({
       });
       readyRef.current = true;
 
-      const b = fitBounds(pool.map((p) => ({ lon: p.lon, lat: p.lat })));
+      const b = fitBounds(poolRef.current.map((p) => ({ lon: p.lon, lat: p.lat })));
       if (b) map.fitBounds(b, { padding: 44, maxZoom: 6, animate: !reducedMotion });
     });
 

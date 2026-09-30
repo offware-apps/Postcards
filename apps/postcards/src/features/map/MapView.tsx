@@ -13,6 +13,7 @@ import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { bundledMapSource } from "../../lib/map-source/bundledMapSource";
 import { useVisits, findByPlace } from "../../lib/store/useVisits";
 import { useUi } from "../../lib/store/useUi";
+import { useSettings } from "../../lib/store/useSettings";
 import { useT } from "../../lib/i18n";
 import { visitedCountryIds } from "../stats/computeStats";
 import { mapDateMatches, type MapDate } from "../travel/period";
@@ -336,10 +337,10 @@ function inViewPoints(cities: City[]): FeatureCollection<Point> {
  * Popup for any tappable place marker: name, region · population, and actions —
  * check/uncheck visited right from the map, plus the city detail page.
  */
-/** Load a small Wikipedia thumbnail of the place into the popup's photo slot,
- *  online only. Never touches the network offline (the caller gates on the live
- *  basemap, which Offline mode forces to the no-network "simple" base). Removes
- *  the slot if there's no image or the request fails — no empty gap, no spinner. */
+/** Load a small Wikipedia thumbnail of the place into the popup's photo slot.
+ *  The request sends the place's name to Wikipedia, so openPlacePopup calls this
+ *  only on the guides opt-in and outside Offline mode. Removes the slot if
+ *  there's no image or the request fails — no empty gap, no spinner. */
 async function loadPopupThumb(name: string, fig: HTMLElement): Promise<void> {
   try {
     const { fetchSummary } = await import("../../lib/wikivoyage");
@@ -383,9 +384,12 @@ function openPlacePopup(
 ): void {
   const el = document.createElement("div");
   el.className = "map-popup";
-  // Online-only preview image (cities & monuments): a little Wikipedia photo of
-  // what the place is, loaded lazily at the top of the card once it opens.
-  if (showImage) {
+  // Preview image (cities & monuments): a little Wikipedia photo of what the
+  // place is, loaded lazily at the top of the card once it opens. It names the
+  // place to Wikipedia, so it waits for the same opt-in as the guides (off by
+  // default) and never runs in Offline mode, whichever basemap is showing.
+  const { autoLoadGuides, offlineMode } = useSettings.getState();
+  if (showImage && autoLoadGuides && !offlineMode) {
     const fig = document.createElement("div");
     fig.className = "map-popup-photo";
     el.appendChild(fig);
@@ -840,6 +844,12 @@ export function MapView({
   showCountriesRef.current = showCountries;
   const modeRef = useRef(mode);
   modeRef.current = mode;
+  // The map builds its style after an async resolve and loads later still, so the
+  // style and the load handler read the theme and projection current by then.
+  const darkRef = useRef(dark);
+  darkRef.current = dark;
+  const globeRef = useRef(globe);
+  globeRef.current = globe;
   const maxMarkersRef = useRef(maxMarkers);
   maxMarkersRef.current = maxMarkers;
   const optimizeMarkersRef = useRef(optimizeMarkers);
@@ -1311,13 +1321,14 @@ export function MapView({
         basemap === "osm" ? "osm-raster" : basemap === "detail" ? "world-detail" : "world-overview";
       const { style: baseStyle, attribution } = await bundledMapSource.resolveStyle(pack);
       if (cancelled || !containerRef.current) return;
+      const builtGlobe = globeRef.current;
 
       // Build the COMPLETE style up front — base + overlay sources + overlay
       // layers + projection — so the map is never a blank canvas waiting on an
       // async setStyle. Overlay sources start empty and are filled on load.
       const fullStyle: StyleSpecification = {
         ...baseStyle,
-        projection: { type: globe ? "globe" : "mercator" },
+        projection: { type: builtGlobe ? "globe" : "mercator" },
         sources: {
           ...baseStyle.sources,
           // tolerance 0: never simplify the country polygons — per-zoom
@@ -1335,7 +1346,7 @@ export function MapView({
           cities: { type: "geojson", data: EMPTY_FC },
           airports: { type: "geojson", data: EMPTY_FC },
         },
-        layers: [...baseStyle.layers, ...overlayLayers(basemap, dark)],
+        layers: [...baseStyle.layers, ...overlayLayers(basemap, darkRef.current)],
       };
 
       try {
@@ -1404,7 +1415,10 @@ export function MapView({
       map.on("load", () => {
         if (cancelled || !map) return;
         loadedRef.current = true;
-        applyTheme(map, dark);
+        // The globe effect skips a change made before load: catch it up here.
+        if (globeRef.current !== builtGlobe)
+          map.setProjection({ type: globeRef.current ? "globe" : "mercator" });
+        applyTheme(map, darkRef.current);
         applyVisited(map);
         if (map.getLayer("countries-visited-fill")) {
           map.setLayoutProperty(
@@ -1417,7 +1431,7 @@ export function MapView({
         applyTripArcs(map);
         loadGeometry(map);
         loadPhysicalWater(map);
-        applyMode(map, mode);
+        applyMode(map, modeRef.current);
         applyPersonalMarkerFilter(map);
         applyMarkerOverlap(map); // honour "show every place at once" from the start
         // The full-gazetteer dot field: built only if the Towns toggle is
@@ -1698,9 +1712,9 @@ export function MapView({
           } as PlaceRef,
           hasPage: kind === "city" || kind === "heritage" || kind === "airport",
         },
-        // A little preview photo for cities & monuments, but only when the online
-        // basemap is active (offline / Offline mode uses "simple" — no network).
-        basemap !== "simple" && (kind === "city" || kind === "heritage"));
+        // A little preview photo for cities & monuments (openPlacePopup gates it
+        // on the guides opt-in).
+        kind === "city" || kind === "heritage");
         suppressBoundsRef.current = true;
         const tapZoom = Math.max(map.getZoom(), 6.5);
         if (basemap === "osm") prefetchAroundPoint(anchor.lng, anchor.lat, tapZoom);

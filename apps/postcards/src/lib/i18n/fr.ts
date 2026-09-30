@@ -132,7 +132,7 @@ export const fr: Messages = {
   "settings.offline.toast.reset": "Les caches de carte et les réglages d'affichage ont été réinitialisés.",
   "settings.guides.title": "Guides de voyage",
   "settings.guides.desc":
-    "Lorsque vous ouvrez un lieu, un court aperçu et une photo peuvent être chargés depuis Wikivoyage et Wikipédia. Ouvrir un lieu est votre propre action, donc c'est activé par défaut ; désactivez-le pour ne charger les guides que sur appui. Rien d'autre ne quitte votre appareil.",
+    "Lorsque vous ouvrez un lieu, un court aperçu et une photo peuvent être chargés depuis Wikivoyage et Wikipédia, et la fiche du lieu sur la carte peut afficher une photo de Wikipédia. Chaque chargement indique à ces sites quel lieu vous avez ouvert, donc c'est désactivé par défaut : tant que vous ne l'activez pas, les guides ne se chargent que sur appui et la fiche de la carte n'affiche pas de photo.",
   "settings.guides.toggle": "Charger les aperçus des guides automatiquement en ligne",
   "settings.packs.title": "Packs de données communautaires",
   "settings.packs.desc":
@@ -199,6 +199,7 @@ export const fr: Messages = {
   "stats.travel.trips_other": "voyages",
   "stats.travel.travelled": "parcourus",
   "stats.travel.modeTitle": "{count} en {mode}",
+  "stats.datasetsNote": "Calculé à partir des jeux de données de référence chargés : tous les pays et territoires (ISO 3166-1), un répertoire GeoNames des villes de plus de 15 000 habitants et les régions de premier niveau (États, provinces) du monde entier.",
   "stats.byCountry.title": "Par pays",
   "stats.byCountry.sortAria": "Trier les pays",
   "stats.byCountry.sortCities": "Plus de villes",
@@ -1039,6 +1040,15 @@ export const fr: Messages = {
     "Tout fonctionne hors ligne dès le départ. Dans les Réglages, vous pouvez activer plus : la carte détaillée en ligne, des régions de carte à enregistrer pour un voyage, la liste complète des villes du monde (petites villes et villages) et des packs de lieux communautaires. Tout est optionnel et supprimable — rien ne se télécharge tout seul.",
   "about.footPre": "Appuyez sur ",
   "about.footPost": " pour voir les raccourcis clavier.",
+  "shortcuts.title": "Raccourcis clavier",
+  "shortcuts.search": "Rechercher",
+  "shortcuts.searchShow": "affiche le lieu",
+  "shortcuts.searchMark": "le marque comme visité",
+  "shortcuts.sections": "changer de section",
+  "shortcuts.inPlaces": "(dans Lieux)",
+  "shortcuts.help": "Cette aide",
+  "shortcuts.escape": "Fermer / effacer la recherche",
+  "attribution.label": "Sources des données :",
   "about.version": "Version {version}",
   "about.gotIt": "Compris",
 
