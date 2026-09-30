@@ -20,6 +20,10 @@ describe("tripDate — approximate trip dates (spec 019)", () => {
     expect(isValidTripDate("2024-13")).toBe(false); // no month 13
     expect(isValidTripDate("2024-00")).toBe(false);
     expect(isValidTripDate("2024-08-40")).toBe(false); // no day 40
+    expect(isValidTripDate("2024-02-30")).toBe(false); // no Feb 30
+    expect(isValidTripDate("2023-02-29")).toBe(false); // not a leap year
+    expect(isValidTripDate("2024-02-29")).toBe(true);
+    expect(formatTripDate("2024-02-31", "en")).toBe(""); // never rolled into March
     expect(isValidTripDate("abc")).toBe(false);
     expect(isValidTripDate("24-08")).toBe(false);
   });

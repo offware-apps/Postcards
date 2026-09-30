@@ -7,6 +7,8 @@
 // locale is undefined and Intl falls back to the environment default, exactly as
 // before — so existing behaviour and snapshots are unchanged.
 
+import { isCalendarDate } from "../schema/helpers";
+
 let activeLocale: string | undefined;
 
 /** Set the locale used by the formatters when no explicit locale is passed. */
@@ -52,10 +54,22 @@ export function formatPercentFloor(value: number, locale = activeLocale): string
   return value > 0 && s === formatPercent(0, locale) ? "<1%" : s;
 }
 
-/** ISO YYYY-MM-DD -> localized date; passthrough if unparseable. */
+/** A calendar date -> localized label at the precision it carries: a day
+ *  `YYYY-MM-DD` ("Aug 12, 2024"), a month `YYYY-MM` ("Aug 2024") or a year `YYYY`
+ *  ("2024"), so a vague trip date never gains a day it doesn't have. Formatted in
+ *  UTC, so the label is the same in every time zone. Passthrough if unparseable or
+ *  not a real day (Feb 30 is shown as typed, not rolled into March). */
 export function formatDate(iso: string | null, locale = activeLocale): string {
   if (!iso) return "";
-  const d = new Date(iso + "T00:00:00");
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(d);
+  if (!isCalendarDate(iso)) return iso;
+  const [year, month, day] = iso.split("-").map(Number) as [number, number?, number?];
+  if (month == null) return String(year);
+  const d = new Date(0);
+  d.setUTCFullYear(year, month - 1, day ?? 1);
+  return new Intl.DateTimeFormat(
+    locale,
+    day == null
+      ? { year: "numeric", month: "short", timeZone: "UTC" }
+      : { dateStyle: "medium", timeZone: "UTC" },
+  ).format(d);
 }

@@ -1,4 +1,5 @@
 import { formatDate } from "../../lib/format/format";
+import { isCalendarDate } from "../../lib/schema/helpers";
 
 // Approximate ("vague") trip dates (spec 019). A trip date is deliberately coarse:
 // a full day `YYYY-MM-DD`, a month `YYYY-MM`, a year `YYYY`, or nothing. These pure
@@ -18,7 +19,8 @@ export interface ParsedTripDate {
   day: number | null;
 }
 
-/** Parse a trip date into its known parts, or null if empty/malformed. */
+/** Parse a trip date into its known parts, or null if empty, malformed or not a
+ *  real calendar date (month 13, Feb 30). */
 export function parseTripDate(s: TripDate): ParsedTripDate | null {
   if (!s) return null;
   const m = RE.exec(s);
@@ -26,8 +28,7 @@ export function parseTripDate(s: TripDate): ParsedTripDate | null {
   const year = Number(m[1]);
   const month = m[2] != null ? Number(m[2]) : null;
   const day = m[3] != null ? Number(m[3]) : null;
-  if (month != null && (month < 1 || month > 12)) return null;
-  if (day != null && (day < 1 || day > 31)) return null;
+  if (!isCalendarDate(s)) return null;
   return { year, month, day };
 }
 
@@ -37,18 +38,10 @@ export function isValidTripDate(s: string): boolean {
 }
 
 /** Human label for the granularity present: a year "2024", a month "Aug 2024", or a
- *  full day formatted like every other date in the app (via `formatDate`), and "" for
- *  undated. Keeps full-date display identical to the rest of the UI. */
+ *  full day, all via the app-wide `formatDate` so trip rows match visits/journal,
+ *  and "" for undated or malformed. */
 export function formatTripDate(s: TripDate, locale: string): string {
-  const p = parseTripDate(s);
-  if (!p) return "";
-  if (p.month == null) return String(p.year);
-  if (p.day == null) {
-    return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", timeZone: "UTC" }).format(
-      new Date(Date.UTC(p.year, p.month - 1, 1)),
-    );
-  }
-  // A full day reuses the app-wide date format so trip rows match visits/journal.
+  if (!parseTripDate(s)) return "";
   return formatDate(s, locale);
 }
 
