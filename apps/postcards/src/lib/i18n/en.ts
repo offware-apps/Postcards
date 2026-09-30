@@ -70,6 +70,11 @@ export const en = {
   "settings.appearance.title": "Appearance",
   "settings.appearance.desc":
     "Follow your device, or force light or dark. Your choice is saved on this device only.",
+  "settings.android.title": "Android app",
+  "settings.android.desc":
+    "Postcards also runs as an Android app, downloaded from GitHub. Your places here do not move to it on their own: export them under Your data and import the file in the app.",
+  "settings.android.link": "Get the Android app",
+  "settings.android.linkTitle": "Download the Postcards Android app (APK) from GitHub",
   "settings.language.title": "Language",
   "settings.language.desc":
     "Choose the app's language. Place, country and city names keep their own language.",

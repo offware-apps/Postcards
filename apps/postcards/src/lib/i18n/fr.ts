@@ -63,6 +63,12 @@ export const fr: Messages = {
   "settings.appearance.title": "Apparence",
   "settings.appearance.desc":
     "Suivez votre appareil, ou forcez le mode clair ou sombre. Votre choix est enregistré sur cet appareil uniquement.",
+  "settings.android.title": "Application Android",
+  "settings.android.desc":
+    "Postcards existe aussi en application Android, téléchargée depuis GitHub. Vos lieux d'ici n'y passent pas d'eux-mêmes : exportez-les sous Vos données et importez le fichier dans l'application.",
+  "settings.android.link": "Obtenir l'application Android",
+  "settings.android.linkTitle":
+    "Télécharger l'application Android de Postcards (APK) depuis GitHub",
   "settings.language.title": "Langue",
   "settings.language.desc":
     "Choisissez la langue de l'application. Les noms de lieux, de pays et de villes gardent leur propre langue.",

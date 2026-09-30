@@ -64,6 +64,11 @@ export const ko: Messages = {
   "settings.appearance.title": "화면 표시",
   "settings.appearance.desc":
     "기기를 따르거나 밝게 또는 어둡게 고정하세요. 선택은 이 기기에만 저장됩니다.",
+  "settings.android.title": "Android 앱",
+  "settings.android.desc":
+    "Postcards는 GitHub에서 내려받는 Android 앱으로도 쓸 수 있습니다. 여기 있는 장소는 앱으로 저절로 옮겨지지 않으니, 내 데이터에서 내보낸 뒤 앱에서 그 파일을 가져오세요.",
+  "settings.android.link": "Android 앱 받기",
+  "settings.android.linkTitle": "GitHub에서 Postcards Android 앱(APK) 내려받기",
   "settings.language.title": "언어",
   "settings.language.desc":
     "앱 언어를 선택하세요. 장소, 국가, 도시 이름은 원래 언어를 유지합니다.",

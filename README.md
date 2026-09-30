@@ -2,6 +2,8 @@
 
 -> offware-apps.github.io/Postcards/ 
 
+-> Android: [download postcards.apk](https://github.com/offware-apps/Postcards/releases/download/android-latest/postcards.apk) (newest build; open it on the phone and allow installing unknown apps)
+
 <div align="center">
 
 # Postcards
