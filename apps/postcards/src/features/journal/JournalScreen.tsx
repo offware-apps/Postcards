@@ -843,14 +843,32 @@ export function JournalScreen() {
   // before any writing happens. The write is debounced: a synchronous
   // storage write on every keystroke stalls typing on slow devices, and the
   // flush paths below make sure quitting mid-burst still keeps everything.
+  //
+  // An edit still matching its story holds no writing: it is not mirrored, and a
+  // draft cached for it (an older build mirrored every Edit) is dropped, so an
+  // untouched Edit never reopens as a recovered draft or saves stale text back.
   useEffect(() => {
     if (!composerOpen) return;
     if (!title.trim() && !text.trim() && !place && !editingId) return;
+    const s = editingId ? stories.find((x) => x.storyId === editingId) : undefined;
+    if (
+      s &&
+      place &&
+      placeKey(place) === placeKey(s.place) &&
+      date === s.date &&
+      title === s.title &&
+      text === s.text &&
+      folder === (s.folder ?? "")
+    ) {
+      pendingDraft.current = null;
+      if (loadDraft()?.editingId === editingId) clearDraft();
+      return;
+    }
     pendingDraft.current = { editingId, place, date, title, text, folder };
     const timer = setTimeout(flushDraft, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [composerOpen, editingId, place, date, title, text, folder]);
+  }, [composerOpen, editingId, place, date, title, text, folder, stories]);
 
   // Flush the pending draft whenever the writing could otherwise be lost:
   // app backgrounded or closed (visibilitychange/pagehide), or this screen
