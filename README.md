@@ -4,6 +4,8 @@
 
 <div align="center">
 
+<img src="https://raw.githubusercontent.com/offware-apps/.github/main/profile/logo.png" alt="Offware" width="72">
+
 # Postcards
 
 **Remember every place you've been — privately, offline, in a file you own.**
