@@ -9,6 +9,7 @@ import { useToast } from "../../lib/store/useToast";
 import { useUi } from "../../lib/store/useUi";
 import { registerEscape } from "../../lib/store/escapeStack";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 import { fileToPostcard } from "../../lib/image/downscale";
 import { countryFlag, formatDate, formatKm } from "../../lib/format/format";
 import { haversineKm } from "../travel/distance";
@@ -503,6 +504,9 @@ export function JournalScreen() {
   const [locating, setLocating] = useState(false);
   const [feedShown, setFeedShown] = useState(FEED_PAGE);
   const [dayChoice, setDayChoice] = useState(false);
+  // The day choice's buttons remove themselves, so focus returns to Today's story.
+  const todayRef = useRef<HTMLButtonElement>(null);
+  useFocusHandoff(dayChoice, null, todayRef);
   // Feed filters: by destination / country / folder, and by year (the "blog" views).
   const [filterSel, setFilterSel] = useState("all");
   const [yearSel, setYearSel] = useState("all");
@@ -1102,6 +1106,7 @@ export function JournalScreen() {
 
       <div className="btn-row journal-toolbar">
         <button
+          ref={todayRef}
           className="btn"
           type="button"
           title={t("journal.todayStory")}

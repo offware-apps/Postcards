@@ -4,6 +4,7 @@ import { useT, type MessageKey } from "../../lib/i18n";
 import { useSettings } from "../../lib/store/useSettings";
 import { useSyncStatus } from "../../lib/store/useSyncStatus";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
 import { useStories } from "../../lib/store/useStories";
@@ -50,6 +51,10 @@ export function SyncSection() {
   useModalKeys(guardRef, () => setGuard(null), { enabled: guard !== null });
 
   const connected = isConfigured({ ...cfg, branch: cfg.branch.trim() || "main" });
+  // Disconnect and the guard's buttons remove themselves, so focus returns to Sync now.
+  const syncNowRef = useRef<HTMLButtonElement>(null);
+  useFocusHandoff(connected, null, syncNowRef);
+  useFocusHandoff(guard !== null, null, syncNowRef);
 
   function update(next: GitHubConnectorValue) {
     setCfg(next);
@@ -142,6 +147,7 @@ export function SyncSection() {
 
       <div className="btn-row sync-actions">
         <button
+          ref={syncNowRef}
           className="btn"
           type="button"
           title={t("sync.now")}

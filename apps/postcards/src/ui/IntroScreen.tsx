@@ -4,6 +4,7 @@ import { useSettings } from "../lib/store/useSettings";
 import { useToast } from "../lib/store/useToast";
 import { downloadFullCities, fullCitiesEnabled } from "../lib/reference/referenceData";
 import { useT } from "../lib/i18n";
+import { useFocusHandoff } from "../lib/hooks/useFocusHandoff";
 
 /** An on/off toggle switch — the one control the intro rows use, so every option
  *  reads the same way: flip it to activate, flip it back to deactivate. */
@@ -66,6 +67,9 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
   }, []);
   // The recommendation is "applied" once both smooth-map settings are on.
   const smoothMapOn = reduceMapWork && optimizeMarkers;
+  // Applying hides the recommendation with its button, so focus moves to the next row.
+  const modeRef = useRef<HTMLDivElement>(null);
+  useFocusHandoff(isPhone && !smoothMapOn, null, modeRef);
   function applyPhoneRecommended() {
     setReduceMapWork(true);
     setOptimizeMarkers(true);
@@ -146,7 +150,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
               {offlineMode ? t("intro.mode.offlineDesc") : t("intro.mode.onlineDesc")}
             </span>
           </div>
-          <div className="intro-seg" role="group" aria-label={t("intro.mode.title")}>
+          <div ref={modeRef} className="intro-seg" role="group" aria-label={t("intro.mode.title")}>
             <button
               type="button"
               className={"intro-seg-btn" + (!offlineMode ? " is-on" : "")}

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 import { useToast } from "../../lib/store/useToast";
 import { useSettings, MARKER_CAP_CHOICES } from "../../lib/store/useSettings";
 import { todayISO } from "../../lib/store/useVisits";
@@ -91,6 +92,9 @@ export function SettingsScreen() {
   );
   const resetRef = useRef<HTMLDivElement>(null);
   useModalKeys(resetRef, () => setConfirmReset(false), { enabled: confirmReset });
+  // Closing the confirm removes the focused button, so focus returns to its link.
+  const resetLinkRef = useRef<HTMLButtonElement>(null);
+  useFocusHandoff(confirmReset, null, resetLinkRef);
 
   async function onDownloadCities() {
     setCitiesDl("busy");
@@ -404,6 +408,7 @@ export function SettingsScreen() {
           </div>
 
           <button
+            ref={resetLinkRef}
             className="link-danger"
             type="button"
             title={t("settings.offline.reset")}

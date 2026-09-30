@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import type { Country } from "../../lib/reference/types";
 import { useVisits } from "../../lib/store/useVisits";
@@ -13,6 +13,7 @@ import { ScopeToggle } from "../../ui/ScopeToggle";
 import { renderPoster } from "./poster";
 import { ListPager } from "../../ui/ListPager";
 import { useT } from "../../lib/i18n";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 
 /** One flag in the passport grid — a button that opens its country's page. */
 function FlagCard({ c, locked }: { c: Country; locked?: boolean }) {
@@ -56,6 +57,9 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
   function closePoster() {
     setPosterUrl(null);
   }
+  // Closing removes the focused Close button, so focus returns to the poster button.
+  const posterButtonRef = useRef<HTMLButtonElement>(null);
+  useFocusHandoff(posterUrl !== null, null, posterButtonRef);
   // The object URL is revoked here — on close, on replace AND on unmount
   // (closing by switching tabs must not leak the rendered PNG).
   useEffect(() => {
@@ -144,6 +148,7 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
           {t("passport.ofFlags", { total: formatInt(collectedCount + missing.length) })}
         </p>
         <button
+          ref={posterButtonRef}
           className="btn"
           type="button"
           title={t("passport.worldPoster")}

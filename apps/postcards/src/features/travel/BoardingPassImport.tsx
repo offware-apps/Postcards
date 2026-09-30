@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 import { parseBcbp, type BcbpResult } from "../../lib/bcbp/parse";
 import { useT } from "../../lib/i18n";
 
@@ -33,6 +34,10 @@ export function BoardingPassImport({
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The open button and the panel replace each other, so focus follows.
+  const openRef = useRef<HTMLButtonElement>(null);
+  const codeRef = useRef<HTMLTextAreaElement>(null);
+  useFocusHandoff(open, codeRef, openRef);
   const canScan = getDetectorCtor() !== null;
 
   function apply(raw: string) {
@@ -73,6 +78,7 @@ export function BoardingPassImport({
   if (!open) {
     return (
       <button
+        ref={openRef}
         className="btn-ghost pass-open"
         type="button"
         title={t("boardingPass.open")}
@@ -122,6 +128,7 @@ export function BoardingPassImport({
       <label className="picker-label" htmlFor="pass-code">
         {t("boardingPass.codeLabel")}
         <textarea
+          ref={codeRef}
           id="pass-code"
           className="pass-textarea"
           title={t("boardingPass.codeLabel")}

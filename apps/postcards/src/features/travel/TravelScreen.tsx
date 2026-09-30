@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { useTrips } from "../../lib/store/useTrips";
 import { useVisits } from "../../lib/store/useVisits";
 import { useToast } from "../../lib/store/useToast";
 import { useUi } from "../../lib/store/useUi";
 import { registerEscape } from "../../lib/store/escapeStack";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 import { countryFlag, formatKm } from "../../lib/format/format";
 import { formatTripDate } from "./tripDate";
 import type { PlaceRef, TravelMode, Trip } from "../../lib/schema/models";
@@ -54,11 +55,13 @@ function TripForm({
   editing,
   onSave,
   onCancel,
+  formRef,
 }: {
   initial: TripFields;
   editing: boolean;
   onSave: (fields: TripFields) => void;
   onCancel: () => void;
+  formRef: Ref<HTMLFormElement>;
 }) {
   const t = useT();
   const [from, setFrom] = useState<PlaceRef | null>(initial.from);
@@ -75,7 +78,7 @@ function TripForm({
   }
 
   return (
-    <form className="trip-form" onSubmit={onSubmit}>
+    <form ref={formRef} className="trip-form" onSubmit={onSubmit}>
       {editing && <p className="editing-note">{t("travel.editingNote")}</p>}
       <label className="picker-label" htmlFor="trip-name">
         {t("travel.nameOptional")}
@@ -176,6 +179,10 @@ export function TravelScreen() {
   // landing (mirrors the Journal composer). "＋ New trip", tapping a trip to edit,
   // or scanning a boarding pass opens it; save/cancel closes it.
   const [addOpen, setAddOpen] = useState(false);
+  // New trip hides itself while the form is open, so focus moves with the form.
+  const newTripRef = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusHandoff(addOpen, formRef, newTripRef);
   // The period filter is shared (via useUi) so the map's trip arcs match it.
   const year = useUi((s) => s.tripYear) as YearFilter;
   const month = useUi((s) => s.tripMonth) as MonthFilter;
@@ -464,7 +471,13 @@ export function TravelScreen() {
             >
               🧵 {t("travel.reconstructBtn")}
             </button>
-            <button type="button" className="btn" title={t("travel.newTrip")} onClick={openNewTrip}>
+            <button
+              ref={newTripRef}
+              type="button"
+              className="btn"
+              title={t("travel.newTrip")}
+              onClick={openNewTrip}
+            >
               ＋ {t("travel.newTrip")}
             </button>
           </div>
@@ -554,6 +567,7 @@ export function TravelScreen() {
           key={formKey}
           initial={draft}
           editing={!!editingId}
+          formRef={formRef}
           onSave={(fields) => void saveTrip(fields)}
           onCancel={() => {
             resetForm();

@@ -71,7 +71,10 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
   const firstFieldRef = useRef<HTMLInputElement>(null);
   useModalKeys(dialogRef, onClose);
   useEffect(() => {
+    // Closing removes the focused control, so focus returns to the opener.
+    const prev = document.activeElement as HTMLElement | null;
     firstFieldRef.current?.focus();
+    return () => prev?.focus?.();
   }, []);
 
   const [scope, setScope] = useState<Scope>("all");
