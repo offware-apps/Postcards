@@ -10,6 +10,8 @@ export function Toast() {
   const toast = useToast((s) => s.toast);
   const dismiss = useToast((s) => s.dismiss);
   const [paused, setPaused] = useState(false);
+  // A dismissed toast unmounts with no mouseleave or blur, so its pause goes with it.
+  if (!toast && paused) setPaused(false);
 
   useEffect(() => {
     if (!toast || paused) return;
