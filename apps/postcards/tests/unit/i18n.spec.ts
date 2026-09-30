@@ -80,6 +80,8 @@ describe("useT() plural helper", () => {
     act(() => useSettings.getState().setLocale("fr"));
     expect(result.current.plural("noun.place", 1)).toBe("lieu");
     expect(result.current.plural("noun.place", 2)).toBe("lieux");
+    // French takes the singular for zero too ("0 lieu"), unlike English.
+    expect(result.current.plural("noun.place", 0)).toBe("lieu");
 
     act(() => useSettings.getState().setLocale("ko"));
     expect(result.current.plural("noun.place", 1)).toBe("장소");
