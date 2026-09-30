@@ -476,20 +476,27 @@ async function loadExtras(impl: ReferenceDataImpl): Promise<void> {
   // Railway stations: whichever dataset the user chose in Settings (default
   // Trainline; "None" loads nothing). A { _source, stations:[…] } wrapper;
   // absent file → []. Switching source later re-fetches via setStationData.
+  // The biggest file here (5 MB, a long parse on a phone), so it is asked for
+  // once the first render has settled, and never delays it.
   const stationSrc = stationSourceById(loadStationSource());
-  const [airports, heritage, landmarks, languages, articleNames, stations] = await Promise.all([
+  const stations = whenIdle().then(() =>
+    stationSrc.url
+      ? json<{ stations?: Station[] }>(stationSrc.url, { stations: [] })
+      : { stations: [] as Station[] },
+  );
+  const [airports, heritage, landmarks, languages, articleNames] = await Promise.all([
     json<Airport[]>(AIRPORTS_URL, []),
     json<HeritageSite[]>(HERITAGE_URL, []),
     json<HeritageSite[]>(LANDMARKS_URL, []),
     json<Record<string, Language[]>>(LANGUAGES_URL, {}),
     json<Record<string, string>>(ARTICLE_NAMES_URL, {}),
-    stationSrc.url
-      ? json<{ stations?: Station[] }>(stationSrc.url, { stations: [] })
-      : Promise.resolve({ stations: [] as Station[] }),
   ]);
   impl.setExtras(airports, [...heritage, ...landmarks], languages, articleNames);
+  generation++;
+  window.dispatchEvent(new Event(GAZETTEER_UPGRADED_EVENT));
+  const loaded = await stations;
   // A source switched in Settings while this was in flight already won.
-  if (!stationsSwapped) impl.replaceStations(stations?.stations ?? []);
+  if (!stationsSwapped) impl.replaceStations(loaded?.stations ?? []);
   extrasPending = false;
   generation++;
   window.dispatchEvent(new Event(GAZETTEER_UPGRADED_EVENT));

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 // The first render waits on initReferenceData. On a phone the airports,
 // heritage and station files held it back by seconds; it now needs only the
-// cities and their regions, and the rest lands behind it.
+// cities and their regions, and the rest lands behind it, the stations last.
 describe("reference data at startup", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -31,21 +31,32 @@ describe("reference data at startup", () => {
     expect(ref.airportById("LIS")).toBeUndefined();
     expect(ref.stationById("Q1")).toBeUndefined();
 
+    // The stations, the biggest file, are not asked for until the first render
+    // has settled, so their download and parse never delay it.
+    expect(late["railways.json"]).toBeUndefined();
+
     const gen = gazetteerGeneration();
-    const landed = new Promise((r) => window.addEventListener(GAZETTEER_UPGRADED_EVENT, r, { once: true }));
+    const next = () =>
+      new Promise((r) => window.addEventListener(GAZETTEER_UPGRADED_EVENT, r, { once: true }));
+    let landed = next();
     late["airports.json"]!([{ id: "LIS", name: "Lisbon Portela", countryIso2: "PT", lat: 38.8, lon: -9.1 }]);
     late["heritage.json"]!([{ id: "h1", name: "Belém Tower", countryIso2: "PT", lat: 38.7, lon: -9.2 }]);
     late["landmarks.json"]!([]);
     late["languages.json"]!({});
     late["article-names.json"]!({});
+    await landed;
+    expect(ref.airportById("LIS")?.name).toBe("Lisbon Portela");
+    expect(ref.heritageById("h1")?.name).toBe("Belém Tower");
+    expect(gazetteerGeneration()).toBe(gen + 1);
+
+    await vi.waitFor(() => expect(late["railways.json"]).toBeDefined(), { timeout: 3000 });
+    landed = next();
     late["railways.json"]!({
       stations: [{ id: "Q1", name: "Lisboa Oriente", countryIso2: "PT", lat: 38.77, lon: -9.1 }],
     });
     await landed;
-    expect(ref.airportById("LIS")?.name).toBe("Lisbon Portela");
-    expect(ref.heritageById("h1")?.name).toBe("Belém Tower");
     expect(ref.stationById("Q1")?.name).toBe("Lisboa Oriente");
-    expect(gazetteerGeneration()).toBe(gen + 1);
+    expect(gazetteerGeneration()).toBe(gen + 2);
   });
 
   it("keeps a station source picked in Settings before the default one lands", async () => {
@@ -68,10 +79,11 @@ describe("reference data at startup", () => {
     const ref = await initReferenceData();
     // "None" picked while the bundled stations are still on their way.
     setStationData([]);
-    const landed = new Promise((r) => window.addEventListener(GAZETTEER_UPGRADED_EVENT, r, { once: true }));
     for (const name of ["airports.json", "heritage.json", "landmarks.json"]) late[name]!([]);
     late["languages.json"]!({});
     late["article-names.json"]!({});
+    await vi.waitFor(() => expect(late["railways.json"]).toBeDefined(), { timeout: 3000 });
+    const landed = new Promise((r) => window.addEventListener(GAZETTEER_UPGRADED_EVENT, r, { once: true }));
     late["railways.json"]!({
       stations: [{ id: "Q1", name: "Lisboa Oriente", countryIso2: "PT", lat: 38.77, lon: -9.1 }],
     });
