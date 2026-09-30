@@ -6,6 +6,7 @@ import { useToast } from "../../lib/store/useToast";
 import { useUi } from "../../lib/store/useUi";
 import { registerEscape } from "../../lib/store/escapeStack";
 import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
+import { scrollBehavior } from "../../lib/hooks/usePrefersReducedMotion";
 import { countryFlag, formatKm } from "../../lib/format/format";
 import { formatTripDate } from "./tripDate";
 import type { PlaceRef, TravelMode, Trip } from "../../lib/schema/models";
@@ -289,7 +290,10 @@ export function TravelScreen() {
       t.tripId,
     );
     setAddOpen(true);
-    document.querySelector(".trip-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // After the render that opens the form, so a closed form is there to scroll to.
+    requestAnimationFrame(() =>
+      formRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: "center" }),
+    );
   }
 
   async function saveTrip({ from, to, mode, date, note, name }: TripFields) {

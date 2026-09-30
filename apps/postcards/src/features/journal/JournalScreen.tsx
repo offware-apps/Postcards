@@ -10,6 +10,7 @@ import { useUi } from "../../lib/store/useUi";
 import { registerEscape } from "../../lib/store/escapeStack";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
 import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
+import { scrollBehavior } from "../../lib/hooks/usePrefersReducedMotion";
 import { fileToPostcard } from "../../lib/image/downscale";
 import { countryFlag, formatDate, formatKm } from "../../lib/format/format";
 import { haversineKm } from "../travel/distance";
@@ -705,7 +706,7 @@ export function JournalScreen() {
     requestAnimationFrame(() =>
       document
         .querySelector(".journal-composer")
-        ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        ?.scrollIntoView({ behavior: scrollBehavior(), block: "center" }),
     );
   }
 
