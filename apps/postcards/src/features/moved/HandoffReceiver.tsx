@@ -8,7 +8,7 @@ import {
   readHandoff,
   type HandoffMessage,
 } from "../../lib/moved/moved";
-import { restoreFromJson } from "../backup/restore";
+import { countPhrases, restoreFromJson } from "../backup/restore";
 
 /**
  * The NEW address's half of the move (see lib/moved/moved.ts), mounted by App
@@ -42,8 +42,7 @@ export default function HandoffReceiver() {
       );
       const toast = useToast.getState().show;
       if (outcome.ok) {
-        const { places, trips, stories } = outcome;
-        toast(t("moved.received", { places, trips, stories }));
+        toast(t("moved.received", countPhrases(t, outcome)));
       } else if (outcome.reason === "invalid") toast(outcome.error);
       else if (outcome.reason === "save") toast(t("backup.msg.saveErr"));
     };

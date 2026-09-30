@@ -51,7 +51,7 @@ test("the old address hands its places to the new one", async ({ page, context }
   // The new tab took the file, dropped the handoff parameter, and shows the place.
   await expect(tab).toHaveURL(`${NEW}/`);
   await expect(
-    tab.getByText("Moved 1 places, 0 trips and 0 stories from the old address."),
+    tab.getByText("Moved 1 place, 0 trips and 0 stories from the old address."),
   ).toBeVisible();
   await tab.getByRole("button", { name: "Places", exact: true }).click();
   await expect(tab.getByText("Paris", { exact: true })).toBeVisible();

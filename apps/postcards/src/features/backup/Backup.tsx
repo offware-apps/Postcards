@@ -7,7 +7,7 @@ import { useTrips } from "../../lib/store/useTrips";
 import { useStories } from "../../lib/store/useStories";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { replaceAllPortable } from "../../lib/db/visitsDb";
-import { restoreFromJson as restoreJson } from "./restore";
+import { countPhrases, restoreFromJson as restoreJson } from "./restore";
 import { toMarkdown } from "./exportMarkdown";
 import { download, downloadBlob } from "../../lib/download";
 import { DurabilityNote } from "../../ui/DurabilityNote";
@@ -192,8 +192,7 @@ export function Backup() {
   async function restoreFromJson(text: string) {
     const outcome = await restoreJson(text, t);
     if (outcome.ok) {
-      const { places, trips, stories } = outcome;
-      setMessage({ kind: "ok", text: t("backup.msg.restored", { places, trips, stories }) });
+      setMessage({ kind: "ok", text: t("backup.msg.restored", countPhrases(t, outcome)) });
     } else if (outcome.reason === "invalid") setMessage({ kind: "err", text: outcome.error });
     else if (outcome.reason === "save") setMessage({ kind: "err", text: t("backup.msg.saveErr") });
   }
@@ -215,7 +214,7 @@ export function Backup() {
       const skip = skipped ? t("backup.msg.skipped", { count: skipped }) : "";
       setMessage({
         kind: "ok",
-        text: t("backup.msg.merged", { added, updated, skip }),
+        text: t.plural("backup.msg.merged", added, { updated, skip }),
       });
     } catch {
       setMessage({ kind: "err", text: t("backup.msg.saveErr") });

@@ -21,6 +21,12 @@ export const fr: Messages = {
   "noun.story_other": "récits",
   "noun.day_one": "jour",
   "noun.day_other": "jours",
+  "count.place_one": "{count} lieu",
+  "count.place_other": "{count} lieux",
+  "count.trip_one": "{count} voyage",
+  "count.trip_other": "{count} voyages",
+  "count.story_one": "{count} récit",
+  "count.story_other": "{count} récits",
 
   // ── App chrome ───────────────────────────────────────────────────────────
   "nav.map": "Carte",
@@ -359,15 +365,17 @@ export const fr: Messages = {
   "backup.msg.eraseErr": "Impossible d'effacer vos données — rien n'a été changé.",
   "backup.msg.erased": "Toutes les données ont été effacées. Cet appareil repart de zéro.",
   "backup.msg.saveErr": "Échec de l'import lors de l'enregistrement ; vos données sont inchangées.",
-  "backup.msg.restored": "{places} lieux, {trips} voyages et {stories} récits restaurés.",
+  "backup.msg.restored": "{places}, {trips} et {stories} restaurés.",
   "backup.msg.csvNoPlaces": "Ce fichier n'a aucun lieu à importer.",
   "backup.msg.csvUnreadable":
     "Impossible de lire un lieu dans ce fichier — colonnes attendues comme lat, lon, country, city.",
-  "backup.msg.merged":
-    "{added} lieux ajoutés, {updated} mis à jour{skip}. Vos voyages et récits sont intacts.",
+  "backup.msg.merged_one":
+    "{count} lieu ajouté, {updated} mis à jour{skip}. Vos voyages et récits sont intacts.",
+  "backup.msg.merged_other":
+    "{count} lieux ajoutés, {updated} mis à jour{skip}. Vos voyages et récits sont intacts.",
   "backup.msg.skipped": ", {count} ignorés",
   "backup.confirm.replace":
-    "⚠ Ceci remplace tout sur cet appareil — vos {curPlaces} lieux, {curTrips} voyages et {curStories} récits — par les {newPlaces} lieux, {newTrips} voyages et {newStories} récits de ce fichier. C'est irréversible. Continuer ?",
+    "⚠ Ceci remplace tout sur cet appareil — vos {curPlaces}, {curTrips} et {curStories} — par les {newPlaces}, {newTrips} et {newStories} de ce fichier. C'est irréversible. Continuer ?",
   "backup.reset.button": "Réinitialiser toutes les données",
   "backup.reset.note":
     "Efface tout sur cet appareil. Exportez d'abord une sauvegarde si vous voulez pouvoir la récupérer.",
@@ -1088,6 +1096,6 @@ export const fr: Messages = {
   "moved.blocked": "La nouvelle adresse n'a pas pu s'ouvrir ici. Téléchargez une sauvegarde, puis importez-la là-bas dans Vos données.",
   "moved.cancelled": "Le transfert a été annulé à la nouvelle adresse ; rien n'y a changé.",
   "moved.failed": "Le transfert n'a pas abouti. Téléchargez une sauvegarde, puis importez-la à la nouvelle adresse dans Vos données.",
-  "moved.received": "{places} lieux, {trips} voyages et {stories} récits transférés depuis l'ancienne adresse.",
+  "moved.received": "{places}, {trips} et {stories} transférés depuis l'ancienne adresse.",
   "toast.dismiss": "Fermer",
 };

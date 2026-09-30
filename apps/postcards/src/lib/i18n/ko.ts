@@ -22,6 +22,12 @@ export const ko: Messages = {
   "noun.story_other": "이야기",
   "noun.day_one": "일",
   "noun.day_other": "일",
+  "count.place_one": "장소 {count}곳",
+  "count.place_other": "장소 {count}곳",
+  "count.trip_one": "여행 {count}개",
+  "count.trip_other": "여행 {count}개",
+  "count.story_one": "이야기 {count}개",
+  "count.story_other": "이야기 {count}개",
 
   // ── App chrome ───────────────────────────────────────────────────────────
   "nav.map": "지도",
@@ -359,15 +365,17 @@ export const ko: Messages = {
   "backup.msg.eraseErr": "데이터를 지울 수 없습니다 — 아무것도 변경되지 않았습니다.",
   "backup.msg.erased": "모든 데이터가 지워졌습니다. 이 기기는 초기 상태입니다.",
   "backup.msg.saveErr": "저장 중 가져오기에 실패했습니다. 데이터는 변경되지 않았습니다.",
-  "backup.msg.restored": "장소 {places}곳, 여행 {trips}개, 이야기 {stories}개를 복원했습니다.",
+  "backup.msg.restored": "{places}, {trips}, {stories}를 복원했습니다.",
   "backup.msg.csvNoPlaces": "이 파일에는 가져올 장소가 없습니다.",
   "backup.msg.csvUnreadable":
     "이 파일에서 장소를 읽을 수 없습니다 — lat, lon, country, city 같은 열이 필요합니다.",
-  "backup.msg.merged":
-    "장소 {added}곳 추가, {updated}곳 업데이트{skip}. 여행과 이야기는 그대로입니다.",
+  "backup.msg.merged_one":
+    "장소 {count}곳 추가, {updated}곳 업데이트{skip}. 여행과 이야기는 그대로입니다.",
+  "backup.msg.merged_other":
+    "장소 {count}곳 추가, {updated}곳 업데이트{skip}. 여행과 이야기는 그대로입니다.",
   "backup.msg.skipped": ", {count}곳 건너뜀",
   "backup.confirm.replace":
-    "⚠ 이 작업은 기기의 모든 것을 바꿉니다 — 현재 장소 {curPlaces}곳, 여행 {curTrips}개, 이야기 {curStories}개를 이 파일의 장소 {newPlaces}곳, 여행 {newTrips}개, 이야기 {newStories}개로. 되돌릴 수 없습니다. 계속할까요?",
+    "⚠ 이 작업은 기기의 모든 것을 바꿉니다 — 현재 {curPlaces}, {curTrips}, {curStories}를 이 파일의 {newPlaces}, {newTrips}, {newStories}로. 되돌릴 수 없습니다. 계속할까요?",
   "backup.reset.button": "모든 데이터 초기화",
   "backup.reset.note": "이 기기의 모든 것을 지웁니다. 되찾고 싶다면 먼저 백업을 내보내세요.",
   "backup.reset.confirmAria": "모든 데이터 초기화 확인",
@@ -1081,6 +1089,6 @@ export const ko: Messages = {
   "moved.blocked": "여기서 새 주소를 열 수 없습니다. 백업을 다운로드한 뒤 새 주소의 내 데이터에서 가져오세요.",
   "moved.cancelled": "새 주소에서 옮기기가 취소되었습니다. 그곳에서는 아무것도 바뀌지 않았습니다.",
   "moved.failed": "옮기기가 끝나지 않았습니다. 백업을 다운로드한 뒤 새 주소의 내 데이터에서 가져오세요.",
-  "moved.received": "이전 주소에서 장소 {places}곳, 여행 {trips}개, 이야기 {stories}개를 옮겼습니다.",
+  "moved.received": "이전 주소에서 {places}, {trips}, {stories}를 옮겼습니다.",
   "toast.dismiss": "닫기",
 };
