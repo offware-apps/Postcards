@@ -9,6 +9,7 @@
 import type { PlaceRef, Story, TravelMode, Trip, Visit } from "../schema/models";
 import { placeKey } from "../schema/helpers";
 import { haversineKm } from "../../features/travel/distance";
+import { tripDateSpan } from "../../features/travel/tripDate";
 
 export interface JourneyStep {
   place: PlaceRef;
@@ -59,10 +60,14 @@ function coordsOf(
   return resolve(place);
 }
 
+/** Whether a date lies in [from, to]. A month- or year-dated trip is in range
+ *  when the range covers its whole span; an undated record only when unbounded. */
 function inRange(date: string | null, from?: string, to?: string): boolean {
-  if (!date) return !from && !to ? true : false;
-  if (from && date < from) return false;
-  if (to && date > to) return false;
+  if (!from && !to) return true;
+  const span = tripDateSpan(date);
+  if (!span) return false;
+  if (from && span.first < from) return false;
+  if (to && span.last > to) return false;
   return true;
 }
 

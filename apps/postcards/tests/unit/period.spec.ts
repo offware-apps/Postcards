@@ -103,6 +103,17 @@ describe("map date window", () => {
     expect(mapDateMatches(null, f)).toBe(false);
   });
 
+  it("a year chip keeps trips dated by the year or a month of it", () => {
+    const f: MapDate = { mode: "range", ...yearRange("2024") };
+    expect(mapDateMatches("2024", f)).toBe(true);
+    expect(mapDateMatches("2024-01", f)).toBe(true);
+    expect(mapDateMatches("2024-12", f)).toBe(true);
+    expect(mapDateMatches("2023-12", f)).toBe(false);
+    // A month is kept only by a range covering all of it.
+    expect(mapDateMatches("2024-06", { mode: "range", from: "2024-06-01", to: "2024-06-30" })).toBe(true);
+    expect(mapDateMatches("2024-06", { mode: "range", from: "2024-06-10", to: "2024-06-30" })).toBe(false);
+  });
+
   it("an open-ended range bounds only the given side", () => {
     expect(mapDateMatches("2020-01-01", { mode: "range", from: "2024-01-01", to: "" })).toBe(false);
     expect(mapDateMatches("2025-01-01", { mode: "range", from: "2024-01-01", to: "" })).toBe(true);

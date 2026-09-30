@@ -195,4 +195,16 @@ describe("buildJourney (visit photos)", () => {
     const j = buildJourney({ visits, trips, stories: [], resolveCoords }, { title: "Trip" });
     expect(j.steps.find((s) => s.place.name === "Rome")!.photos).toHaveLength(1);
   });
+
+  it("keeps a month- or year-dated trip in a range covering it", () => {
+    const year = trip("t1", paris, rome, "flight", "2026");
+    const march = trip("t2", rome, cairo, "ferry", "2026-03");
+    const sel = (dateFrom: string, dateTo: string) =>
+      buildJourney({ visits: [], trips: [year, march], stories: [], resolveCoords }, { title: "T", dateFrom, dateTo })
+        .steps.map((s) => s.place.name);
+    expect(sel("2026-03-01", "2026-03-31")).toEqual(["Rome", "Cairo"]);
+    expect(sel("2026-01-01", "2026-12-31")).toEqual(["Paris", "Rome", "Cairo"]);
+    expect(sel("2026-03-10", "2026-03-31")).toEqual([]); // the range covers part of March only
+  });
 });
+
