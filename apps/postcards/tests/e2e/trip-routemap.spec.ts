@@ -43,3 +43,28 @@ test("Map segment shows a real MapLibre map; the companion list builds the route
   await expect(page.getByRole("button", { name: /Edit trip/ }).first()).toBeVisible();
   await expect(page.getByText("Tokyo", { exact: false }).first()).toBeVisible();
 });
+
+test("the map's city/airport filter narrows the pins (and the companion list)", async ({
+  page,
+}: {
+  page: Page;
+}) => {
+  await page.goto("/");
+  for (const city of ["Paris", "Tokyo", "Osaka"]) await markVisited(page, city);
+
+  await gotoTab(page, "Trips");
+  await page.getByRole("button", { name: "Reconstruct a journey" }).click();
+  await page.locator(".myplaces-picker").getByRole("button", { name: /Map/ }).click();
+
+  const list = page.locator(".route-map-list li");
+  const filter = page.locator(".route-map-filter");
+  // All three visited cities are pins by default.
+  await expect(list).toHaveCount(3);
+
+  // Filtering to Airports empties the list (nothing but cities was visited)…
+  await filter.getByRole("button", { name: "Airports" }).click();
+  await expect(list).toHaveCount(0);
+  // …and Cities brings them back.
+  await filter.getByRole("button", { name: "Cities" }).click();
+  await expect(list).toHaveCount(3);
+});

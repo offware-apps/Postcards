@@ -52,13 +52,34 @@ export const FORMAT = "postcards" as const;
 // v12 adds Trip.legModes (per-leg transport). It's a new key on a `.strict()`
 // object, so an older (≤v11) app would reject a file that carries it — hence the
 // bump, which makes such files fail the version guard gracefully instead.
-export const SCHEMA_VERSION = 12;
+// v13 is the journal redesign (spec 020): a postcard's `place` becomes OPTIONAL
+// (you can journal without picking a visited place), plus four additive optional
+// fields — `extraPlaces` (an ordered set beyond the primary), `endDate` (a range),
+// `tags` (personal mood/weather/free labels), and `tripId` (a link to a
+// reconstructed trip). The relaxation keeps v1–v12 files valid; the new `.strict()`
+// keys are why the version bumps (an older app rejects a v13 file gracefully).
+// v15 adds an optional per-STOP date array on a Trip (`stopDates`, spec 021),
+// aligned to `stops`. Additive & optional with no default, so it's never injected:
+// v1–v14 trips (no per-stop dates) validate and round-trip byte-identically; a v15
+// file carrying stopDates is rejected by an older app via the version guard.
+// v14 adds a "station" (railway station) place kind — an additive enum value on the
+// `.strict()` PlaceRef, sourced from a named openly-licensed dataset (Wikidata CC0),
+// exactly like v4 added "custom". v1–v13 files (no station refs) validate unchanged;
+// a v14 file carrying a station is rejected by an older app via the version guard.
+export const SCHEMA_VERSION = 15;
 
 /** Most photos one place's gallery may hold (bounds the inline portable file). */
 export const MAX_PHOTOS_PER_VISIT = 48;
 
 /** Most photos one journal story may hold (bounds the inline portable file). */
 export const MAX_PHOTOS_PER_STORY = 24;
+
+/** Most places one postcard may reference (primary + extras combined). */
+export const MAX_PLACES_PER_STORY = 24;
+
+/** Most tags one postcard may hold, and each tag's max length. */
+export const MAX_TAGS_PER_STORY = 24;
+export const MAX_TAG_LEN = 40;
 
 /** Stable key used for dedupe: one visit per (kind, id). */
 export function placeKey(place: Pick<PlaceRef, "kind" | "id">): string {

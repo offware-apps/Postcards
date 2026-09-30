@@ -5,7 +5,7 @@ import { useSettings } from "../../lib/store/useSettings";
 import { usePrefersReducedMotion } from "../../lib/hooks/usePrefersReducedMotion";
 import { stopsArcs } from "../map/visitedLayers";
 import { fitBounds } from "../map/mapFit";
-import { useT } from "../../lib/i18n";
+import { useT, type MessageKey } from "../../lib/i18n";
 import type { PlaceRef, TravelMode } from "../../lib/schema/models";
 import { placeFlag, type MyPlace } from "./myPlaces";
 import { getLand } from "./landGeometry";
@@ -13,13 +13,24 @@ import { pickPointsFC } from "./pickPoints";
 
 // The composer's REAL picker map: a dedicated, offline MapLibre instance (bundled
 // Natural Earth land via the MapSource seam — no tiles, no network, no geolocation
-// prompt) showing ONLY your pool of visited places as tappable pins. Tapping lays
-// down stops in order and draws the live great-circle route. It is fully decoupled
-// from the app's main MapView, so it can never perturb the production map.
+// prompt) showing your pool of visited places as tappable pins. Tapping a pin does
+// NOT add it straight away: with many overlapping places a blind add lands on a
+// near-random neighbour, so a tap instead snaps to the MOST POPULOUS pin in the
+// cluster and opens a little confirm box ABOVE it — you then press Add. A pill
+// above the canvas filters the pins to just cities or just airports, so a city and
+// its airport stop fighting for the same spot. It is fully decoupled from the app's
+// main MapView, so it can never perturb the production map.
 //
 // The map is a POINTER enhancement, not the only path: a companion list of the same
 // places (real <button>s with flags) sits beneath the canvas as the keyboard/AT
 // route, and an aria-live region announces every add.
+
+type KindFilter = "all" | "city" | "airport";
+const FILTERS: { key: KindFilter; label: MessageKey }[] = [
+  { key: "all", label: "trip.compose.filterAll" },
+  { key: "city", label: "trip.compose.filterCities" },
+  { key: "airport", label: "trip.compose.filterAirports" },
+];
 
 function resolveDark(theme: "system" | "light" | "dark"): boolean {
   if (theme === "dark") return true;
@@ -46,8 +57,17 @@ export function RouteMap({
   const dark = resolveDark(useSettings((s) => s.theme));
   const boxRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
   const readyRef = useRef(false);
   const [live, setLive] = useState("");
+  const [kind, setKind] = useState<KindFilter>("all");
+
+  // Only the pins matching the filter (all / cities / airports). Drives both the
+  // map layer AND the companion list, so the two never disagree.
+  const shownPool = useMemo(
+    () => (kind === "all" ? pool : pool.filter((p) => p.place.kind === kind)),
+    [pool, kind],
+  );
 
   // Latest values the imperative map handlers read, without re-binding listeners.
   const poolByKey = useMemo(() => new Map(pool.map((p) => [p.key, p.place])), [pool]);
@@ -55,8 +75,10 @@ export function RouteMap({
   onPickRef.current = onPick;
   const poolByKeyRef = useRef(poolByKey);
   poolByKeyRef.current = poolByKey;
+  const tRef = useRef(t);
+  tRef.current = t;
 
-  const pins = useMemo(() => pickPointsFC(pool, stops), [pool, stops]);
+  const pins = useMemo(() => pickPointsFC(shownPool, stops), [shownPool, stops]);
   const arcs = useMemo(() => stopsArcs(stops, ref, mode), [stops, ref, mode]);
 
   // Create the map once. Offline base style (no sources → no tiles); land, arcs
@@ -137,29 +159,70 @@ export function RouteMap({
       if (b) map.fitBounds(b, { padding: 44, maxZoom: 6, animate: !reducedMotion });
     });
 
+    // A tap doesn't add — it snaps to the most populous pin in the tapped cluster
+    // and opens a confirm box above it. This is what stops a dense pool from adding
+    // a near-random neighbour when you meant the big city.
     const pick = (pt: maplibregl.Point) => {
       const box: [maplibregl.PointLike, maplibregl.PointLike] = [
-        [pt.x - 9, pt.y - 9],
-        [pt.x + 9, pt.y + 9],
+        [pt.x - 12, pt.y - 12],
+        [pt.x + 12, pt.y + 12],
       ];
       const feats = map.queryRenderedFeatures(box, { layers: ["pins"] });
-      if (!feats.length) return;
-      // Nearest pin to the tap, by projected pixel distance (dense pools overlap).
+      if (!feats.length) {
+        popupRef.current?.remove();
+        return;
+      }
+      // Most populous wins; ties (and non-cities, pop 0) break to the nearest pin.
       let best = feats[0]!;
+      let bestPop = -1;
       let bestD = Infinity;
       for (const f of feats) {
         if (f.geometry.type !== "Point") continue;
+        const pop = Number(f.properties?.pop ?? 0);
         const p = map.project(f.geometry.coordinates as [number, number]);
         const d = (p.x - pt.x) ** 2 + (p.y - pt.y) ** 2;
-        if (d < bestD) {
+        if (pop > bestPop || (pop === bestPop && d < bestD)) {
+          bestPop = pop;
           bestD = d;
           best = f;
         }
       }
+      if (best.geometry.type !== "Point") return;
       const key = best.properties?.key;
       const place = key != null ? poolByKeyRef.current.get(String(key)) : undefined;
-      if (place) onPickRef.current(place);
+      if (!place) return;
+      openConfirm(place, best.geometry.coordinates as [number, number]);
     };
+
+    // The "little box above the point": a MapLibre popup with the place's flag +
+    // name and one Add button. Built imperatively (it lives outside React) but reads
+    // the latest onPick/t via refs. Reused across taps so only one is ever open.
+    const openConfirm = (place: PlaceRef, coords: [number, number]) => {
+      const node = document.createElement("div");
+      node.className = "route-popup";
+      const label = document.createElement("span");
+      label.className = "route-popup-name";
+      label.textContent = `${placeFlag(place)} ${place.name}`;
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "route-popup-add";
+      add.textContent = tRef.current("trip.compose.confirmAdd");
+      add.addEventListener("click", () => {
+        onPickRef.current(place);
+        popupRef.current?.remove();
+      });
+      node.append(label, add);
+      if (!popupRef.current) {
+        popupRef.current = new maplibregl.Popup({
+          closeButton: true,
+          closeOnClick: false,
+          offset: 14,
+          className: "route-popup-wrap",
+        });
+      }
+      popupRef.current.setLngLat(coords).setDOMContent(node).addTo(map);
+    };
+
     map.on("click", (e) => pick(e.point));
     map.on("mouseenter", "pins", () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", "pins", () => (map.getCanvas().style.cursor = ""));
@@ -171,6 +234,8 @@ export function RouteMap({
 
     return () => {
       ro.disconnect();
+      popupRef.current?.remove();
+      popupRef.current = null;
       readyRef.current = false;
       mapRef.current = null;
       map.remove();
@@ -197,15 +262,34 @@ export function RouteMap({
     setLive(t("trip.compose.addedLive", { name: last.name, index: stops.length }));
   }, [stops, t]);
 
+  // Changing the filter can hide the pin a confirm box points at — dismiss it.
+  const switchKind = (k: KindFilter) => {
+    setKind(k);
+    popupRef.current?.remove();
+  };
+
   return (
     <div className="route-map">
+      <div className="route-map-filter segmented" role="group" aria-label={t("trip.compose.filterAria")}>
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            aria-pressed={kind === f.key}
+            className={kind === f.key ? "seg-on" : ""}
+            onClick={() => switchKind(f.key)}
+          >
+            {t(f.label)}
+          </button>
+        ))}
+      </div>
       <div ref={boxRef} className="route-map-canvas" role="application" aria-label={t("trip.compose.mapCanvasAria")} />
       <p className="sr-only" role="status" aria-live="polite">
         {live}
       </p>
-      {/* Keyboard / screen-reader path: the same pool as real buttons. */}
+      {/* Keyboard / screen-reader path: the same (filtered) pool as real buttons. */}
       <ul className="myplaces-list route-map-list">
-        {pool.map((p) => (
+        {shownPool.map((p) => (
           <li key={p.key}>
             <button
               type="button"

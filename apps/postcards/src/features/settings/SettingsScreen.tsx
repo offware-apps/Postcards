@@ -13,6 +13,7 @@ import { DataPacksSection } from "./DataPacksSection";
 import { Attribution } from "../../ui/Attribution";
 import { formatInt } from "../../lib/format/format";
 import { downloadFullCities, fullCitiesEnabled } from "../../lib/reference/referenceData";
+import { STATION_SOURCES } from "../../lib/reference/stationSources";
 import { useT } from "../../lib/i18n";
 
 // Publish mode is loaded on demand (it pulls in the site renderer + crypto).
@@ -42,6 +43,8 @@ export function SettingsScreen() {
   const setShowAllMarkers = useSettings((s) => s.setShowAllMarkers);
   const reduceMapWork = useSettings((s) => s.reduceMapWork);
   const setReduceMapWork = useSettings((s) => s.setReduceMapWork);
+  const stationSource = useSettings((s) => s.stationSource);
+  const setStationSource = useSettings((s) => s.setStationSource);
   const [progress, setProgress] = useState<Record<string, number | undefined>>({});
   // Downloads are cancelable, and each region remembers when it was last saved
   // (so the button honestly reads "Re-download" instead of pretending it's new).
@@ -204,6 +207,26 @@ export function SettingsScreen() {
           <ScopeToggle />
         </div>
         <p className="muted small">{t("settings.scope.desc")}</p>
+
+        {/* Which railway-station dataset to load — you choose the data you carry.
+            The recommended one is bundled; picking it (or another) applies live. */}
+        <label className="picker-label setting-picker" htmlFor="station-source">
+          {t("settings.stations.title")}
+          <select
+            id="station-source"
+            className="select"
+            value={stationSource}
+            onChange={(e) => setStationSource(e.target.value as (typeof STATION_SOURCES)[number]["id"])}
+          >
+            {STATION_SOURCES.map((s) => (
+              <option key={s.id} value={s.id}>
+                {t(`settings.stations.source.${s.id}` as const)}
+                {s.recommended ? ` · ${t("settings.stations.recommended")}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="muted small">{t(`settings.stations.desc.${stationSource}` as const)}</p>
       </section>
 
       {/* Optimisation — the map-performance controls, grouped so a user whose

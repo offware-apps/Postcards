@@ -30,6 +30,12 @@
     "url": "https://openflights.org/data.html"
   },
   {
+    "dataset": "Railway stations — Trainline EU open stations database (choosable in Settings)",
+    "license": "ODbL-1.0",
+    "version": "trainline · worldwide: --source=wikidata",
+    "url": "https://github.com/trainline-eu/stations"
+  },
+  {
     "dataset": "world-countries (continent/region; UN-member vs territory, Holy See = non-member per UN)",
     "license": "ODbL-1.0",
     "version": "5.1.0",

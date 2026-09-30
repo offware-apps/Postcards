@@ -20,6 +20,7 @@ export interface Coverage {
   cityPct: number; // 0..1 — citiesVisited / worldCityCount
   airportsVisited: number;
   monumentsVisited: number;
+  stationsVisited: number;
 }
 
 // A "big city" is population ≥ BIG_CITY_MIN_POPULATION (100k, the "large" band
@@ -48,6 +49,9 @@ export interface CountryCoverage {
   heritageVisited: number;
   heritageTotal: number;
   heritagePct: number; // 0..1
+  stationsVisited: number;
+  stationsTotal: number;
+  stationPct: number; // 0..1
 }
 
 function pct(part: number, total: number): number {
@@ -60,12 +64,14 @@ function onlyVisited(visits: Visit[]): Visit[] {
 }
 
 /** Distinct country ids across visited records (a city visit implies its
- *  country). Airports deliberately do NOT count: changing planes in a country
- *  is not visiting it. */
+ *  country). Airports and railway stations deliberately do NOT count: changing
+ *  planes — or trains — in a country is not visiting it. */
 export function visitedCountryIds(visits: Visit[]): Set<string> {
   return new Set(
     onlyVisited(visits)
-      .filter((v) => v.place.kind !== "airport" && v.place.countryId !== "ZZ")
+      .filter(
+        (v) => v.place.kind !== "airport" && v.place.kind !== "station" && v.place.countryId !== "ZZ",
+      )
       .map((v) => v.place.countryId),
   );
 }
@@ -93,6 +99,11 @@ export function computeCoverage(
       .filter((v) => v.place.kind === "heritage")
       .map((v) => v.place.id),
   );
+  const stationIds = new Set(
+    onlyVisited(visits)
+      .filter((v) => v.place.kind === "station")
+      .map((v) => v.place.id),
+  );
   const worldCountryCount = ref.worldCountryCount(scope);
   // World gazetteer-city total = the sum of every in-scope country's cityCount
   // (metadata, so it's the FULL count regardless of which cities are lazily
@@ -110,6 +121,7 @@ export function computeCoverage(
     cityPct: pct(cityIds.size, worldCityCount),
     airportsVisited: airportIds.size,
     monumentsVisited: monumentIds.size,
+    stationsVisited: stationIds.size,
   };
 }
 
@@ -180,6 +192,16 @@ export function computeCountryCoverage(
       .filter((v) => v.place.kind === "heritage" && heritageIdsHere.has(v.place.id))
       .map((v) => v.place.id),
   ).size;
+  // Railway stations in this country vs its total, by the country's own station
+  // list (stationsOf) — same shape as heritage. Stations don't mark the country
+  // visited, but "how many of its stations have I passed through" is a fair metric.
+  const stationIdsHere = new Set(ref.stationsOf(iso2).map((s) => s.id));
+  const stationsTotal = stationIdsHere.size;
+  const stationsVisited = new Set(
+    onlyVisited(visits)
+      .filter((v) => v.place.kind === "station" && stationIdsHere.has(v.place.id))
+      .map((v) => v.place.id),
+  ).size;
 
   const citiesTotal = country?.cityCount ?? 0;
   const regionsTotal = country?.subdivisionCount ?? 0;
@@ -201,6 +223,9 @@ export function computeCountryCoverage(
     heritageVisited,
     heritageTotal,
     heritagePct: pct(heritageVisited, heritageTotal),
+    stationsVisited,
+    stationsTotal,
+    stationPct: pct(stationsVisited, stationsTotal),
   };
 }
 

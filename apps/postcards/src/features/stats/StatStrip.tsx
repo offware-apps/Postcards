@@ -91,6 +91,9 @@ export function StatStrip() {
       />
       <span className="ss-sep" aria-hidden />
       <Counter num={stats.cov.citiesVisited} label={t("statStrip.been")} cls="ss-been" view="visited" />
+      {stats.cov.stationsVisited > 0 && (
+        <Counter num={stats.cov.stationsVisited} label={t("statStrip.stations")} cls="ss-sta" view="stations" />
+      )}
       {stats.cov.airportsVisited > 0 && (
         <Counter num={stats.cov.airportsVisited} label={t("statStrip.airports")} cls="ss-air" view="airports" />
       )}

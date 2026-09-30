@@ -8,6 +8,7 @@ import type {
   Language,
   ReferenceData,
   ReferenceProvenance,
+  Station,
   Subdivision,
 } from "./types";
 import { BIG_CITY_MIN_POPULATION, MEGA_CITY_MIN_POPULATION } from "./types";
@@ -16,6 +17,7 @@ import continentsData from "./data/continents.json";
 import sovereigntyData from "./data/sovereignty.json";
 import countryNamesData from "./data/country-names.json";
 import { inScope, type CountryScope, type Sovereignty } from "./scope";
+import { loadStationSource, stationSourceById } from "./stationSources";
 
 countries.registerLocale(enLocale as Parameters<typeof countries.registerLocale>[0]);
 
@@ -111,6 +113,10 @@ interface IndexedAirport extends Airport {
   search: string;
 }
 
+interface IndexedStation extends Station {
+  search: string;
+}
+
 interface IndexedHeritage extends HeritageSite {
   search: string;
 }
@@ -124,11 +130,14 @@ class ReferenceDataImpl implements ReferenceData {
   readonly provenance: ReferenceProvenance[] = provenance;
   private cities: IndexedCity[] = [];
   private airports: IndexedAirport[];
+  private stations: IndexedStation[];
   private heritage: IndexedHeritage[];
   private byIso2 = new Map<string, Country>();
   private byNumeric = new Map<string, Country>();
   private cityIndex = new Map<string, City>();
   private airportIndex = new Map<string, Airport>();
+  private stationIndex = new Map<string, Station>();
+  private stationsByCountry = new Map<string, Station[]>();
   private heritageIndex = new Map<string, HeritageSite>();
   private heritageByCountry = new Map<string, HeritageSite[]>();
   private subIndex = new Map<string, Subdivision>();
@@ -187,6 +196,7 @@ class ReferenceDataImpl implements ReferenceData {
     heritage: HeritageSite[] = [],
     languages: Record<string, Language[]> = {},
     articleNames: Record<string, string> = {},
+    stations: Station[] = [],
   ) {
     this.languages = languages;
     this.articleNames = articleNames;
@@ -197,6 +207,7 @@ class ReferenceDataImpl implements ReferenceData {
       .map((c) => ({ ...c, search: normalize(c.name) }))
       .sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
     this.airports = airports.map((a) => ({ ...a, search: normalize(a.name) }));
+    this.stations = stations.map((s) => ({ ...s, search: normalize(s.name) }));
     this.heritage = heritage.map((h) => ({ ...h, search: normalize(h.name) }));
     this.countries = buildCountries(cities, subdivisions);
     this.countrySearch = this.countries.map((c) => ({ c, search: normalize(c.name) }));
@@ -207,6 +218,12 @@ class ReferenceDataImpl implements ReferenceData {
     // Build the live city set (world gazetteer + any installed pack places).
     this.remergeCities();
     for (const a of this.airports) this.airportIndex.set(a.id, a);
+    for (const s of this.stations) {
+      this.stationIndex.set(s.id, s);
+      const arr = this.stationsByCountry.get(s.countryIso2);
+      if (arr) arr.push(s);
+      else this.stationsByCountry.set(s.countryIso2, [s]);
+    }
     for (const h of this.heritage) {
       this.heritageIndex.set(h.id, h);
       const arr = this.heritageByCountry.get(h.countryIso2);
@@ -262,6 +279,42 @@ class ReferenceDataImpl implements ReferenceData {
   }
   airportById(id: string): Airport | undefined {
     return this.airportIndex.get(id.toUpperCase());
+  }
+  allStations(): Station[] {
+    return this.stations;
+  }
+  stationById(id: string): Station | undefined {
+    // Station ids are opaque (Wikidata QIDs), NOT codes — look up by raw id.
+    return this.stationIndex.get(id);
+  }
+  stationsOf(countryIso2: string): Station[] {
+    return this.stationsByCountry.get(countryIso2.toUpperCase()) ?? [];
+  }
+  searchStations(query: string, limit = 8): Station[] {
+    // Name-only prefix/contains (stations have no code), like searchHeritage.
+    const q = normalize(query);
+    if (!q) return [];
+    const starts: Station[] = [];
+    const contains: Station[] = [];
+    for (const s of this.stations) {
+      if (s.search.startsWith(q)) starts.push(s);
+      else if (s.search.includes(q)) contains.push(s);
+    }
+    return [...starts, ...contains].slice(0, limit);
+  }
+  /** Swap in a different railway-station set (Settings data-source change).
+   *  Rebuilds the id + per-country indexes from scratch. Impl-only, like
+   *  replaceCities — the module-level setStationData() calls this and notifies. */
+  replaceStations(stations: Station[]): void {
+    this.stations = stations.map((s) => ({ ...s, search: normalize(s.name) }));
+    this.stationIndex.clear();
+    this.stationsByCountry.clear();
+    for (const s of this.stations) {
+      this.stationIndex.set(s.id, s);
+      const arr = this.stationsByCountry.get(s.countryIso2);
+      if (arr) arr.push(s);
+      else this.stationsByCountry.set(s.countryIso2, [s]);
+    }
   }
   languagesOf(iso2: string): Language[] {
     return this.languages[iso2.toUpperCase()] ?? [];
@@ -351,8 +404,17 @@ export function initReferenceDataSync(
   heritage: HeritageSite[] = [],
   languages: Record<string, Language[]> = {},
   articleNames: Record<string, string> = {},
+  stations: Station[] = [],
 ): ReferenceData {
-  instance = new ReferenceDataImpl(cities, subdivisions, airports, heritage, languages, articleNames);
+  instance = new ReferenceDataImpl(
+    cities,
+    subdivisions,
+    airports,
+    heritage,
+    languages,
+    articleNames,
+    stations,
+  );
   return instance;
 }
 
@@ -360,15 +422,25 @@ export function initReferenceDataSync(
 export async function initReferenceData(): Promise<ReferenceData> {
   if (instance) return instance;
   try {
-    const [cities, subdivisions, airports, heritage, landmarks, languages, articleNames] = await Promise.all([
-      fetch(CITIES_URL).then((r) => (r.ok ? r.json() : Promise.reject(new Error("cities")))),
-      fetch(SUBDIVISIONS_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(AIRPORTS_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(HERITAGE_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(LANDMARKS_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(LANGUAGES_URL).then((r) => (r.ok ? r.json() : {})),
-      fetch(ARTICLE_NAMES_URL).then((r) => (r.ok ? r.json() : {})),
-    ]);
+    const [cities, subdivisions, airports, heritage, landmarks, languages, articleNames, stations] =
+      await Promise.all([
+        fetch(CITIES_URL).then((r) => (r.ok ? r.json() : Promise.reject(new Error("cities")))),
+        fetch(SUBDIVISIONS_URL).then((r) => (r.ok ? r.json() : [])),
+        fetch(AIRPORTS_URL).then((r) => (r.ok ? r.json() : [])),
+        fetch(HERITAGE_URL).then((r) => (r.ok ? r.json() : [])),
+        fetch(LANDMARKS_URL).then((r) => (r.ok ? r.json() : [])),
+        fetch(LANGUAGES_URL).then((r) => (r.ok ? r.json() : {})),
+        fetch(ARTICLE_NAMES_URL).then((r) => (r.ok ? r.json() : {})),
+        // Railway stations: whichever dataset the user chose in Settings (default
+        // Trainline; "None" loads nothing). A { _source, stations:[…] } wrapper;
+        // absent file → []. Switching source later re-fetches via setStationData.
+        (() => {
+          const src = stationSourceById(loadStationSource());
+          return src.url
+            ? fetch(src.url).then((r) => (r.ok ? r.json() : { stations: [] }))
+            : Promise.resolve({ stations: [] });
+        })(),
+      ]);
     const ref = initReferenceDataSync(
       cities as City[],
       subdivisions as Subdivision[],
@@ -376,6 +448,7 @@ export async function initReferenceData(): Promise<ReferenceData> {
       [...(heritage as HeritageSite[]), ...(landmarks as HeritageSite[])],
       languages as Record<string, Language[]>,
       articleNames as Record<string, string>,
+      ((stations as { stations?: Station[] })?.stations ?? []) as Station[],
     );
     // The full 135k-city set is NOT auto-fetched — it's a one-tap download in
     // Settings (like a tile pack). Only re-load it here if the user already opted
@@ -462,6 +535,17 @@ export function setPackPlaces(places: City[]): void {
     generation++;
     window.dispatchEvent(new Event(GAZETTEER_UPGRADED_EVENT));
   }
+}
+
+/** Replace the loaded railway stations and refresh every live consumer (map,
+ *  search, stats), mirroring setPackPlaces. Called when the Settings station
+ *  data-source changes — an empty array clears them ("None"). */
+export function setStationData(stations: Station[]): void {
+  const impl = instance as ReferenceDataImpl | null;
+  if (!impl) return;
+  impl.replaceStations(stations);
+  generation++;
+  window.dispatchEvent(new Event(GAZETTEER_UPGRADED_EVENT));
 }
 
 /** Fetch + swap in the full gazetteer (shared by the opted-in auto-load and the

@@ -28,6 +28,9 @@ export function pickPointsFC(pool: MyPlace[], stops: PlaceRef[]): FeatureCollect
         seq: seqByKey.get(p.key) ?? 0,
         added: seqByKey.has(p.key),
         name: p.name,
+        // Population (0 for non-cities) so a tap can snap to the most populous
+        // pin in an overlapping cluster.
+        pop: p.population,
       },
     })),
   };

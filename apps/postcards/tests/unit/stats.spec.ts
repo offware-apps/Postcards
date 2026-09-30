@@ -7,6 +7,7 @@ import {
   computeContinentCoverage,
   countryDetail,
   visitedCountriesList,
+  visitedCountryIds,
 } from "../../src/features/stats/computeStats";
 import type { Visit } from "../../src/lib/schema/models";
 import type { City } from "../../src/lib/reference/types";
@@ -139,5 +140,33 @@ describe("coverage statistics (real gazetteer)", () => {
     expect(cov.citiesVisited).toBe(1);
     const jp = computeCountryCoverage([wish], ref, "JP");
     expect(jp.citiesVisited).toBe(0);
+  });
+});
+
+describe("railway stations in coverage (spec 021)", () => {
+  const stationVisit = (id: string, country: string): Visit => ({
+    visitId: crypto.randomUUID(),
+    place: { kind: "station", id, name: id, countryId: country },
+    date: null,
+    note: null,
+    status: "visited" as const,
+    favorite: false,
+    addedAt: new Date().toISOString(),
+  });
+
+  it("counts distinct visited stations as their own KPI", () => {
+    const cov = computeCoverage([stationVisit("Q1", "FR"), stationVisit("Q2", "JP")], ref);
+    expect(cov.stationsVisited).toBe(2);
+  });
+
+  it("a station does NOT mark its country visited (like an airport)", () => {
+    expect(visitedCountryIds([stationVisit("Q1", "FR")]).has("FR")).toBe(false);
+    expect(computeCoverage([stationVisit("Q1", "FR")], ref).countriesVisited).toBe(0);
+  });
+
+  it("a city still counts its country even alongside a station there", () => {
+    const cov = computeCoverage([visitOf(paris), stationVisit("Q1", "FR")], ref);
+    expect(cov.countriesVisited).toBe(1); // FR — via the city, never the station
+    expect(cov.stationsVisited).toBe(1);
   });
 });

@@ -20,17 +20,31 @@ interface StoriesState {
   loaded: boolean;
   load: () => Promise<void>;
   addStory: (input: {
-    place: PlaceRef;
+    /** Optional primary place (v13): a postcard can be place-less. */
+    place?: PlaceRef | null;
+    /** Additional ordered places beyond the primary. */
+    extraPlaces?: PlaceRef[];
     date: string;
+    /** Optional range end day (> date). */
+    endDate?: string;
     title: string;
     text: string;
     photos?: Photo[];
     /** Optional folder label (e.g. "Japan 2024"); omitted when empty. */
     folder?: string | null;
+    /** Personal mood/weather/free tags; omitted when empty. */
+    tags?: string[];
+    /** Optional link to a reconstructed trip; omitted when empty. */
+    tripId?: string;
   }) => Promise<Story>;
   updateStory: (
     storyId: string,
-    changes: Partial<Pick<Story, "place" | "date" | "title" | "text" | "photos" | "folder">>,
+    changes: Partial<
+      Pick<
+        Story,
+        "place" | "extraPlaces" | "date" | "endDate" | "title" | "text" | "photos" | "folder" | "tags" | "tripId"
+      >
+    >,
   ) => Promise<void>;
   removeStory: (storyId: string) => Promise<void>;
   setAll: (stories: Story[]) => Promise<void>;
@@ -44,23 +58,29 @@ export const useStories = create<StoriesState>((set, get) => ({
     const stories = sortStories((await db.getAllStories()).map(backfillUpdatedAt));
     set({ stories, loaded: true });
   },
-  async addStory({ place, date, title, text, photos = [], folder = null }) {
+  async addStory({ place = null, extraPlaces, date, endDate, title, text, photos = [], folder = null, tags, tripId }) {
     const at = new Date().toISOString();
     // Stamp coordinates from the in-memory gazetteer so a published journey can
-    // plot this place without it (the site is self-contained; the bundle is only
-    // the top-10k cities). See stampPlaceCoords.
-    place = stampPlaceCoords(place);
+    // plot each place without it (the site is self-contained; the bundle is only
+    // the top-10k cities). See stampPlaceCoords. A place-less postcard skips this.
+    const stampedPlace = place ? stampPlaceCoords(place) : undefined;
+    const stampedExtras = extraPlaces?.length ? extraPlaces.map(stampPlaceCoords) : undefined;
+    const cleanTags = tags?.map((t) => t.trim()).filter(Boolean);
     const story: Story = {
       storyId: uuid(),
-      place,
+      // Every optional key is carried ONLY when set — never persist an empty/undefined
+      // key (mirrors the schema's optional fields and how a trip's `name` is stored),
+      // so older-shaped records and exports stay lean and byte-identical.
+      ...(stampedPlace ? { place: stampedPlace } : {}),
+      ...(stampedExtras ? { extraPlaces: stampedExtras } : {}),
       date,
+      ...(endDate && endDate > date ? { endDate } : {}),
       title,
       text,
-      // Only carry `folder` when set — never persist an empty/undefined key (mirrors
-      // the schema's optional field and how a trip's `name` is stored).
       ...(folder && folder.trim() ? { folder: folder.trim() } : {}),
-      // Only carry `photos` when there is at least one — keeps records and exports lean.
       ...(photos.length ? { photos } : {}),
+      ...(cleanTags && cleanTags.length ? { tags: cleanTags } : {}),
+      ...(tripId ? { tripId } : {}),
       addedAt: at,
       updatedAt: at,
     };
@@ -71,17 +91,24 @@ export const useStories = create<StoriesState>((set, get) => ({
   async updateStory(storyId, changes) {
     const existing = get().stories.find((s) => s.storyId === storyId);
     if (!existing) return;
-    // If the place was changed, stamp its coordinates too (see stampPlaceCoords).
+    // Stamp coordinates on any place that changed (primary and/or extras).
     if (changes.place) changes = { ...changes, place: stampPlaceCoords(changes.place) };
+    if (changes.extraPlaces)
+      changes = { ...changes, extraPlaces: changes.extraPlaces.map(stampPlaceCoords) };
     const updated: Story = { ...existing, ...changes, updatedAt: stampNow() };
-    // Normalize an edited folder label: trim it, and drop the key entirely when
-    // cleared so we never persist an empty `folder` (the schema forbids it).
+    // Drop any optional key that was cleared, so we never persist an empty value
+    // (the schema forbids empty folder/tags and never injects an unset key).
+    if ("place" in changes && !changes.place) delete updated.place;
+    if (!updated.extraPlaces?.length) delete updated.extraPlaces;
     if ("folder" in changes) {
       const f = changes.folder?.trim();
       if (f) updated.folder = f;
       else delete updated.folder;
     }
     if (!updated.photos?.length) delete updated.photos;
+    if (!updated.tags?.length) delete updated.tags;
+    if (!(updated.endDate && updated.endDate > updated.date)) delete updated.endDate;
+    if (!updated.tripId) delete updated.tripId;
     set({ stories: sortStories(get().stories.map((s) => (s.storyId === storyId ? updated : s))) });
     await db.putStory(updated);
   },

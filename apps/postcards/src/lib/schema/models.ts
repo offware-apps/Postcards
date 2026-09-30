@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { sanitizeText } from "./sanitize";
-import { FORMAT, MAX_PHOTOS_PER_STORY, MAX_PHOTOS_PER_VISIT } from "./helpers";
+import {
+  FORMAT,
+  MAX_PHOTOS_PER_STORY,
+  MAX_PHOTOS_PER_VISIT,
+  MAX_PLACES_PER_STORY,
+  MAX_TAGS_PER_STORY,
+  MAX_TAG_LEN,
+} from "./helpers";
 
 // Canonical, versioned schema for the portable data file.
 // Single source of truth: these Zod models generate TS types AND the published
@@ -14,6 +21,9 @@ export {
   FORMAT,
   MAX_PHOTOS_PER_STORY,
   MAX_PHOTOS_PER_VISIT,
+  MAX_PLACES_PER_STORY,
+  MAX_TAGS_PER_STORY,
+  MAX_TAG_LEN,
   SCHEMA_VERSION,
   backfillUpdatedAt,
   normalizeVisitPhotos,
@@ -28,7 +38,7 @@ export const PlaceRefSchema = z
   .object({
     // Additive: older files only ever used "country"/"city", so they still validate.
     // A file with a newer kind opened in an older app build fails closed (unknown kind), by design.
-    kind: z.enum(["country", "city", "airport", "heritage", "custom"]),
+    kind: z.enum(["country", "city", "airport", "heritage", "custom", "station"]),
     id: z.string().min(1).max(64),
     name: z
       .string()
@@ -97,6 +107,17 @@ const optionalLabel = (max = 80) =>
       return s.length ? s : undefined;
     })
     .optional();
+
+/** One personal tag on a postcard (a mood, a weather note, a free label) — a
+ *  bounded, sanitized, non-empty string. Personal data, never reference data
+ *  (Constitution I): a tag invents no world fact. Mood/weather are just preset
+ *  tag VALUES the composer offers; the model stays plain strings for portability. */
+const tagString = z
+  .string()
+  .min(1)
+  .max(MAX_TAG_LEN)
+  .transform((s) => sanitizeText(s, MAX_TAG_LEN))
+  .refine((s) => s.length > 0, "a tag cannot be empty");
 
 export const PhotoSchema = z
   .object({
@@ -191,6 +212,24 @@ export const TripSchema = z
      * a trip with a single `mode` (and every v1–v11 file) round-trips byte-identically.
      */
     legModes: z.array(TravelModeSchema).max(200).optional(),
+    /**
+     * Optional per-STOP date (spec 021): the day you were at each waypoint, aligned
+     * to `stops` (so `stopDates[i]` dates `stops[i]`). Each entry is a vague date
+     * (`YYYY` / `YYYY-MM` / `YYYY-MM-DD`) or null for "no date". The first and last
+     * non-null give the journey's start and end. Additive & optional with no
+     * default, so the key is NEVER injected on parse — a trip without per-stop dates
+     * (every v1–v14 file) validates and round-trips byte-identically. The trip's own
+     * `date` continues to hold the representative (start) date for the log & filters.
+     */
+    stopDates: z
+      .array(
+        z
+          .string()
+          .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/)
+          .nullable(),
+      )
+      .max(200)
+      .optional(),
     // Approximate/"vague" date (spec 019): a full day `YYYY-MM-DD`, a month
     // `YYYY-MM`, or a year `YYYY` — all optional/nullable (an undated trip is fine).
     // The wider regex is a RELAXATION, so every previously-valid full-day value
@@ -218,9 +257,33 @@ export const TripSchema = z
 export const StorySchema = z
   .object({
     storyId: idString,
-    place: PlaceRefSchema,
-    /** The day the story is about — required, unlike a visit's optional date. */
+    /**
+     * The place this postcard is about. OPTIONAL as of v13 (the journal redesign):
+     * you can write a dated postcard with no place at all. When present it is a
+     * full PlaceRef drawn from places you've been — the composer never mints a new
+     * reference place, and a blank place invents nothing (Constitution I). A
+     * relaxation, so v1–v12 files (place always present) still validate; the key is
+     * simply absent on a place-less postcard.
+     */
+    place: PlaceRefSchema.optional(),
+    /**
+     * Additional places this postcard spans, in order, beyond the primary `place`
+     * (a travel day: Paris → Reims → back). Additive & optional, never injected on
+     * parse; drawn from places you've been (mints nothing). Read-side membership
+     * uses `placesOf(story) = [place, ...extraPlaces]`.
+     */
+    extraPlaces: z.array(PlaceRefSchema).max(MAX_PLACES_PER_STORY - 1).optional(),
+    /** The day the postcard is about — required (the start day of any range). */
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /**
+     * Optional range END day. Additive & optional and NEVER injected on parse (no
+     * default, no null transform) so v1–v12 files round-trip byte-identically:
+     * absent, or ≤ `date`, means a single-day postcard; a later day spans a range.
+     */
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
     // Title AND text are both optional so a journal entry can be image-only. Each
     // stays a (possibly empty) string — no key ripple for consumers — and the
     // whole-story refine below still requires a title, some text, OR a photo, so a
@@ -248,6 +311,17 @@ export const StorySchema = z
      */
     folder: optionalLabel(),
     photos: z.array(PhotoSchema).max(MAX_PHOTOS_PER_STORY).optional(),
+    /**
+     * Personal tags (mood, weather, free labels). Additive & optional, never
+     * injected on parse. Personal data, not reference data (Constitution I).
+     */
+    tags: z.array(tagString).max(MAX_TAGS_PER_STORY).optional(),
+    /**
+     * Optional link to one reconstructed Trip (its `tripId`). Additive & optional;
+     * a bare reference — a dangling id (trip since deleted) is resolved to "no trip"
+     * by the UI, never an error.
+     */
+    tripId: idString.optional(),
     addedAt: z.string().datetime({ offset: true }),
     /** Last-mutated stamp for device sync (spec 013); see Visit.updatedAt. */
     updatedAt: z.string().datetime({ offset: true }).optional(),
