@@ -21,11 +21,14 @@ test("country flags draw from the bundled flag font", async ({ page }) => {
     return {
       status: f?.status,
       range: f?.unicodeRange,
+      // Its glyphs fill less of the em than colour-emoji flags: scaled to match.
+      sizeAdjust: (f as (FontFace & { sizeAdjust?: string }) | undefined)?.sizeAdjust,
       stack: getComputedStyle(document.body).fontFamily,
     };
   });
   expect(face.status).toBe("loaded");
   expect(face.range).toBe("U+1F1E6-1F1FF");
+  expect(face.sizeAdjust).toBe("118%");
   expect(face.stack.replace(/"/g, "")).toMatch(/^Twemoji Country Flags,/);
   expect(fontLoads).toContain(200);
 });

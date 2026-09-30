@@ -176,9 +176,8 @@ function makeCityPill(iso2: string, favorite: boolean, wish: boolean): ImageData
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
   } else {
-    // The bundled flag glyph fills less of its em box than a colour-emoji flag
-    // and sits above the middle baseline: a larger size, set lower, centres it.
-    ctx.font = `32px ${FLAG_FONT}`;
+    // The bundled flag glyph sits above the middle baseline: set lower to centre.
+    ctx.font = `27px ${FLAG_FONT}`;
     ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 5);
   }
   if (favorite) drawStar(ctx, w - 9, 9, 7);
