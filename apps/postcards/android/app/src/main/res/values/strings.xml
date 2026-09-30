@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Place\'Been</string>
-    <string name="title_activity_main">Place\'Been</string>
+    <string name="app_name">Postcards</string>
+    <string name="title_activity_main">Postcards</string>
     <string name="package_name">coop.samourai.postcards</string>
     <string name="custom_url_scheme">coop.samourai.postcards</string>
 </resources>
