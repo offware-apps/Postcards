@@ -343,16 +343,6 @@ async function rewriteVisits(
 const isStored = (v: Visit | StoredVisit): v is StoredVisit =>
   (v.photos ?? []).some((p) => !("src" in p));
 
-export async function replaceAllVisits(visits: Visit[]): Promise<void> {
-  if (!hasIndexedDB()) return;
-  return trackWrite(async () => {
-    const database = await db();
-    const tx = database.transaction([STORE, PHOTOS], "readwrite");
-    await rewriteVisits(tx.objectStore(STORE), tx.objectStore(PHOTOS), visits);
-    await tx.done;
-  });
-}
-
 /**
  * Replace visits, trips (and, when provided, stories) in a single transaction —
  * used on import so the portable file lands atomically. If any write fails the

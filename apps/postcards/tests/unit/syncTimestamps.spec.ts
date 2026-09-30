@@ -112,10 +112,4 @@ describe("store stamps updatedAt on mutation (addedAt stays immutable)", () => {
     expect(after.updatedAt).toBe("2026-05-02T00:00:00.000Z"); // bumped
     expect(after.addedAt).toBe(addedAt); // never moves
   });
-
-  it("setAll backfills updatedAt from addedAt for imported records that lack it", async () => {
-    useVisits.setState({ visits: [] });
-    await useVisits.getState().setAll([baseVisit()]);
-    expect(useVisits.getState().visits[0]!.updatedAt).toBe("2026-01-01T00:00:00.000Z");
-  });
 });
