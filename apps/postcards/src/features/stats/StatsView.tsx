@@ -633,7 +633,10 @@ export function StatsView() {
                   <span
                     className="tt-mode"
                     key={m.mode}
-                    title={t("stats.travel.modeTitle", { count: m.trips, mode: m.mode })}
+                    title={t("stats.travel.modeTitle", {
+                      count: m.trips,
+                      mode: t(`travel.mode.${m.mode}` as MessageKey),
+                    })}
                   >
                     {MODE_GLYPH[m.mode]} {m.trips}
                   </span>
@@ -666,11 +669,7 @@ export function StatsView() {
         <CountryRow key={c.iso2} c={c} />
       ))}
 
-      <p className="muted small">
-        Computed against the loaded reference datasets: all countries &amp; territories (ISO
-        3166-1), a GeoNames gazetteer of cities with 15,000+ people, and first-level regions
-        (states/provinces) worldwide.
-      </p>
+      <p className="muted small">{t("stats.datasetsNote")}</p>
     </section>
   );
 }
