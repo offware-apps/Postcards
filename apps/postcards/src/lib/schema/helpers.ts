@@ -94,3 +94,11 @@ export function backfillUpdatedAt<T extends { addedAt: string; updatedAt?: strin
 /** Current instant as an ISO-8601 string — the `updatedAt`/tombstone timestamp every
  *  store stamps on a write (one definition instead of a copy per store). */
 export const stampNow = (): string => new Date().toISOString();
+
+/** The stamp of a record's deletion: now, or just after the record's own stamp
+ *  when that is later (a device whose clock runs fast wrote it), so the tombstone
+ *  always sorts after the version it deletes and the merge keeps it deleted. */
+export function stampDeletion(r: { updatedAt?: string; addedAt: string } | undefined): string {
+  const own = r ? Date.parse(r.updatedAt ?? r.addedAt) + 1 : NaN;
+  return new Date(own > Date.now() ? own : Date.now()).toISOString();
+}

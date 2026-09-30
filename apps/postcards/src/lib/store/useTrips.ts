@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { backfillUpdatedAt, stampNow } from "../schema/helpers";
+import { backfillUpdatedAt, stampDeletion, stampNow } from "../schema/helpers";
 import type { PlaceRef, TravelMode, Trip } from "../schema/models";
 import * as db from "../db/tripsDb";
 import * as visitsDb from "../db/visitsDb";
@@ -98,10 +98,11 @@ export const useTrips = create<TripsState>((set, get) => ({
     await db.putTrip(updated);
   },
   async removeTrip(tripId) {
+    const gone = get().trips.find((t) => t.tripId === tripId);
     set({ trips: get().trips.filter((t) => t.tripId !== tripId) });
     await db.deleteTrip(tripId);
     // Tombstone the deletion so it propagates on sync (spec 013, FR-009).
-    await visitsDb.putTombstone("trip", tripId, stampNow());
+    await visitsDb.putTombstone("trip", tripId, stampDeletion(gone));
   },
   async restoreTrip(trip) {
     // Bump `updatedAt` so the restored trip wins on the next merge, over its own

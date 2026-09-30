@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { backfillUpdatedAt, stampNow } from "../schema/helpers";
+import { backfillUpdatedAt, stampDeletion, stampNow } from "../schema/helpers";
 import type { Photo, PlaceRef, Story } from "../schema/models";
 import * as db from "../db/storiesDb";
 import * as visitsDb from "../db/visitsDb";
@@ -89,10 +89,11 @@ export const useStories = create<StoriesState>((set, get) => ({
     await db.putStory(updated);
   },
   async removeStory(storyId) {
+    const gone = get().stories.find((s) => s.storyId === storyId);
     set({ stories: get().stories.filter((s) => s.storyId !== storyId) });
     await db.deleteStory(storyId);
     // Tombstone the deletion so it propagates on sync (spec 013, FR-009).
-    await visitsDb.putTombstone("story", storyId, stampNow());
+    await visitsDb.putTombstone("story", storyId, stampDeletion(gone));
   },
   async restoreStory(story) {
     // Bump `updatedAt` so the restored story wins on the next merge, over its own

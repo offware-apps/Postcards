@@ -12,7 +12,7 @@
 // connector. `serialize` builds the portable file from records + tombstones only —
 // the token is NEVER part of it — so it can't leak into the pushed file or a backup.
 
-import { normalizeVisitPhotos, backfillUpdatedAt } from "../schema/helpers";
+import { normalizeVisitPhotos, backfillUpdatedAt, stampDeletion } from "../schema/helpers";
 import type { SyncTombstone } from "../schema/models";
 import {
   getAllTombstones,
@@ -44,14 +44,13 @@ const snapFor = (merged: StoreSnapshots, kind: TombstoneKind) =>
  * merged a snapshot of the store taken before its pull, so a record added, edited
  * or deleted since would otherwise be overwritten by that older copy. Store writes
  * are immutable, so a record edited since is a new object; one gone from the store
- * was deleted here and gets a tombstone as of `deletedAt`. Newest still wins.
+ * was deleted here and gets a tombstone as of now. Newest still wins.
  */
 function withEditsSince<R extends { updatedAt?: string; addedAt: string }>(
   merged: SyncSnapshot<R>,
   snapshot: R[],
   current: R[],
   idOf: (r: R) => string,
-  deletedAt: string,
 ): SyncSnapshot<R> {
   if (current === snapshot) return merged;
   const before = new Map(snapshot.map((r) => [idOf(r), r]));
@@ -59,7 +58,7 @@ function withEditsSince<R extends { updatedAt?: string; addedAt: string }>(
   const edited = current.filter((r) => before.get(idOf(r)) !== r);
   const deleted = snapshot
     .filter((r) => !now.has(idOf(r)))
-    .map((r) => ({ id: idOf(r), deletedAt }));
+    .map((r) => ({ id: idOf(r), deletedAt: stampDeletion(r) }));
   return mergeById(
     merged,
     { records: edited, tombstones: deleted },
@@ -177,28 +176,24 @@ export async function runDeviceSync(
     const persist = async (merged: StoreSnapshots): Promise<void> => {
       // The user kept editing while the pull and push ran: keep those edits. They
       // are pushed by the next run, which auto-sync schedules for any edit.
-      const deletedAt = new Date().toISOString();
       const withEdits = (): StoreSnapshots => ({
         visits: withEditsSince(
           merged.visits,
           local.visits.records,
           useVisits.getState().visits,
           (v) => v.visitId,
-          deletedAt,
         ),
         trips: withEditsSince(
           merged.trips,
           local.trips.records,
           useTrips.getState().trips,
           (t) => t.tripId,
-          deletedAt,
         ),
         stories: withEditsSince(
           merged.stories,
           local.stories.records,
           useStories.getState().stories,
           (s) => s.storyId,
-          deletedAt,
         ),
       });
       const onDisk = withEdits();

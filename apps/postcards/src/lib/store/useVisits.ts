@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import { backfillUpdatedAt, MAX_PHOTOS_PER_VISIT, normalizeVisitPhotos, placeKey, stampNow } from "../schema/helpers";
+import {
+  backfillUpdatedAt,
+  MAX_PHOTOS_PER_VISIT,
+  normalizeVisitPhotos,
+  placeKey,
+  stampDeletion,
+  stampNow,
+} from "../schema/helpers";
 import type { Photo, PlaceRef, Visit } from "../schema/models";
 import { sanitizeText } from "../schema/sanitize";
 import * as db from "../db/visitsDb";
@@ -147,11 +154,12 @@ export const useVisits = create<VisitsState>((set, get) => ({
     return visit;
   },
   async removeVisit(visitId) {
+    const gone = get().visits.find((v) => v.visitId === visitId);
     set({ visits: get().visits.filter((v) => v.visitId !== visitId) });
     await db.deleteVisit(visitId);
     // Record a tombstone so the deletion propagates on sync instead of the record
     // being re-added by a device that still holds it (spec 013, FR-009).
-    await db.putTombstone("visit", visitId, stampNow());
+    await db.putTombstone("visit", visitId, stampDeletion(gone));
   },
   async toggleVisit(place) {
     const existing = findByPlace(get().visits, place);
