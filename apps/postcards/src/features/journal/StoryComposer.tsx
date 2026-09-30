@@ -289,7 +289,13 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
       onKeyDown={onKeyDown}
     >
       <div className="trip-composer-head">
-        <button type="button" className="link back-link" onClick={onClose} aria-label={t("journal.composer.back")}>
+        <button
+          type="button"
+          className="link back-link"
+          onClick={onClose}
+          aria-label={t("journal.composer.back")}
+          title={t("journal.composer.back")}
+        >
           ← {t("journal.composer.back")}
         </button>
         <h2>{t(storyId ? "journal.composer.editTitle" : "journal.composer.newTitle")}</h2>
@@ -303,6 +309,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
             ref={dateRef}
             id="story-date"
             className="select"
+            title={t("journal.date")}
             type="date"
             required
             max="9999-12-31"
@@ -315,6 +322,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
           <input
             id="story-title"
             className="select"
+            title={t("journal.titleField")}
             type="text"
             maxLength={200}
             placeholder={t("journal.titlePlaceholder")}
@@ -328,6 +336,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
             id="story-text"
             ref={textRef}
             className="select journal-textarea"
+            title={t("journal.story")}
             rows={8}
             maxLength={8000}
             placeholder={t("journal.storyPlaceholder")}
@@ -339,7 +348,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
 
       {/* Everything else is optional — tucked away, present but out of the way. */}
       <details className="story-details">
-        <summary>{t("journal.composer.addDetails")}</summary>
+        <summary title={t("journal.composer.addDetails")}>{t("journal.composer.addDetails")}</summary>
         {nearby && nearby.length > 0 && !place && (
           <div className="story-nearby" role="group" aria-label={t("journal.composer.nearYou")}>
             <span className="muted small">📍 {t("journal.composer.nearYou")}</span>
@@ -349,6 +358,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
                   key={city.id}
                   type="button"
                   className="mini-btn"
+                  title={t("journal.writeAboutAria", { city: city.name, km: formatKm(km) })}
                   onClick={() => {
                     // Only attaches a place — nothing is marked visited, no coords stored.
                     setPlace({ kind: "city", id: city.id, name: city.name, countryId: city.countryIso2 });
@@ -366,6 +376,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
           <select
             id="story-place"
             className="select"
+            title={t("journal.place")}
             value={place ? placeKey(place) : ""}
             onChange={(e) => setPlace(placeOptions.find((p) => placeKey(p) === e.target.value) ?? null)}
           >
@@ -388,6 +399,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
                   type="button"
                   className="story-tag-x"
                   aria-label={t("journal.composer.removePlace", { name: p.name })}
+                  title={t("journal.composer.removePlace", { name: p.name })}
                   onClick={() => setExtraPlaces((prev) => prev.filter((q) => placeKey(q) !== placeKey(p)))}
                 >
                   ✕
@@ -402,6 +414,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
             <select
               id="story-extra-place"
               className="select"
+              title={t("journal.composer.morePlaces")}
               value=""
               onChange={(e) => {
                 const p = placeOptions.find((x) => placeKey(x) === e.target.value);
@@ -428,6 +441,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
           <input
             id="story-enddate"
             className="select"
+            title={t("journal.composer.endDate")}
             type="date"
             min={date}
             max="9999-12-31"
@@ -441,6 +455,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
           <input
             id="story-folder"
             className="select"
+            title={t("journal.folder")}
             type="text"
             maxLength={80}
             list="story-folder-suggestions"
@@ -469,6 +484,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
                     type="button"
                     className="story-tag-x"
                     aria-label={t("journal.composer.removeTag", { tag })}
+                    title={t("journal.composer.removeTag", { tag })}
                     onClick={() => removeTag(tag)}
                   >
                     ✕
@@ -479,6 +495,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
           )}
           <input
             className="select"
+            title={t("journal.composer.tags")}
             type="text"
             maxLength={40}
             list="story-tag-suggestions"
@@ -499,7 +516,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
           </datalist>
           <div className="story-tag-presets">
             {[...MOOD_TAGS, ...WEATHER_TAGS].map((m) => (
-              <button key={m} type="button" className="mini-btn" onClick={() => addTag(m)}>
+              <button key={m} type="button" className="mini-btn" title={m} onClick={() => addTag(m)}>
                 {m}
               </button>
             ))}
@@ -510,7 +527,13 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
         {trips.length > 0 && (
           <label className="picker-label" htmlFor="story-trip">
             {t("journal.composer.trip")}
-            <select id="story-trip" className="select" value={tripId} onChange={(e) => setTripId(e.target.value)}>
+            <select
+              id="story-trip"
+              className="select"
+              title={t("journal.composer.trip")}
+              value={tripId}
+              onChange={(e) => setTripId(e.target.value)}
+            >
               <option value="">{t("journal.composer.noTrip")}</option>
               {trips.map((tr) => (
                 <option key={tr.tripId} value={tr.tripId}>
@@ -542,6 +565,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
                   maxLength={300}
                   placeholder={t("journal.captionPlaceholder")}
                   aria-label={t("journal.captionAria", { n: i + 1 })}
+                  title={t("journal.captionAria", { n: i + 1 })}
                   value={p.caption ?? ""}
                   onChange={(e) =>
                     setPhotos((prev) => prev.map((q, j) => (j === i ? { ...q, caption: e.target.value || null } : q)))
@@ -551,6 +575,7 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
                   className="link-danger"
                   type="button"
                   aria-label={t("journal.removePhotoAria", { n: i + 1 })}
+                  title={t("journal.removePhotoAria", { n: i + 1 })}
                   onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
                 >
                   {t("common.remove")}
@@ -564,7 +589,11 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
             className="mini-btn"
             type="button"
             disabled={busy || photos.length >= MAX_PHOTOS_PER_STORY}
-            title={photos.length >= MAX_PHOTOS_PER_STORY ? t("journal.storyFullTitle", { max: MAX_PHOTOS_PER_STORY }) : undefined}
+            title={
+              photos.length >= MAX_PHOTOS_PER_STORY
+                ? t("journal.storyFullTitle", { max: MAX_PHOTOS_PER_STORY })
+                : t("journal.addPhotos")
+            }
             onClick={() => photoInput.current?.click()}
           >
             {busy ? "…" : `📷 ${t("journal.addPhotos")}`}
@@ -573,15 +602,27 @@ export function StoryComposer({ storyId, onClose }: { storyId: string | null; on
       </details>
 
       <div className="trip-composer-actions">
-        <button type="button" className="btn-ghost" onClick={onClose}>
+        <button type="button" className="btn-ghost" title={t("common.cancel")} onClick={onClose}>
           {t("common.cancel")}
         </button>
         {!storyId && (
-          <button type="button" className="btn-ghost" disabled={!canSave} onClick={() => void save(true)}>
+          <button
+            type="button"
+            className="btn-ghost"
+            title={t("journal.composer.saveAndNew")}
+            disabled={!canSave}
+            onClick={() => void save(true)}
+          >
             {t("journal.composer.saveAndNew")}
           </button>
         )}
-        <button type="button" className="btn" disabled={!canSave} onClick={() => void save(false)}>
+        <button
+          type="button"
+          className="btn"
+          title={t(storyId ? "journal.saveChanges" : "journal.composer.save")}
+          disabled={!canSave}
+          onClick={() => void save(false)}
+        >
           {t(storyId ? "journal.saveChanges" : "journal.composer.save")}
         </button>
       </div>

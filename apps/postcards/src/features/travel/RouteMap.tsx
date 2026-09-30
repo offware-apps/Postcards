@@ -285,6 +285,7 @@ export function RouteMap({
             type="button"
             aria-pressed={kind === f.key}
             className={kind === f.key ? "seg-on" : ""}
+            title={t(f.label)}
             onClick={() => switchKind(f.key)}
           >
             {t(f.label)}

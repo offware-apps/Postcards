@@ -1007,6 +1007,7 @@ export function JournalScreen() {
                         <button
                           type="button"
                           className="journal-tag-chip"
+                          title={t("journal.byTag") + ": " + tag}
                           onClick={() => {
                             setFilterSel(`t:${tag}`);
                             setDaySel(null);

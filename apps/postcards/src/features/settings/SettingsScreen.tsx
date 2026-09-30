@@ -265,6 +265,7 @@ export function SettingsScreen() {
           <select
             id="station-source"
             className="select"
+            title={t("settings.stations.title")}
             value={stationSource}
             onChange={(e) => setStationSource(e.target.value as (typeof STATION_SOURCES)[number]["id"])}
           >
