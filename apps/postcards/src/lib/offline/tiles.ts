@@ -227,7 +227,9 @@ export interface SaveProgress {
  * Fetch every tile so the SW caches it. Uses CORS (OSM sends
  * Access-Control-Allow-Origin) so only real 200s are stored — no opaque error
  * tiles poison the cache — and an explicit referrerPolicy guarantees the Referer
- * OSM requires. Concurrency-limited and abortable.
+ * OSM requires. Concurrency-limited and abortable: aborting `signal` cancels the
+ * requests in flight too, and `stop` is checked before each tile (the caller's
+ * Offline mode), so no request starts once it reports true.
  */
 export async function saveAreaOffline(
   bounds: Bounds,
@@ -239,6 +241,7 @@ export async function saveAreaOffline(
     concurrency?: number;
     onProgress?: (p: SaveProgress) => void;
     signal?: AbortSignal;
+    stop?: () => boolean;
     fetchFn?: typeof fetch;
   } = {},
 ): Promise<{ saved: number; failed: number; total: number; capped: boolean }> {
@@ -252,12 +255,13 @@ export async function saveAreaOffline(
   let i = 0;
   async function worker() {
     while (i < urls.length) {
-      if (opts.signal?.aborted) return;
+      if (opts.signal?.aborted || opts.stop?.()) return;
       const url = urls[i++]!;
       try {
         const res = await doFetch(url, {
           mode: "cors",
           referrerPolicy: "strict-origin-when-cross-origin",
+          ...(opts.signal ? { signal: opts.signal } : {}),
         });
         if (!res.ok) failed++;
       } catch {

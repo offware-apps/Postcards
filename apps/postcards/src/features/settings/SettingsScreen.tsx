@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
 import { useToast } from "../../lib/store/useToast";
 import { useSettings, MARKER_CAP_CHOICES } from "../../lib/store/useSettings";
@@ -46,6 +46,20 @@ export function SettingsScreen() {
   // Downloads are cancelable, and each region remembers when it was last saved
   // (so the button honestly reads "Re-download" instead of pretending it's new).
   const controllers = useRef<Record<string, AbortController | undefined>>({});
+  // A region download stops the moment Offline mode is switched on, or Settings
+  // is left: every controller aborts, which cancels the requests in flight too.
+  useEffect(() => {
+    const abortAll = () => {
+      for (const c of Object.values(controllers.current)) c?.abort();
+    };
+    const unsubscribe = useSettings.subscribe((s) => {
+      if (s.offlineMode) abortAll();
+    });
+    return () => {
+      unsubscribe();
+      abortAll();
+    };
+  }, []);
   const [savedAt, setSavedAt] = useState<Record<string, string | undefined>>(() => {
     const out: Record<string, string | undefined> = {};
     for (const r of OFFLINE_REGIONS) {
@@ -118,6 +132,7 @@ export function SettingsScreen() {
         levels: r.levels,
         maxTiles: REGION_MAX_TILES,
         signal: ctl.signal,
+        stop: () => useSettings.getState().offlineMode,
         onProgress: (p) => setProgress((s) => ({ ...s, [r.id]: p.total ? p.done / p.total : 1 })),
       });
       if (ctl.signal.aborted) {

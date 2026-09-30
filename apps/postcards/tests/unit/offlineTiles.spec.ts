@@ -72,6 +72,45 @@ describe("saveAreaOffline", () => {
     expect(res.saved).toBe(0);
     expect(res.capped).toBe(true);
   });
+
+  it("hands its abort signal to every fetch, so aborting stops the requests in flight", async () => {
+    const ctl = new AbortController();
+    const signals: (AbortSignal | undefined)[] = [];
+    // A tile request that only ends when its signal aborts.
+    const fetchFn = ((_url: string, init?: RequestInit) => {
+      signals.push(init?.signal ?? undefined);
+      return new Promise((_res, rej) =>
+        init?.signal?.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError"))),
+      );
+    }) as unknown as typeof fetch;
+    const run = saveAreaOffline({ west: -20, south: 30, east: 40, north: 60 }, 6, {
+      levels: 2,
+      signal: ctl.signal,
+      fetchFn,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    ctl.abort();
+    await run;
+    expect(signals).toHaveLength(3);
+    expect(signals.every((s) => s === ctl.signal)).toBe(true);
+  });
+
+  it("requests no further tile once stop() reports true", async () => {
+    let offline = false;
+    let calls = 0;
+    const fetchFn = (async () => {
+      calls++;
+      if (calls === 5) offline = true;
+      return { ok: true } as Response;
+    }) as unknown as typeof fetch;
+    await saveAreaOffline({ west: -20, south: 30, east: 40, north: 60 }, 6, {
+      levels: 3,
+      fetchFn,
+      stop: () => offline,
+    });
+    // The 3 workers each finish the request they had started, then stop.
+    expect(calls).toBeLessThanOrEqual(7);
+  });
 });
 
 describe("prefetchAroundBounds (warm the ring around the viewport)", () => {
