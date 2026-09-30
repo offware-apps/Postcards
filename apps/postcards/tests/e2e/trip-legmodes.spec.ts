@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // Per-leg transport (spec 019): a journey can mix modes — fly one leg, take the
 // train the next — and the per-leg choice survives save + reopen.
@@ -8,12 +8,7 @@ test("set a different transport per leg; it persists across save + reopen", asyn
 }: {
   page: Page;
 }) => {
-  await page.goto("/");
-  for (const c of ["Paris", "Tokyo", "Osaka"]) {
-    await page.getByLabel("Search a city or country").fill(c);
-    await page.getByRole("button", { name: `Mark ${c} visited` }).first().click();
-    await page.keyboard.press("Escape");
-  }
+  await openAppWithVisits(page, ["Paris", "Tokyo", "Osaka"]);
   await gotoTab(page, "Trips");
   await page.getByRole("button", { name: "Reconstruct a journey" }).click();
   await page.getByRole("button", { name: "Add Paris to the trip" }).click();

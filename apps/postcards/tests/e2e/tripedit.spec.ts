@@ -1,20 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openApp, addTrip } from "./nav-helper";
 
 // End-to-end: a logged trip can be edited (here, adding a date) and saved.
 test("edit a logged trip", async ({ page }) => {
-  await page.goto("/");
+  await openApp(page);
   await gotoTab(page, "Trips");
 
-  // Add a trip. Filter the option by its code so the picker's listbox row is
-  // targeted, never the mode <select>'s native "Flight" option (both expose
-  // role=option; the deferred picker list can lag a frame behind the keystroke).
-  await page.getByRole("button", { name: "New trip" }).click();
-  await page.getByLabel("From", { exact: true }).fill("CDG");
-  await page.getByRole("option").filter({ hasText: "CDG" }).first().click();
-  await page.getByLabel("To", { exact: true }).fill("JFK");
-  await page.getByRole("option").filter({ hasText: "JFK" }).first().click();
-  await page.getByRole("button", { name: "Add trip" }).click();
+  await addTrip(page, "CDG", "JFK");
   await expect(page.locator(".travel-totals")).toContainText("1 trip");
 
   // Edit it → the form enters edit mode.

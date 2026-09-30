@@ -1,26 +1,28 @@
 import { test, expect } from "@playwright/test";
+import { openApp, markVisited } from "./nav-helper";
 
 // SC-002 / SC-007 / US2-AC1: every core action works with no network. The
 // locally-served app stands in for the service-worker-installed one (same
 // role: the shell is on the device); every request that would LEAVE the
 // device is blocked — tiles, fonts, anything.
+
+// Offline is the service worker's job for an installed app, so it runs here.
+test.use({ serviceWorkers: "allow" });
+
 test("core actions work with no network: offline map renders, visits persist", async ({
   page,
   context,
 }) => {
   await context.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (route) => route.abort());
 
-  await page.goto("/");
-  await expect(page.getByText("Cities in view")).toBeVisible();
+  await openApp(page);
 
   // With tiles unreachable the map falls back to the bundled offline vector
   // world map — a usable map still renders (no blank screen, no spinner trap).
   await expect(page.locator(".maplibregl-canvas").first()).toBeVisible();
 
   // Log a visit, reload (still offline), and it's still there (IndexedDB).
-  await page.getByLabel("Search a city or country").fill("Lisbon");
-  await page.getByRole("button", { name: "Mark Lisbon visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Lisbon");
   await page.reload();
   await page.getByRole("button", { name: "Places", exact: true }).click();
   await expect(page.getByText("Lisbon", { exact: true })).toBeVisible();

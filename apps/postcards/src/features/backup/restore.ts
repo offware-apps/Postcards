@@ -10,6 +10,18 @@ export type RestoreOutcome =
   | { ok: false; reason: "invalid"; error: string }
   | { ok: false; reason: "cancelled" | "save" };
 
+/** Each count as a phrase in the active language: "1 place", "2 trips". */
+export function countPhrases(
+  t: TFunction,
+  c: { places: number; trips: number; stories: number },
+): { places: string; trips: string; stories: string } {
+  return {
+    places: t.plural("count.place", c.places),
+    trips: t.plural("count.trip", c.trips),
+    stories: t.plural("count.story", c.stories),
+  };
+}
+
 /**
  * Full restore from a Postcards JSON file — this REPLACES all of your data, so it
  * asks first when there is any (the one destructive path). Shared by the Backup
@@ -39,14 +51,16 @@ export async function restoreFromJson(
     stories: result.stories.length,
   };
   if (cur.places + cur.trips + cur.stories > 0) {
+    const now = countPhrases(t, cur);
+    const next = countPhrases(t, incoming);
     const ok = window.confirm(
       t("backup.confirm.replace", {
-        curPlaces: cur.places,
-        curTrips: cur.trips,
-        curStories: cur.stories,
-        newPlaces: incoming.places,
-        newTrips: incoming.trips,
-        newStories: incoming.stories,
+        curPlaces: now.places,
+        curTrips: now.trips,
+        curStories: now.stories,
+        newPlaces: next.places,
+        newTrips: next.trips,
+        newStories: next.stories,
       }),
     );
     if (!ok) return { ok: false, reason: "cancelled" };

@@ -37,11 +37,12 @@ observed working:
    a key added to `en.ts` must be added to `fr.ts` and `ko.ts` (and removing one
    means removing it from all three), or tsc fails.
 3. `npx vitest run` — full unit suite green.
-4. `npx playwright test` — e2e green. `smoke`/`photo`/`countryscope`/`import-csv`
-   can flake under full-suite CPU load; re-run the file in isolation to confirm,
-   CI retry absorbs it.
-5. For any UI change, **screenshot and eyeball it** (Chromium is at
-   `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`).
+4. `npx playwright test` — e2e green. On a host whose network interfaces churn
+   (many docker containers, for one), Chromium aborts in-flight requests with
+   `net::ERR_NETWORK_CHANGED`, and a spec can find the app never booted (the
+   reload message or a blank page); re-run the file, and CI's retry absorbs it.
+5. For any UI change, **screenshot and eyeball it** (Playwright's Chromium,
+   from `npx playwright install chromium` in `apps/postcards`).
 6. Commit with a clear message. **Never** put the model identifier in commits,
    PRs, or code — chat only.
 7. Deploy: push HEAD to the feature branch **and** fast-forward the deployed

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openApp } from "./nav-helper";
 
 // Escape / Back should step out of a LOCAL sub-view (a screen's own inner view)
 // back to that screen's home view BEFORE leaving the tab — the same way the
@@ -8,7 +9,7 @@ import { test, expect } from "@playwright/test";
 test("Escape backs out of a Places collection to the browse before leaving the tab", async ({
   page,
 }) => {
-  await page.goto("/");
+  await openApp(page);
 
   // Land on Places — its home is the two-axis browse (header title "Places").
   await page.getByRole("button", { name: "Places", exact: true }).click();

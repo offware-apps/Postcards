@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openApp, markVisited } from "./nav-helper";
 
 // A places CSV (the app's own export shape) imports by MERGING — it adds places
 // and never erases what you already have. No confirm dialog on this path.
@@ -14,12 +15,10 @@ test("import a places CSV — merges without erasing, no confirm", async ({ page
   page.on("dialog", (d) => {
     throw new Error(`Unexpected dialog on CSV import: ${d.message()}`);
   });
-  await page.goto("/");
+  await openApp(page);
 
   // Seed one existing visit that the CSV does NOT mention — it must survive.
-  await page.getByLabel("Search a city or country").fill("Lisbon");
-  await page.getByRole("button", { name: "Mark Lisbon visited" }).first().click();
-  await page.keyboard.press("Escape");
+  await markVisited(page, "Lisbon");
 
   await page.getByRole("button", { name: "Settings" }).click();
   // The Backup import is the only file input that accepts CSV — target it

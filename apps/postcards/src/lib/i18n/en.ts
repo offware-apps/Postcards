@@ -28,6 +28,12 @@ export const en = {
   "noun.story_other": "stories",
   "noun.day_one": "day",
   "noun.day_other": "days",
+  "count.place_one": "{count} place",
+  "count.place_other": "{count} places",
+  "count.trip_one": "{count} trip",
+  "count.trip_other": "{count} trips",
+  "count.story_one": "{count} story",
+  "count.story_other": "{count} stories",
 
   // ── App chrome: bottom nav + top bar ─────────────────────────────────────
   "nav.map": "Map",
@@ -372,15 +378,17 @@ export const en = {
   "backup.msg.eraseErr": "Couldn't erase your data — nothing was changed.",
   "backup.msg.erased": "All data erased. This device is a clean slate.",
   "backup.msg.saveErr": "Import failed while saving; your data is unchanged.",
-  "backup.msg.restored": "Restored {places} places, {trips} trips and {stories} stories.",
+  "backup.msg.restored": "Restored {places}, {trips} and {stories}.",
   "backup.msg.csvNoPlaces": "This file has no places to import.",
   "backup.msg.csvUnreadable":
     "Couldn't read any places from this file — expected columns like lat, lon, country, city.",
-  "backup.msg.merged":
-    "Added {added} places, updated {updated}{skip}. Your trips and stories are untouched.",
+  "backup.msg.merged_one":
+    "Added {count} place, updated {updated}{skip}. Your trips and stories are untouched.",
+  "backup.msg.merged_other":
+    "Added {count} places, updated {updated}{skip}. Your trips and stories are untouched.",
   "backup.msg.skipped": ", {count} skipped",
   "backup.confirm.replace":
-    "⚠ This replaces everything on this device — {curPlaces} places, {curTrips} trips and {curStories} stories — with the {newPlaces} places, {newTrips} trips and {newStories} stories in this file. It can't be undone. Continue?",
+    "⚠ This replaces everything on this device — {curPlaces}, {curTrips} and {curStories} — with the {newPlaces}, {newTrips} and {newStories} in this file. It can't be undone. Continue?",
   "backup.reset.button": "Reset all data",
   "backup.reset.note": "Erases everything on this device. Export a backup first if you might want it back.",
   "backup.reset.confirmAria": "Confirm reset all data",
@@ -1092,6 +1100,11 @@ export const en = {
   "update.reload": "Reload",
   "storage.blocked": "Close Postcards in your other tabs to finish opening it here.",
 
+  // ── Code that failed to download ──────────────────────────────────────────
+  "loadFailure.text": "Part of Postcards did not load, often because the connection dropped. Your places are safe on this device.",
+  "loadFailure.reload": "Reload",
+  "loadFailure.reloadTitle": "Reload Postcards and try again",
+
   // ── Misc shared ──────────────────────────────────────────────────────────
   "common.undo": "Undo",
   "common.retry": "Retry",
@@ -1107,9 +1120,9 @@ export const en = {
   "moved.blocked": "The new address could not open here. Download a backup, then import it there under Your data.",
   "moved.cancelled": "The move was cancelled at the new address; nothing changed there.",
   "moved.failed": "The move did not finish. Download a backup, then import it at the new address under Your data.",
-  "moved.received": "Moved {places} places, {trips} trips and {stories} stories from the old address.",
+  "moved.received": "Moved {places}, {trips} and {stories} from the old address.",
   "moved.confirm":
-    "{from} is handing over {places} places, {trips} trips and {stories} stories. Save them at this address? Continue only if you just chose Move my places at the old address.",
+    "{from} is handing over {places}, {trips} and {stories}. Save them at this address? Continue only if you just chose Move my places at the old address.",
   "toast.dismiss": "Dismiss",
 } as const;
 

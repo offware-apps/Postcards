@@ -68,6 +68,9 @@
     <meta name="theme-color" content="#4338ca" />
     <meta name="description" content="Remember the places you've been — private, offline, in a file you own." />
     <title>Postcards</title>
+    <!-- Before the module entry, so a failed download of the app's own code shows
+         a reload message instead of a blank page (see the file). -->
+    <script src="%BASE_URL%boot-guard.js"></script>
     <!-- Apply the saved colour-theme choice before first paint, so an explicit
          Light/Dark selection never flashes the wrong palette while the app
          bundle loads. First-party, inert: it only reads our own localStorage key
