@@ -37,6 +37,7 @@ class FakeMap {
   getCenter() { return { lng: 0, lat: 0 }; }
   hasImage() { return true; }
   addImage() {}
+  listImages() { return []; }
   triggerRepaint() {}
   remove() {}
   resize() {}
