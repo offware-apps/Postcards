@@ -118,6 +118,8 @@ interface IndexedHeritage extends HeritageSite {
 // Community-pack places, indexed for search, merged into every ReferenceData
 // instance's city set. Module-level so they survive a gazetteer swap / reinit.
 let packCities: IndexedCity[] = [];
+// Other ids a pack place also answers to (alias -> its id); see packs/store.
+let packAliases = new Map<string, string>();
 
 class ReferenceDataImpl implements ReferenceData {
   readonly countries: Country[];
@@ -177,6 +179,10 @@ class ReferenceDataImpl implements ReferenceData {
     this.cities = packCities.length ? this.baseCities.concat(packCities) : this.baseCities;
     this.cityIndex.clear();
     for (const c of this.cities) this.cityIndex.set(c.id, c);
+    for (const [alias, id] of packAliases) {
+      const c = this.cityIndex.get(id);
+      if (c && !this.cityIndex.has(alias)) this.cityIndex.set(alias, c);
+    }
     this.citiesByCountry.clear(); // per-country slices rebuild lazily from the new set
   }
 
@@ -450,9 +456,10 @@ async function upgradeToFullGazetteer(impl: ReferenceDataImpl): Promise<void> {
  * mappable city set. Called by the packs store at startup and whenever a pack is
  * added or removed. Fires the gazetteer event so screens holding memoized city
  * snapshots refresh. Pack ids are namespaced (pack:<id>:<n>), so they never
- * collide with GeoNames ids.
+ * collide with GeoNames ids; `aliases` are further ids cityById resolves to them.
  */
-export function setPackPlaces(places: City[]): void {
+export function setPackPlaces(places: City[], aliases = new Map<string, string>()): void {
+  packAliases = aliases;
   packCities = places
     .map((c) => ({ ...c, search: normalize(c.name) }))
     .sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
