@@ -94,7 +94,13 @@ export function GuideSection({ place }: { place: PlaceRef }) {
   return (
     <section className="city-section guide-section">
       <h3>{t("guide.sectionTitle")}</h3>
-      <GuideContent placeName={place.name} names={names} />
+      {/* Keyed by place: the page stays mounted when it moves to another place, and
+          GuideContent seeds its saved overview and guide from storage on mount. */}
+      <GuideContent
+        key={`${names.countryIso2}:${names.summaryTitle}`}
+        placeName={place.name}
+        names={names}
+      />
     </section>
   );
 }
