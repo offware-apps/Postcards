@@ -1093,5 +1093,7 @@ export const ko: Messages = {
   "moved.cancelled": "새 주소에서 옮기기가 취소되었습니다. 그곳에서는 아무것도 바뀌지 않았습니다.",
   "moved.failed": "옮기기가 끝나지 않았습니다. 백업을 다운로드한 뒤 새 주소의 내 데이터에서 가져오세요.",
   "moved.received": "이전 주소에서 장소 {places}곳, 여행 {trips}개, 이야기 {stories}개를 옮겼습니다.",
+  "moved.confirm":
+    "{from}에서 장소 {places}곳, 여행 {trips}개, 이야기 {stories}개를 보냈습니다. 이 주소에 저장할까요? 방금 이전 주소에서 '내 장소 옮기기'를 선택한 경우에만 계속하세요.",
   "toast.dismiss": "닫기",
 };

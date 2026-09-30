@@ -1100,5 +1100,7 @@ export const fr: Messages = {
   "moved.cancelled": "Le transfert a été annulé à la nouvelle adresse ; rien n'y a changé.",
   "moved.failed": "Le transfert n'a pas abouti. Téléchargez une sauvegarde, puis importez-la à la nouvelle adresse dans Vos données.",
   "moved.received": "{places} lieux, {trips} voyages et {stories} récits transférés depuis l'ancienne adresse.",
+  "moved.confirm":
+    "{from} transmet {places} lieux, {trips} voyages et {stories} récits. Les enregistrer à cette adresse ? Continuez seulement si vous venez de choisir Transférer mes lieux à l'ancienne adresse.",
   "toast.dismiss": "Fermer",
 };
