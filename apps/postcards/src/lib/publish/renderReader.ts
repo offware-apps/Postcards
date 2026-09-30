@@ -347,11 +347,18 @@ const READER_JS = `
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function pad2(n){n=String(n); return n.length<2?"0"+n:n;}
   function fmtInt(n){try{return new Intl.NumberFormat().format(Math.round(n));}catch(_e){return String(Math.round(n));}}
+  // A day, a month ("Mar 2024") or a year: a vague trip date keeps its precision.
+  // Formatted in UTC so every visitor's zone reads the same day; a day its month
+  // lacks is shown as written.
   function fmtDate(iso){
     if(!iso) return "";
-    var d=new Date(iso+"T00:00:00");
-    if(isNaN(d.getTime())) return iso;
-    try{return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(d);}catch(_e){return iso;}
+    var m=/^([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?$/.exec(iso);
+    if(!m) return iso;
+    if(!m[2]) return m[1];
+    var d=new Date(0); d.setUTCFullYear(+m[1],+m[2]-1,m[3]?+m[3]:1);
+    if(d.getUTCMonth()!==+m[2]-1||(m[3]&&d.getUTCDate()!==+m[3])) return iso;
+    var opt=m[3]?{dateStyle:"medium",timeZone:"UTC"}:{year:"numeric",month:"short",timeZone:"UTC"};
+    try{return new Intl.DateTimeFormat(undefined,opt).format(d);}catch(_e){return iso;}
   }
   function flag(cc){
     if(!cc||cc==="ZZ") return "📍";
