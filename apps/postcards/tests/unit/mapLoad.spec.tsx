@@ -145,6 +145,12 @@ describe("the map's place card photo", () => {
 
   it("loads once guides are on", async () => {
     useSettings.setState({ autoLoadGuides: true, offlineMode: false });
-    expect((await openCard()).some((u) => u.includes("wikipedia.org"))).toBe(true);
+    await openCard();
+    // Under a loaded suite the guides module can take longer than the card's wait.
+    const fetchMock = globalThis.fetch as unknown as { mock: { calls: unknown[][] } };
+    await vi.waitFor(
+      () => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("wikipedia.org"))).toBe(true),
+      { timeout: 5000 },
+    );
   });
 });

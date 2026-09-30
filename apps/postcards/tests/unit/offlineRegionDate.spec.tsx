@@ -22,6 +22,11 @@ describe("offline region download date", () => {
     process.env.TZ = "Asia/Tokyo";
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-09-29T23:30:00Z"));
+    // The download needs a controlling service worker to keep the tiles.
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { controller: {} },
+    });
     render(<SettingsScreen />);
     fireEvent.click(screen.getAllByRole("button", { name: /Download$/ })[0]!);
     const key = `postcards-region-saved:${OFFLINE_REGIONS[0]!.id}`;
