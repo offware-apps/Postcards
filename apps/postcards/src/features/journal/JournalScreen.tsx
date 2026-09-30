@@ -488,6 +488,13 @@ export function JournalScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [busy, setBusy] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
+  // New story leaves the page while the composer is open, so focus is placed by
+  // hand: into the first field on open, back to the opener or New story on close.
+  const newStoryRef = useRef<HTMLButtonElement>(null);
+  const composerRef = useRef<HTMLFormElement>(null);
+  const firstFieldRef = useRef<HTMLSelectElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const focusMove = useRef<"composer" | "opener" | null>(null);
   // A restored editing draft carries no photos (they aren't cached); this holds
   // the story id whose photos still need rehydrating from the store.
   const hydratePhotosFor = useRef<string | null>(null);
@@ -670,6 +677,11 @@ export function JournalScreen() {
   // still inside the debounce window are flushed first, same guarantee.
   function resetForm() {
     flushDraft();
+    // A close from outside the composer leaves focus where the user put it.
+    const active = document.activeElement;
+    if (!active || active === document.body || composerRef.current?.contains(active)) {
+      focusMove.current = "opener";
+    }
     setComposerOpen(false);
     setEditingId(null);
     setPlace(null);
@@ -693,7 +705,23 @@ export function JournalScreen() {
     );
   }
 
+  /** Focus the composer's first field once it renders, remembering the opener. */
+  function focusComposer() {
+    const active = document.activeElement;
+    opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    focusMove.current = "composer";
+  }
+
+  useEffect(() => {
+    const move = focusMove.current;
+    if (!move) return;
+    focusMove.current = null;
+    if (move === "composer") firstFieldRef.current?.focus({ preventScroll: true });
+    else (opener.current?.isConnected ? opener.current : newStoryRef.current)?.focus();
+  });
+
   function openComposer(prefill?: PlaceRef, dateStr?: string) {
+    focusComposer();
     setEditingId(null);
     setPlace(prefill ?? null);
     setDate(dateStr ?? today());
@@ -784,6 +812,7 @@ export function JournalScreen() {
   }
 
   function startEdit(s: Story) {
+    focusComposer();
     setEditingId(s.storyId);
     setPlace(s.place);
     setDate(s.date);
@@ -1082,6 +1111,7 @@ export function JournalScreen() {
         </button>
         {!composerOpen && (
           <button
+            ref={newStoryRef}
             className="btn-ghost"
             type="button"
             title={t("journal.newStory")}
@@ -1528,6 +1558,7 @@ export function JournalScreen() {
 
       {composerOpen && (
         <form
+          ref={composerRef}
           className={"trip-form journal-composer" + (dirty || editingId ? " journal-composer-busy" : "")}
           onSubmit={onSubmit}
         >
@@ -1536,6 +1567,7 @@ export function JournalScreen() {
             <label className="picker-label" htmlFor="story-place">
               {t("journal.place")}
               <select
+                ref={firstFieldRef}
                 id="story-place"
                 className="select"
                 title={t("journal.place")}
