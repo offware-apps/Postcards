@@ -18,7 +18,7 @@ export function statusShows(statuses: readonly FilterStatus[], kind: FilterStatu
   return statuses.length === 0 || statuses.length === 3 || statuses.includes(kind);
 }
 export type SortOrder = "pop" | "az";
-export type FilterMode = "all" | "cities" | "monuments" | "airports";
+export type FilterMode = "all" | "cities" | "monuments" | "airports" | "stations";
 export type FilterDate =
   | { mode: "all" }
   | { mode: "undated" }
@@ -115,7 +115,7 @@ function loadSort(): SortOrder {
 }
 function loadMode(): FilterMode {
   const v = readLocal(MODE_KEY);
-  return v === "cities" || v === "monuments" || v === "airports" ? v : "all";
+  return v === "cities" || v === "monuments" || v === "airports" || v === "stations" ? v : "all";
 }
 
 /** The remaining value dimensions (date/folder/category/country/continent/growth),
@@ -123,13 +123,14 @@ function loadMode(): FilterMode {
  *  entry falls back to its default rather than throwing. */
 function loadExtra(): Pick<
   FilterState,
-  "date" | "folder" | "category" | "country" | "continent" | "favoritesOnly" | "hasPhoto" | "hasNote"
+  "date" | "folder" | "category" | "continent" | "favoritesOnly" | "hasPhoto" | "hasNote"
 > {
+  // `country` is deliberately excluded — a drill-down never persists across
+  // restarts (see persist()), so any stale value from an older build is ignored.
   const base = {
     date: DEFAULT_FILTERS.date,
     folder: DEFAULT_FILTERS.folder,
     category: DEFAULT_FILTERS.category,
-    country: DEFAULT_FILTERS.country,
     continent: DEFAULT_FILTERS.continent,
     favoritesOnly: DEFAULT_FILTERS.favoritesOnly,
     hasPhoto: DEFAULT_FILTERS.hasPhoto,
@@ -150,7 +151,6 @@ function loadExtra(): Pick<
       date,
       folder: str(p.folder) ?? base.folder,
       category: str(p.category) ?? base.category,
-      country: str(p.country) ?? base.country,
       continent: str(p.continent) ?? base.continent,
       favoritesOnly: bool(p.favoritesOnly) ?? base.favoritesOnly,
       hasPhoto: bool(p.hasPhoto) ?? base.hasPhoto,
@@ -168,11 +168,14 @@ function persist(state: FilterState): void {
   writeLocal(MODE_KEY, state.mode);
   writeLocal(
     EXTRA_KEY,
+    // NOTE: `country` is intentionally NOT persisted. It's a transient drill-down
+    // (tapping into a country from a Stats card), not a saved preference — it
+    // survives navigation within a session (it lives in the store) but must reset
+    // on restart, so the app never reopens stuck filtered to one country.
     JSON.stringify({
       date: state.date,
       folder: state.folder,
       category: state.category,
-      country: state.country,
       continent: state.continent,
       favoritesOnly: state.favoritesOnly,
       hasPhoto: state.hasPhoto,

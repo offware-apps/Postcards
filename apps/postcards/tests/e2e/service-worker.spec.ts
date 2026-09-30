@@ -72,27 +72,30 @@ test("downloaded tiles and the full city list outlive the cache's age limit", as
   await expect.poll(() => cacheSize(page, "gazetteer-v1")).toBe(1);
 
   // As if 61 days passed without opening them: age every expiration timestamp.
-  const aged = await page.evaluate(
-    () =>
-      new Promise<number>((resolve) => {
-        const req = indexedDB.open("workbox-expiration");
-        req.onsuccess = () => {
-          const tx = req.result.transaction("cache-entries", "readwrite");
-          const old = Date.now() - 61 * 24 * 3600 * 1000;
-          let n = 0;
-          tx.objectStore("cache-entries").openCursor().onsuccess = (e) => {
-            const c = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
-            if (!c) return;
-            c.update({ ...c.value, timestamp: old });
-            n++;
-            c.continue();
+  // The worker records each entry's timestamp after the cache write settles, so
+  // age again until all four are there to age.
+  const ageAll = () =>
+    page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          const req = indexedDB.open("workbox-expiration");
+          req.onsuccess = () => {
+            const tx = req.result.transaction("cache-entries", "readwrite");
+            const old = Date.now() - 61 * 24 * 3600 * 1000;
+            let n = 0;
+            tx.objectStore("cache-entries").openCursor().onsuccess = (e) => {
+              const c = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
+              if (!c) return;
+              c.update({ ...c.value, timestamp: old });
+              n++;
+              c.continue();
+            };
+            tx.oncomplete = () => resolve(n);
           };
-          tx.oncomplete = () => resolve(n);
-        };
-        req.onerror = () => resolve(-1);
-      }),
-  );
-  expect(aged).toBe(4);
+          req.onerror = () => resolve(-1);
+        }),
+    );
+  await expect.poll(ageAll).toBe(4);
 
   // Using either cache again runs its expiration pass.
   await fetchIn(page, "https://tile.openstreetmap.org/3/4/2.png");

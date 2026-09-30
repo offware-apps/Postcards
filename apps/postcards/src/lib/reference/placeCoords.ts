@@ -25,6 +25,9 @@ export function stampPlaceCoords(place: PlaceRef): PlaceRef {
   } else if (place.kind === "airport") {
     const x = ref.airportById(place.id);
     if (x) c = { lat: x.lat, lon: x.lon };
+  } else if (place.kind === "station") {
+    const x = ref.stationById(place.id);
+    if (x) c = { lat: x.lat, lon: x.lon };
   } else if (place.kind === "heritage") {
     const x = ref.heritageById(place.id);
     // Some heritage sites carry no coordinate in the source (stored as 0,0).

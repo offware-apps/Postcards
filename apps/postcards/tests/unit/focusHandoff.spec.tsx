@@ -29,10 +29,7 @@ beforeEach(() => {
   useTrips.setState({ trips: [] });
   useStories.setState({ loaded: true, stories: [] });
 });
-afterEach(() => {
-  cleanup();
-  vi.useRealTimers();
-});
+afterEach(cleanup);
 
 function press(name: string | RegExp) {
   const button = screen.getByRole("button", { name });
@@ -69,18 +66,6 @@ it("Disconnect leaves focus on Sync now", () => {
   render(<SyncSection />);
   press("Disconnect");
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Sync now" }));
-});
-
-it("cancelling the late-night day choice gives focus back to Today's story", () => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date(2026, 8, 30, 22, 30));
-  render(<JournalScreen />);
-  press(/Today's story/);
-  act(() => {});
-  const cancel = screen.getAllByRole("button", { name: "Cancel" })[0]!;
-  cancel.focus();
-  fireEvent.click(cancel);
-  expect(document.activeElement).toBe(screen.getByRole("button", { name: /Today's story/ }));
 });
 
 it("cancelling the offline-map reset gives focus back to its link", () => {

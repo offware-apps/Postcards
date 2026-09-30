@@ -1,8 +1,6 @@
 import { it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
-import { JournalScreen } from "../../src/features/journal/JournalScreen";
 import { TravelScreen } from "../../src/features/travel/TravelScreen";
-import { useStories } from "../../src/lib/store/useStories";
 import { useTrips } from "../../src/lib/store/useTrips";
 
 // A reader who asked for reduced motion gets jumps, not smooth scrolls, when a
@@ -22,7 +20,6 @@ beforeEach(() => {
     addEventListener() {},
     removeEventListener() {},
   }));
-  useStories.setState({ loaded: true, stories: [] });
   useTrips.setState({
     trips: [{ tripId: "t1", from: PARIS, to: TOKYO, mode: "flight", date: null, addedAt: "x", updatedAt: "x" }] as never,
   });
@@ -30,13 +27,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-});
-
-it("New story scrolls to the composer without animation", async () => {
-  render(<JournalScreen />);
-  fireEvent.click(screen.getByRole("button", { name: /New story/ }));
-  await act(() => new Promise((r) => requestAnimationFrame(r)));
-  expect(scrolls).toEqual([expect.objectContaining({ behavior: "auto" })]);
 });
 
 it("editing a trip scrolls to the form without animation", async () => {

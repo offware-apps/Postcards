@@ -34,13 +34,17 @@ export function MyPlacesPicker({
   const [q, setQ] = useState("");
   const dq = useDeferredValue(q);
 
-  // With a query, search the whole gazetteer for airports + cities (any airport is
-  // reachable); with no query, the instant list is the places you've been.
+  // With a query, search the whole gazetteer for cities + transport hubs (any
+  // airport or station is a reachable trip stop); with no query, the instant list
+  // is the places you've been.
   const searchRows = useMemo(() => {
     const s = dq.trim();
     if (!s) return null;
     return searchPlaces(ref, s, 12)
-      .filter((r) => r.place.kind === "airport" || r.place.kind === "city")
+      .filter(
+        (r) =>
+          r.place.kind === "airport" || r.place.kind === "city" || r.place.kind === "station",
+      )
       .map((r) => ({ place: r.place, detail: r.detail }));
   }, [ref, dq]);
 

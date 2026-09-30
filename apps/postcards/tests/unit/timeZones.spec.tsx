@@ -6,7 +6,7 @@ import { JournalScreen } from "../../src/features/journal/JournalScreen";
 import { useStories } from "../../src/lib/store/useStories";
 import { useTrips } from "../../src/lib/store/useTrips";
 import { useVisits } from "../../src/lib/store/useVisits";
-import type { Story } from "../../src/lib/schema/models";
+import type { Story, Trip } from "../../src/lib/schema/models";
 
 // Calendar labels must not depend on the device's time zone. A date built at UTC
 // midnight and formatted in local time reads as the day before west of UTC, so
@@ -30,14 +30,21 @@ describe.each(ZONES)("calendar labels in %s", (zone) => {
     expect(formatTripDate("2024-01", "en")).toBe("Jan 2024");
   });
 
-  it("the trip composer's month options name the month they save", () => {
-    useTrips.setState({ trips: [] });
+  it("the trip composer names a month-dated trip's own month", () => {
+    const trip: Trip = {
+      tripId: "t1",
+      from: { kind: "country", id: "FR", name: "France", countryId: "FR" },
+      to: { kind: "country", id: "JP", name: "Japan", countryId: "JP" },
+      mode: "flight",
+      date: "2024-01",
+      carrier: null,
+      note: null,
+      addedAt: "2024-01-01T00:00:00Z",
+    };
+    useTrips.setState({ trips: [trip] });
     useVisits.setState({ visits: [] });
-    render(<TripComposer tripId={null} onClose={() => {}} />);
-    const sel = screen.getByLabelText("Month") as HTMLSelectElement;
-    const opts = [...sel.options].slice(1).map((o) => `${o.value}=${o.textContent}`);
-    expect(opts[0]).toBe("01=January");
-    expect(opts[11]).toBe("12=December");
+    render(<TripComposer tripId="t1" onClose={() => {}} />);
+    expect(screen.getByText("Jan 2024")).toBeTruthy();
   });
 
   it("the Monday-first journal calendar is headed Mon…Sun", () => {

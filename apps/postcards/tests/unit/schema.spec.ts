@@ -93,6 +93,12 @@ describe("PostcardsFileSchema", () => {
     };
     for (const d of ["2024", "2024-03", "2024-03-31"]) expect(TripSchema.parse({ ...trip, date: d }).date).toBe(d);
     for (const d of ["2024-13", "2024-00", "2024-04-31"]) expect(TripSchema.parse({ ...trip, date: d }).date).toBeNull();
+    // A per-stop date takes the same rule: an impossible one loads as that stop undated.
+    const stops = [trip.from, trip.to];
+    expect(TripSchema.parse({ ...trip, stops, stopDates: ["2024-03", "2024-04-31"] }).stopDates).toEqual([
+      "2024-03",
+      null,
+    ]);
     // A file the app wrote before dates were checked (a CSV import let 2024-13-45
     // through) still loads whole.
     const r = PostcardsFileSchema.safeParse({
@@ -117,6 +123,9 @@ describe("PostcardsFileSchema", () => {
     expect(StorySchema.safeParse({ ...story, date: "2024-02-29" }).success).toBe(true);
     expect(StorySchema.safeParse({ ...story, date: "2024-13-45" }).success).toBe(false);
     expect(StorySchema.safeParse({ ...story, date: "2024-02-30" }).success).toBe(false);
+    // A range's end day too.
+    expect(StorySchema.safeParse({ ...story, date: "2024-02-01", endDate: "2024-02-29" }).success).toBe(true);
+    expect(StorySchema.safeParse({ ...story, date: "2024-02-01", endDate: "2024-02-30" }).success).toBe(false);
   });
 
   it("can generate a JSON Schema for external tools (interoperability)", () => {

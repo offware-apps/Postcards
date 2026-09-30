@@ -116,8 +116,9 @@ export interface StoryDayCell {
   intensity: number;
 }
 
-/** Minimal story shape the day index needs. */
-type DatedPlaced = { date: string; place: { countryId: string } };
+/** Minimal story shape the day index needs. `place` is optional (a place-less
+ *  postcard, v13) — such a day tints with a neutral (empty) country/continent. */
+type DatedPlaced = { date: string; place?: { countryId: string } | null };
 
 /**
  * Index stories by day. For each day that has ≥1 entry, returns its count and the
@@ -136,7 +137,7 @@ export function storyDayIndex(
     if (!s.date) continue;
     let counts = byDay.get(s.date);
     if (!counts) byDay.set(s.date, (counts = new Map()));
-    const cid = s.place.countryId;
+    const cid = s.place?.countryId ?? "";
     counts.set(cid, (counts.get(cid) ?? 0) + 1);
   }
 

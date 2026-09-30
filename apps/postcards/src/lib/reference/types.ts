@@ -50,6 +50,17 @@ export interface Airport {
   lon: number;
 }
 
+/** A mainline railway station from the openly-licensed dataset (Wikidata, CC0).
+ *  `id` is a stable opaque id (a Wikidata QID) — NOT a code, so never upper-cased. */
+export interface Station {
+  id: string;
+  name: string;
+  countryIso2: string;
+  subdivisionId: string | null; // admin-1 region id, or null (country-level coverage)
+  lat: number;
+  lon: number;
+}
+
 /** A spoken language of a country (English name + language code). */
 export interface Language {
   code: string; // ISO 639-3 where available
@@ -90,6 +101,11 @@ export interface ReferenceData {
   cityById(id: string): City | undefined;
   allAirports(): Airport[];
   airportById(id: string): Airport | undefined;
+  /** Railway stations: all, one by id, a name search, and those in a country (coverage). */
+  allStations(): Station[];
+  stationById(id: string): Station | undefined;
+  searchStations(query: string, limit?: number): Station[];
+  stationsOf(countryIso2: string): Station[];
   /** Spoken languages of a country (for Wikivoyage phrasebook/alphabet guides). */
   languagesOf(iso2: string): Language[];
   /** All heritage sites, those in a country (coverage denominator), one by id, or a search. */

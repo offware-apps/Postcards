@@ -70,6 +70,15 @@ const SCREENS: [string, (page: Page) => Promise<void>][] = [
     },
   ],
   [
+    "places stations",
+    async (page) => {
+      await gotoTab(page, "Places");
+      await page.getByRole("group", { name: /kind/i }).getByRole("button", { name: "Stations" }).click();
+      await page.getByRole("searchbox").fill("Part-Dieu");
+      await expect(page.getByText("Lyon Part-Dieu").first()).toBeVisible();
+    },
+  ],
+  [
     "places row options",
     async (page) => {
       await gotoTab(page, "Places");
@@ -143,6 +152,7 @@ const SCREENS: [string, (page: Page) => Promise<void>][] = [
       await gotoTab(page, "Trips");
       await page.getByRole("button", { name: /Edit trip CDG/ }).click();
       await expect(page.locator(".trip-stops li").first()).toBeVisible();
+      await expect(page.locator(".trip-stop-date input").first()).toBeVisible();
     },
   ],
   [
@@ -161,10 +171,13 @@ const SCREENS: [string, (page: Page) => Promise<void>][] = [
     },
   ],
   [
-    "journal composer",
+    "postcard composer",
     async (page) => {
       await gotoTab(page, "Journal");
-      await page.getByRole("button", { name: "New story" }).click();
+      await page.getByRole("button", { name: /Write a postcard/ }).click();
+      await expect(page.locator(".story-composer")).toBeVisible();
+      // Expand the optional "add details" so those controls are audited too.
+      await page.getByText("Add details", { exact: true }).click();
       await expect(page.locator("#story-place")).toBeVisible();
     },
   ],

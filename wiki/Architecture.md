@@ -211,9 +211,12 @@ datasets into `public/reference/*.json`:
 
 - **`all-the-cities`** (GeoNames, CC BY 4.0) → cities, plus per-region centroid
   accumulation.
-- **`country-state-city`** (dr5hn, ODbL) → first-level region **centroids**;
-  each region is named **geographically**, by nearest centroid, because GeoNames
-  admin codes rarely equal other code schemes.
+- **GeoNames `cities500` and `admin1CodesASCII`**, vendored under
+  `scripts/data/` from one retrieval day → each city's current region code and
+  each code's name; a city GeoNames no longer lists takes its nearest listed
+  city's region, and France's regions keep their French names.
+- **`country-state-city`** (dr5hn, ODbL) → a name, by nearest centroid, only for
+  a code GeoNames does not name.
 - **`airport-data`** (OpenFlights / OurAirports) → IATA-coded airports; rows
   whose country can't be resolved are **dropped, never guessed**.
 - `i18n-iso-countries` + `world-countries` supply ISO codes, continents, and

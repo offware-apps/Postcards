@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FeatureCollection, Position } from "geojson";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { useVisits } from "../../lib/store/useVisits";
+import { useUi } from "../../lib/store/useUi";
 import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { getLand } from "../travel/landGeometry";
 import { useT } from "../../lib/i18n";
@@ -157,15 +158,24 @@ export function CountryCoverageMap({ iso2, name }: { iso2: string; name: string 
 
   if (!layout) return null;
 
-  const aria = t("stats.country.mapAria", {
+  // Tapping the map opens the country's full page — its cities, regions and sites,
+  // all interactive. The whole figure is the target; the SVG is decorative (its
+  // coverage is described on the button), so AT hears one clear action.
+  const aria = t("stats.country.mapOpenAria", {
     name,
     visited: model.regionsVisited,
     total: model.regionsTotal,
   });
 
   return (
-    <figure className="country-cov-map">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} preserveAspectRatio="xMidYMid meet">
+    <button
+      type="button"
+      className="country-cov-map"
+      onClick={() => useUi.getState().openCountry(iso2)}
+      aria-label={aria}
+      title={t("stats.country.openPage")}
+    >
+      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden preserveAspectRatio="xMidYMid meet">
         {layout.landPath && <path className="ccov-land" d={layout.landPath} />}
         {/* Painted "still to explore" regions. */}
         {layout.blobs.map((b, i) => (
@@ -176,14 +186,15 @@ export function CountryCoverageMap({ iso2, name }: { iso2: string; name: string 
           <circle key={`v${i}`} className="ccov-visited" cx={d.x} cy={d.y} r={2.6} />
         ))}
       </svg>
-      <figcaption className="country-cov-legend">
+      <span className="country-cov-legend" aria-hidden>
         <span>
-          <span className="ccov-key ccov-key-visited" aria-hidden /> {t("stats.country.mapVisited")}
+          <span className="ccov-key ccov-key-visited" /> {t("stats.country.mapVisited")}
         </span>
         <span>
-          <span className="ccov-key ccov-key-missing" aria-hidden /> {t("stats.country.mapMissing")}
+          <span className="ccov-key ccov-key-missing" /> {t("stats.country.mapMissing")}
         </span>
-      </figcaption>
-    </figure>
+        <span className="ccov-open">{t("stats.country.openPage")} ↗</span>
+      </span>
+    </button>
   );
 }
