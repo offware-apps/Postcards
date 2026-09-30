@@ -279,7 +279,7 @@ export function StatsView() {
     // A world-level tile: clear any country drill-down a card left set, so this
     // shows the tier across every country, not just the last one you opened.
     useFilters.getState().set({ minPop, country: "" });
-    useUi.getState().openPlaces("visited");
+    useUi.getState().openPlaces("visitedCities");
   }
   // The coverage-hero + KPI tiles are all world-level: drop the WHOLE country
   // drill-down (country AND its population tier) before opening the view, so a
@@ -364,7 +364,7 @@ export function StatsView() {
               total: formatInt(coverage.worldCityCount),
               pct: cityPctLabel,
             })}
-            onClick={() => openWorld("visited")}
+            onClick={() => openWorld("visitedCities")}
           >
             <span className="stat-bar-top">
               <span className="stat-bar-name">{t("stats.bars.cities")}</span>
@@ -465,7 +465,7 @@ export function StatsView() {
               type="button"
               className="kpi"
               title={t("stats.kpi.monumentsTitle")}
-              onClick={() => openWorld("monuments")}
+              onClick={() => openWorld("visitedMonuments")}
             >
               <span className="kpi-num kpi-want">{formatInt(coverage.monumentsVisited)}</span>
               <span className="kpi-label">{t("stats.kpi.monuments")}</span>

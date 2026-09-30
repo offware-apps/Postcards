@@ -65,7 +65,7 @@ function Counter({
 }
 
 /** Compact counter strip. Every counter is a shortcut: tap it to open the
- *  matching Places view (been → visited, want → wishlist, fav → favourites…). */
+ *  matching Places view (been → visited cities, want → wishlist, fav → favourites…). */
 export function StatStrip() {
   const t = useT();
   const ref = useMemo(() => getReferenceData(), []);
@@ -93,7 +93,7 @@ export function StatStrip() {
         view="countries"
       />
       <span className="ss-sep" aria-hidden />
-      <Counter num={stats.cov.citiesVisited} label={t("statStrip.been")} cls="ss-been" view="visited" />
+      <Counter num={stats.cov.citiesVisited} label={t("statStrip.been")} cls="ss-been" view="visitedCities" />
       {stats.cov.airportsVisited > 0 && (
         <Counter num={stats.cov.airportsVisited} label={t("statStrip.airports")} cls="ss-air" view="airports" />
       )}

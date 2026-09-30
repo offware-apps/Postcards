@@ -106,8 +106,6 @@ function save(key: string, value: string): void {
 // callers keep working unchanged.
 function mapRequest(view: PlacesView): { kind?: Kind; status?: Status; collection: Collection | null } {
   switch (view) {
-    case "visited":
-      return { kind: "all", status: "visited", collection: null };
     case "favorites":
       return { kind: "all", status: "favorites", collection: null };
     case "wishlist":
@@ -118,6 +116,10 @@ function mapRequest(view: PlacesView): { kind?: Kind; status?: Status; collectio
       return { kind: "cities", status: "all", collection: null };
     case "monuments":
       return { kind: "monuments", status: "all", collection: null };
+    case "visitedCities":
+      return { kind: "cities", status: "visited", collection: null };
+    case "visitedMonuments":
+      return { kind: "monuments", status: "visited", collection: null };
     case "airports":
       // The airports you've actually been through (the count these tiles show),
       // not the whole world of airports.
