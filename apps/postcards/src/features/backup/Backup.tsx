@@ -221,12 +221,18 @@ export function Backup() {
             {t("backup.reminder.suffix")}
           </span>
           <span className="backup-reminder-actions">
-            <button className="btn" type="button" onClick={() => void exportJson()}>
+            <button
+              className="btn"
+              type="button"
+              title={t("backup.reminder.backupNow")}
+              onClick={() => void exportJson()}
+            >
               {t("backup.reminder.backupNow")}
             </button>
             <button
               className="link"
               type="button"
+              title={t("backup.reminder.later")}
               onClick={() => {
                 snoozeReminder(Date.now());
                 setReminderDue(false);
@@ -241,24 +247,50 @@ export function Backup() {
       <p className="muted">{t("backup.intro")}</p>
 
       <div className="btn-row">
-        <button className="btn" type="button" onClick={() => void exportArchive()}>
+        <button
+          className="btn"
+          type="button"
+          title={t("backup.export.all")}
+          onClick={() => void exportArchive()}
+        >
           {t("backup.export.all")}
         </button>
-        <button className="btn-ghost" type="button" onClick={() => void exportJson()}>
+        <button
+          className="btn-ghost"
+          type="button"
+          title={t("backup.export.data")}
+          onClick={() => void exportJson()}
+        >
           {t("backup.export.data")}
         </button>
-        <button className="btn-ghost" type="button" onClick={() => void exportCsv()}>
+        <button
+          className="btn-ghost"
+          type="button"
+          title={t("backup.export.csv")}
+          onClick={() => void exportCsv()}
+        >
           {t("backup.export.csv")}
         </button>
-        <button className="btn-ghost" type="button" onClick={() => void exportMd()}>
+        <button
+          className="btn-ghost"
+          type="button"
+          title={t("backup.export.md")}
+          onClick={() => void exportMd()}
+        >
           {t("backup.export.md")}
         </button>
-        <button className="btn-ghost" type="button" onClick={() => fileInput.current?.click()}>
+        <button
+          className="btn-ghost"
+          type="button"
+          title={t("backup.import")}
+          onClick={() => fileInput.current?.click()}
+        >
           {t("backup.import")}
         </button>
         <input
           ref={fileInput}
           type="file"
+          title={t("backup.import")}
           accept="application/zip,.zip,application/json,.json,text/csv,.csv,.tsv,text/plain"
           onChange={onImport}
           style={{ display: "none" }}
@@ -294,6 +326,7 @@ export function Backup() {
               <button
                 className="btn-danger"
                 type="button"
+                title={t("backup.reset.button")}
                 onClick={() => {
                   setResetText("");
                   setResetOpen(true);
@@ -326,11 +359,13 @@ export function Backup() {
                 autoCorrect="off"
                 spellCheck={false}
                 aria-label={t("backup.reset.inputAria", { word: RESET_WORD })}
+                title={t("backup.reset.inputAria", { word: RESET_WORD })}
               />
               <div className="btn-row">
                 <button
                   className="btn-danger"
                   type="button"
+                  title={t("backup.reset.erase")}
                   disabled={resetText.trim().toUpperCase() !== RESET_WORD}
                   onClick={() => void resetAll()}
                 >
@@ -339,6 +374,7 @@ export function Backup() {
                 <button
                   className="btn-ghost"
                   type="button"
+                  title={t("common.cancel")}
                   onClick={() => {
                     setResetOpen(false);
                     setResetText("");

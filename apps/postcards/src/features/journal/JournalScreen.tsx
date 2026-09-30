@@ -220,6 +220,7 @@ function StoryPhotos({ photos, title }: { photos: Photo[]; title: string }) {
             type="button"
             className="journal-thumb"
             aria-label={t("journal.viewPhotoAria", { n: i + 1, count, title })}
+            title={t("journal.viewPhotoAria", { n: i + 1, count, title })}
             onClick={(e) => {
               triggerRef.current = e.currentTarget;
               setIndex(i);
@@ -246,6 +247,7 @@ function StoryPhotos({ photos, title }: { photos: Photo[]; title: string }) {
                 type="button"
                 className="lightbox-nav prev"
                 aria-label={t("journal.prevPhoto")}
+                title={t("journal.prevPhoto")}
                 onClick={() => setIndex((i) => (i - 1 + count) % count)}
               >
                 ‹
@@ -261,6 +263,7 @@ function StoryPhotos({ photos, title }: { photos: Photo[]; title: string }) {
                 type="button"
                 className="lightbox-nav next"
                 aria-label={t("journal.nextPhoto")}
+                title={t("journal.nextPhoto")}
                 onClick={() => setIndex((i) => (i + 1) % count)}
               >
                 ›
@@ -282,6 +285,7 @@ function StoryPhotos({ photos, title }: { photos: Photo[]; title: string }) {
                 ref={closeRef}
                 type="button"
                 className="btn-ghost"
+                title={t("common.close")}
                 onClick={() => setOpen(false)}
               >
                 {t("common.close")}
@@ -356,6 +360,7 @@ function JournalCalendar({
           className="mini-btn"
           type="button"
           aria-label={t("journal.cal.prevMonth")}
+          title={t("journal.cal.prevMonth")}
           onClick={onPrev}
         >
           ‹
@@ -367,6 +372,7 @@ function JournalCalendar({
           className="mini-btn"
           type="button"
           aria-label={t("journal.cal.nextMonth")}
+          title={t("journal.cal.nextMonth")}
           onClick={onNext}
         >
           ›
@@ -406,6 +412,7 @@ function JournalCalendar({
                           className={"journal-cal-day" + (count ? " has-entries" : "")}
                           style={style}
                           aria-label={label}
+                          title={label}
                           onClick={() => onPick(cell, day.iso)}
                         >
                           <span className="journal-cal-num" aria-hidden>
@@ -1065,21 +1072,41 @@ export function JournalScreen() {
       </div>
 
       <div className="btn-row journal-toolbar">
-        <button className="btn" type="button" onClick={startDailyStory}>
+        <button
+          className="btn"
+          type="button"
+          title={t("journal.todayStory")}
+          onClick={startDailyStory}
+        >
           📔 {t("journal.todayStory")}
         </button>
         {!composerOpen && (
-          <button className="btn-ghost" type="button" onClick={() => openComposer()}>
+          <button
+            className="btn-ghost"
+            type="button"
+            title={t("journal.newStory")}
+            onClick={() => openComposer()}
+          >
             ＋ {t("journal.newStory")}
           </button>
         )}
         {stories.length > 0 && (
-          <button className="btn-ghost" type="button" onClick={() => void exportMd()}>
+          <button
+            className="btn-ghost"
+            type="button"
+            title={t("journal.exportMd")}
+            onClick={() => void exportMd()}
+          >
             {t("journal.exportMd")}
           </button>
         )}
         {(stories.length > 0 || trips.length > 0) && (
-          <button className="btn-ghost" type="button" onClick={() => setPublishOpen(true)}>
+          <button
+            className="btn-ghost"
+            type="button"
+            title={t("journal.publishSite")}
+            onClick={() => setPublishOpen(true)}
+          >
             🌍 {t("journal.publishSite")}
           </button>
         )}
@@ -1100,11 +1127,22 @@ export function JournalScreen() {
         <div className="day-choice" role="group" aria-label={t("journal.dayChoiceAria")}>
           <span className="muted small">{t("journal.whichDay")}</span>
           {boundaryDays()?.map(({ iso, hint }) => (
-            <button key={iso} className="mini-btn" type="button" onClick={() => pickDay(iso)}>
+            <button
+              key={iso}
+              className="mini-btn"
+              type="button"
+              title={`${formatDate(iso)} · ${t(`journal.day.${hint}` as MessageKey)}`}
+              onClick={() => pickDay(iso)}
+            >
               {formatDate(iso)} · {t(`journal.day.${hint}` as MessageKey)}
             </button>
           ))}
-          <button className="link" type="button" onClick={() => setDayChoice(false)}>
+          <button
+            className="link"
+            type="button"
+            title={t("common.cancel")}
+            onClick={() => setDayChoice(false)}
+          >
             {t("common.cancel")}
           </button>
         </div>
@@ -1125,6 +1163,7 @@ export function JournalScreen() {
             <button
               type="button"
               className={"mini-btn" + (view === "feed" ? " mini-on" : "")}
+              title={t("journal.viewFeed")}
               aria-pressed={view === "feed"}
               onClick={() => setView("feed")}
             >
@@ -1133,6 +1172,7 @@ export function JournalScreen() {
             <button
               type="button"
               className={"mini-btn" + (view === "byplace" ? " mini-on" : "")}
+              title={t("journal.viewByPlace")}
               aria-pressed={view === "byplace"}
               onClick={() => setView("byplace")}
             >
@@ -1141,6 +1181,7 @@ export function JournalScreen() {
             <button
               type="button"
               className={"mini-btn" + (view === "timeline" ? " mini-on" : "")}
+              title={t("journal.viewTimeline")}
               aria-pressed={view === "timeline"}
               onClick={() => setView("timeline")}
             >
@@ -1149,6 +1190,7 @@ export function JournalScreen() {
             <button
               type="button"
               className={"mini-btn" + (view === "map" ? " mini-on" : "")}
+              title={t("journal.viewMap")}
               aria-pressed={view === "map"}
               onClick={() => setView("map")}
             >
@@ -1157,6 +1199,7 @@ export function JournalScreen() {
             <button
               type="button"
               className={"mini-btn" + (view === "calendar" ? " mini-on" : "")}
+              title={t("journal.viewCalendar")}
               aria-pressed={view === "calendar"}
               onClick={() => setView("calendar")}
             >
@@ -1175,6 +1218,7 @@ export function JournalScreen() {
               <input
                 id="journal-search"
                 className="select journal-search-input"
+                title={t("journal.searchLabel")}
                 type="search"
                 value={query}
                 placeholder={t("journal.searchPlaceholder")}
@@ -1189,6 +1233,7 @@ export function JournalScreen() {
                   className="link journal-search-clear"
                   type="button"
                   aria-label={t("journal.searchClear")}
+                  title={t("journal.searchClear")}
                   onClick={() => {
                     setQuery("");
                     setFeedShown(FEED_PAGE);
@@ -1205,6 +1250,7 @@ export function JournalScreen() {
                 {t("journal.show")}
                 <select
                   className="select"
+                  title={t("journal.show")}
                   value={filterSel}
                   onChange={(e) => {
                     setFilterSel(e.target.value);
@@ -1247,6 +1293,7 @@ export function JournalScreen() {
                   {t("journal.when")}
                   <select
                     className="select"
+                    title={t("journal.when")}
                     value={yearSel}
                     onChange={(e) => {
                       setYearSel(e.target.value);
@@ -1276,6 +1323,7 @@ export function JournalScreen() {
                 className="link"
                 type="button"
                 aria-label={t("journal.clearDayAria")}
+                title={t("journal.clearDayAria")}
                 onClick={() => {
                   setDaySel(null);
                   setFeedShown(FEED_PAGE);
@@ -1299,6 +1347,7 @@ export function JournalScreen() {
               {t("journal.noMatch")}{" "}
               <button
                 className="link"
+                title={t("journal.clearFilters")}
                 type="button"
                 onClick={() => {
                   setFilterSel("all");
@@ -1327,7 +1376,7 @@ export function JournalScreen() {
                     className="journal-place-group"
                     open={byPlaceGroups.length <= 4}
                   >
-                    <summary className="journal-place-summary">
+                    <summary className="journal-place-summary" title={place.name}>
                       <span className="journal-place-name">
                         {countryFlag(place.countryId)} {place.name}
                       </span>
@@ -1346,6 +1395,7 @@ export function JournalScreen() {
                             aria-label={t("journal.editAria", {
                               title: s.title || s.place.name,
                             })}
+                            title={t("journal.editAria", { title: s.title || s.place.name })}
                           >
                             <time className="journal-date">{formatDate(s.date)}</time>
                             <span className="journal-place-entry-title">
@@ -1379,6 +1429,7 @@ export function JournalScreen() {
                           type="button"
                           onClick={() => startEdit(s)}
                           aria-label={t("journal.editAria", { title: s.title || s.place.name })}
+                          title={t("journal.editAria", { title: s.title || s.place.name })}
                         >
                           <time className="journal-date">{formatDate(s.date)}</time>
                           <span className="journal-place-entry-title">
@@ -1405,6 +1456,7 @@ export function JournalScreen() {
                   {CITY_PAGE_KINDS.includes(s.place.kind) ? (
                     <button
                       className="link journal-place"
+                      title={t("places.row.openAria", { name: s.place.name })}
                       type="button"
                       onClick={() => useUi.getState().openCity(s.place.id)}
                     >
@@ -1422,6 +1474,7 @@ export function JournalScreen() {
                         className="link journal-folder-tag"
                         type="button"
                         aria-label={t("journal.byFolder") + ": " + s.folder}
+                        title={t("journal.byFolder") + ": " + s.folder}
                         onClick={() => {
                           setFilterSel(`f:${s.folder}`);
                           setDaySel(null);
@@ -1443,6 +1496,7 @@ export function JournalScreen() {
                     type="button"
                     onClick={() => startEdit(s)}
                     aria-label={t("journal.editAria", { title: s.title || s.place.name })}
+                    title={t("journal.editAria", { title: s.title || s.place.name })}
                   >
                     {t("common.edit")}
                   </button>
@@ -1451,6 +1505,7 @@ export function JournalScreen() {
                     type="button"
                     onClick={() => removeWithUndo(s)}
                     aria-label={t("journal.removeAria", { title: s.title || s.place.name })}
+                    title={t("journal.removeAria", { title: s.title || s.place.name })}
                   >
                     {t("common.remove")}
                   </button>
@@ -1483,6 +1538,7 @@ export function JournalScreen() {
               <select
                 id="story-place"
                 className="select"
+                title={t("journal.place")}
                 value={place ? placeKey(place) : ""}
                 onChange={(e) => {
                   setPlace(placeOptions.find((p) => placeKey(p) === e.target.value) ?? null);
@@ -1504,6 +1560,7 @@ export function JournalScreen() {
               <input
                 id="story-date"
                 className="select"
+                title={t("journal.date")}
                 type="date"
                 required
                 value={date}
@@ -1512,7 +1569,13 @@ export function JournalScreen() {
             </label>
           </div>
           <div>
-            <button className="mini-btn" type="button" disabled={locating} onClick={findNearby}>
+            <button
+              className="mini-btn"
+              type="button"
+              title={t("journal.nearMe")}
+              disabled={locating}
+              onClick={findNearby}
+            >
               📍 {locating ? t("journal.locating") : t("journal.nearMe")}
             </button>{" "}
             <span className="muted small" role="status">
@@ -1527,6 +1590,7 @@ export function JournalScreen() {
                   className="mini-btn"
                   type="button"
                   aria-label={t("journal.writeAboutAria", { city: city.name, km: formatKm(km) })}
+                  title={t("journal.writeAboutAria", { city: city.name, km: formatKm(km) })}
                   onClick={() => {
                     // Only fills the Place field — nothing gets marked as visited.
                     setPlace({
@@ -1549,6 +1613,7 @@ export function JournalScreen() {
             <input
               id="story-title"
               className="select"
+              title={t("journal.titleField")}
               type="text"
               maxLength={200}
               placeholder={t("journal.titlePlaceholder")}
@@ -1561,6 +1626,7 @@ export function JournalScreen() {
             <textarea
               id="story-text"
               className="select journal-textarea"
+              title={t("journal.story")}
               rows={6}
               maxLength={8000}
               placeholder={t("journal.storyPlaceholder")}
@@ -1573,6 +1639,7 @@ export function JournalScreen() {
             <input
               id="story-folder"
               className="select"
+              title={t("journal.folder")}
               type="text"
               maxLength={80}
               list="journal-folder-suggestions"
@@ -1612,6 +1679,7 @@ export function JournalScreen() {
                     maxLength={300}
                     placeholder={t("journal.captionPlaceholder")}
                     aria-label={t("journal.captionAria", { n: i + 1 })}
+                    title={t("journal.captionAria", { n: i + 1 })}
                     value={p.caption ?? ""}
                     onChange={(e) =>
                       setPhotos((prev) =>
@@ -1625,6 +1693,7 @@ export function JournalScreen() {
                     className="link-danger"
                     type="button"
                     aria-label={t("journal.removePhotoAria", { n: i + 1 })}
+                    title={t("journal.removePhotoAria", { n: i + 1 })}
                     onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
                   >
                     {t("common.remove")}
@@ -1641,7 +1710,7 @@ export function JournalScreen() {
               title={
                 photos.length >= MAX_PHOTOS_PER_STORY
                   ? t("journal.storyFullTitle", { max: MAX_PHOTOS_PER_STORY })
-                  : undefined
+                  : t("journal.addPhotos")
               }
               onClick={() => photoInput.current?.click()}
             >
@@ -1652,6 +1721,7 @@ export function JournalScreen() {
           <div className="trip-form-actions">
             <button
               className="btn"
+              title={editingId ? t("journal.saveChanges") : t("journal.saveStory")}
               type="submit"
               // A story needs a place + date and SOMETHING to say — a title, some
               // text, or at least one photo (an image-only entry is allowed).
@@ -1663,7 +1733,12 @@ export function JournalScreen() {
             >
               {editingId ? t("journal.saveChanges") : t("journal.saveStory")}
             </button>
-            <button className="btn-ghost" type="button" onClick={resetForm}>
+            <button
+              className="btn-ghost"
+              type="button"
+              title={t("common.cancel")}
+              onClick={resetForm}
+            >
               {t("common.cancel")}
             </button>
           </div>

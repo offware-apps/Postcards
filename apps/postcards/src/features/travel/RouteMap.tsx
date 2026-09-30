@@ -219,6 +219,7 @@ export function RouteMap({
               type="button"
               className="myplaces-pick"
               aria-label={t("trip.compose.pickAria", { name: p.name })}
+              title={t("trip.compose.pickAria", { name: p.name })}
               onClick={() => onPick(p.place)}
             >
               <span className="flag" aria-hidden>

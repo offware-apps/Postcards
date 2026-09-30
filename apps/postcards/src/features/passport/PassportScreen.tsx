@@ -143,7 +143,13 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
           <strong className="flags-count">{formatInt(collectedCount)}</strong>{" "}
           {t("passport.ofFlags", { total: formatInt(collectedCount + missing.length) })}
         </p>
-        <button className="btn" type="button" disabled={rendering} onClick={() => void exportPoster()}>
+        <button
+          className="btn"
+          type="button"
+          title={t("passport.worldPoster")}
+          disabled={rendering}
+          onClick={() => void exportPoster()}
+        >
           {rendering ? t("passport.rendering") : `🖼 ${t("passport.worldPoster")}`}
         </button>
       </div>
@@ -177,6 +183,11 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
         className="link"
         type="button"
         aria-expanded={showMissing}
+        title={
+          showMissing
+            ? t("passport.hideToCollect", { count: formatInt(missing.length) })
+            : t("passport.showToCollect", { count: formatInt(missing.length) })
+        }
         onClick={() => setShowMissing((s) => !s)}
       >
         {showMissing
@@ -187,10 +198,21 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
         <div className="lightbox" role="dialog" aria-modal="true" aria-label={t("passport.posterAria")} onClick={closePoster}>
           <img className="lightbox-img" src={posterUrl} alt={t("passport.posterAlt")} />
           <div className="lightbox-actions" onClick={(e) => e.stopPropagation()}>
-            <a className="mini-btn" href={posterUrl} download="postcards-world.png">
+            <a
+              className="mini-btn"
+              href={posterUrl}
+              download="postcards-world.png"
+              title={t("passport.downloadPng")}
+            >
               ⬇ {t("passport.downloadPng")}
             </a>
-            <button className="btn-ghost" type="button" autoFocus onClick={closePoster}>
+            <button
+              className="btn-ghost"
+              type="button"
+              title={t("common.close")}
+              autoFocus
+              onClick={closePoster}
+            >
               {t("common.close")}
             </button>
           </div>

@@ -74,6 +74,7 @@ export function DataPacksSection() {
         <input
           id="pack-url"
           className="select"
+          title={t("settings.packs.urlLabel")}
           type="url"
           inputMode="url"
           placeholder="https://github.com/…/pack.json"
@@ -87,12 +88,19 @@ export function DataPacksSection() {
         <button
           className="btn"
           type="button"
+          title={t("settings.packs.add")}
           disabled={busy || offlineMode || !url.trim()}
           onClick={() => void onAddUrl()}
         >
           {busy ? t("settings.packs.adding") : t("settings.packs.add")}
         </button>
-        <button className="btn-ghost" type="button" disabled={busy} onClick={() => fileRef.current?.click()}>
+        <button
+          className="btn-ghost"
+          type="button"
+          title={t("settings.packs.importFile")}
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
           {t("settings.packs.importFile")}
         </button>
         <input
@@ -123,6 +131,7 @@ export function DataPacksSection() {
                 className="link-danger"
                 type="button"
                 aria-label={t("settings.packs.removeAria", { name: p.pack.name })}
+                title={t("settings.packs.removeAria", { name: p.pack.name })}
                 onClick={() => {
                   void remove(p.id);
                   showToast(t("settings.packs.toast.removed", { name: p.pack.name }));

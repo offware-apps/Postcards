@@ -72,7 +72,12 @@ export function BoardingPassImport({
 
   if (!open) {
     return (
-      <button className="btn-ghost pass-open" type="button" onClick={() => onOpenChange(true)}>
+      <button
+        className="btn-ghost pass-open"
+        type="button"
+        title={t("boardingPass.open")}
+        onClick={() => onOpenChange(true)}
+      >
         ✈ {t("boardingPass.open")}
       </button>
     );
@@ -82,13 +87,23 @@ export function BoardingPassImport({
     <div className="pass-panel">
       <div className="pass-panel-head">
         <strong>{t("boardingPass.heading")}</strong>
-        <button className="link" type="button" onClick={() => onOpenChange(false)}>
+        <button
+          className="link"
+          type="button"
+          title={t("common.close")}
+          onClick={() => onOpenChange(false)}
+        >
           {t("common.close")}
         </button>
       </div>
       {canScan && (
         <>
-          <button className="btn-ghost" type="button" onClick={() => fileRef.current?.click()}>
+          <button
+            className="btn-ghost"
+            type="button"
+            title={t("boardingPass.scan")}
+            onClick={() => fileRef.current?.click()}
+          >
             📷 {t("boardingPass.scan")}
           </button>
           <input
@@ -96,6 +111,7 @@ export function BoardingPassImport({
             type="file"
             accept="image/*"
             capture="environment"
+            title={t("boardingPass.scan")}
             onChange={onPhoto}
             style={{ display: "none" }}
             aria-hidden="true"
@@ -108,13 +124,20 @@ export function BoardingPassImport({
         <textarea
           id="pass-code"
           className="pass-textarea"
+          title={t("boardingPass.codeLabel")}
           rows={2}
           placeholder="M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 100"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
       </label>
-      <button className="btn" type="button" disabled={!text.trim()} onClick={() => apply(text)}>
+      <button
+        className="btn"
+        type="button"
+        title={t("boardingPass.read")}
+        disabled={!text.trim()}
+        onClick={() => apply(text)}
+      >
         {t("boardingPass.read")}
       </button>
       {error && (

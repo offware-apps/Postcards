@@ -27,13 +27,19 @@ export function FilterSummary({ exclude = [] }: { exclude?: (keyof FilterState)[
             type="button"
             className="filter-chip-x"
             aria-label={t("filter.removeAria", { label: chip.label })}
+            title={t("filter.removeAria", { label: chip.label })}
             onClick={() => f.clearField(chip.field)}
           >
             ✕
           </button>
         </span>
       ))}
-      <button type="button" className="link filter-summary-clear" onClick={() => f.clearAll()}>
+      <button
+        type="button"
+        className="link filter-summary-clear"
+        title={t("filter.clearAll")}
+        onClick={() => f.clearAll()}
+      >
         {t("filter.clearAll")}
       </button>
     </div>

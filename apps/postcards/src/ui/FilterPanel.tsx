@@ -116,7 +116,7 @@ export function FilterPanel({
       >
         <div className="filter-panel-head">
           <h2>{t("filter.title")}</h2>
-          <button type="button" className="btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost" title={t("filter.done")} onClick={onClose}>
             {t("filter.done")}
           </button>
         </div>
@@ -130,6 +130,7 @@ export function FilterPanel({
               type="button"
               aria-pressed={!f.listOnly}
               className={!f.listOnly ? "seg-on" : ""}
+              title={t("filter.scope.both")}
               onClick={() => f.set({ listOnly: false })}
             >
               {t("filter.scope.both")}
@@ -138,6 +139,7 @@ export function FilterPanel({
               type="button"
               aria-pressed={f.listOnly}
               className={f.listOnly ? "seg-on" : ""}
+              title={t("filter.scope.listOnly")}
               onClick={() => f.set({ listOnly: true })}
             >
               {t("filter.scope.listOnly")}
@@ -164,6 +166,7 @@ export function FilterPanel({
                     type="button"
                     aria-pressed={on}
                     className={on ? "seg-on" : ""}
+                    title={t(`filter.status.${s}` as const)}
                     onClick={() =>
                       f.set({
                         status: on ? f.status.filter((x) => x !== s) : [...f.status, s],
@@ -182,17 +185,28 @@ export function FilterPanel({
         <div className="filter-section">
           <span className="filter-section-title">👥 {t("filter.people.title")}</span>
           <div className="segmented wrap" role="group" aria-label={t("filter.people.title")}>
-            {POP_CHOICES.map((n) => (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={f.minPop === n}
-                className={f.minPop === n ? "seg-on" : ""}
-                onClick={() => f.set({ minPop: n })}
-              >
-                {n === 0 ? t("filter.people.any") : n === 10_000 ? "10k+" : n === 100_000 ? "100k+" : "1M+"}
-              </button>
-            ))}
+            {POP_CHOICES.map((n) => {
+              const label =
+                n === 0
+                  ? t("filter.people.any")
+                  : n === 10_000
+                    ? "10k+"
+                    : n === 100_000
+                      ? "100k+"
+                      : "1M+";
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  aria-pressed={f.minPop === n}
+                  className={f.minPop === n ? "seg-on" : ""}
+                  title={label}
+                  onClick={() => f.set({ minPop: n })}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -201,26 +215,31 @@ export function FilterPanel({
           <div className="filter-section">
             <span className="filter-section-title">{t("filter.date.title")}</span>
             <div className="segmented wrap" role="group" aria-label={t("filter.date.title")}>
-              {["all", ...years.list, ...(years.undated ? ["none"] : [])].map((y) => (
-                <button
-                  key={y}
-                  type="button"
-                  aria-pressed={activeYear === y}
-                  className={activeYear === y ? "seg-on" : ""}
-                  onClick={() =>
-                    f.set({
-                      date:
-                        y === "all"
-                          ? { mode: "all" }
-                          : y === "none"
-                            ? { mode: "undated" }
-                            : { mode: "range", ...yearRange(y) },
-                    })
-                  }
-                >
-                  {y === "all" ? t("filter.date.any") : y === "none" ? t("filter.date.undated") : y}
-                </button>
-              ))}
+              {["all", ...years.list, ...(years.undated ? ["none"] : [])].map((y) => {
+                const label =
+                  y === "all" ? t("filter.date.any") : y === "none" ? t("filter.date.undated") : y;
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    aria-pressed={activeYear === y}
+                    className={activeYear === y ? "seg-on" : ""}
+                    title={label}
+                    onClick={() =>
+                      f.set({
+                        date:
+                          y === "all"
+                            ? { mode: "all" }
+                            : y === "none"
+                              ? { mode: "undated" }
+                              : { mode: "range", ...yearRange(y) },
+                      })
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             <div className="filter-range">
               <label className="picker-label">
@@ -228,6 +247,7 @@ export function FilterPanel({
                 <input
                   type="date"
                   className="select"
+                  title={t("filter.date.from")}
                   value={rangeFrom}
                   onChange={(e) => setRange(e.target.value, rangeTo)}
                 />
@@ -237,6 +257,7 @@ export function FilterPanel({
                 <input
                   type="date"
                   className="select"
+                  title={t("filter.date.to")}
                   value={rangeTo}
                   onChange={(e) => setRange(rangeFrom, e.target.value)}
                 />
@@ -253,6 +274,7 @@ export function FilterPanel({
               <select
                 id="filter-folder"
                 className="select"
+                title={t("filter.folder.title")}
                 value={f.folder}
                 onChange={(e) => f.set({ folder: e.target.value })}
               >
@@ -278,6 +300,7 @@ export function FilterPanel({
                   type="button"
                   aria-pressed={f.sort === s}
                   className={f.sort === s ? "seg-on" : ""}
+                  title={s === "pop" ? t("filter.sort.pop") : t("filter.sort.az")}
                   onClick={() => f.set({ sort: s })}
                 >
                   {s === "pop" ? t("filter.sort.pop") : t("filter.sort.az")}
@@ -299,6 +322,7 @@ export function FilterPanel({
                     type="button"
                     aria-pressed={f[k]}
                     className={f[k] ? "seg-on" : ""}
+                    title={t(label)}
                     onClick={() => f.set({ [k]: !f[k] })}
                   >
                     {icon} {t(label)}
@@ -312,6 +336,7 @@ export function FilterPanel({
                 <select
                   id="filter-continent"
                   className="select"
+                  title={t("filter.continent.title")}
                   value={f.continent}
                   onChange={(e) => f.set({ continent: e.target.value })}
                 >
@@ -328,7 +353,12 @@ export function FilterPanel({
         )}
 
         <div className="filter-panel-foot">
-          <button type="button" className="link" onClick={() => f.clearAll()}>
+          <button
+            type="button"
+            className="link"
+            title={t("filter.clearAll")}
+            onClick={() => f.clearAll()}
+          >
             {t("filter.clearAll")}
           </button>
         </div>

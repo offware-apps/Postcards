@@ -44,6 +44,7 @@ export function GitHubConnectorFields({
           <input
             id={`${idPrefix}-owner`}
             className="select"
+            title={t("connector.owner")}
             type="text"
             autoComplete="off"
             value={value.owner}
@@ -56,6 +57,7 @@ export function GitHubConnectorFields({
           <input
             id={`${idPrefix}-repo`}
             className="select"
+            title={t("connector.repo")}
             type="text"
             autoComplete="off"
             value={value.repo}
@@ -68,6 +70,7 @@ export function GitHubConnectorFields({
           <input
             id={`${idPrefix}-branch`}
             className="select"
+            title={t("connector.branch")}
             type="text"
             autoComplete="off"
             value={value.branch}
@@ -81,6 +84,7 @@ export function GitHubConnectorFields({
         <input
           id={`${idPrefix}-token`}
           className="select"
+          title={t("connector.token")}
           type="password"
           autoComplete="off"
           value={value.token}
@@ -95,7 +99,7 @@ export function GitHubConnectorFields({
       </p>
 
       <details className="guide-full-section connector-guide">
-        <summary>{t("connector.guide.summary")}</summary>
+        <summary title={t("connector.guide.summary")}>{t("connector.guide.summary")}</summary>
         <ol className="connector-guide-steps">
           <li>{t("connector.guide.step1")}</li>
           <li>{t("connector.guide.step2")}</li>

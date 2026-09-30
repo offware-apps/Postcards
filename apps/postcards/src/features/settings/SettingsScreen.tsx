@@ -205,6 +205,7 @@ export function SettingsScreen() {
           <input
             type="checkbox"
             checked={offlineMode}
+            title={t("settings.offlineMode.toggle")}
             onChange={(e) => setOfflineMode(e.target.checked)}
           />
           <span>{t("settings.offlineMode.toggle")}</span>
@@ -223,6 +224,7 @@ export function SettingsScreen() {
             type="checkbox"
             checked={onlineMap && !offlineMode}
             disabled={offlineMode}
+            title={t("settings.detailedMap.toggle")}
             onChange={(e) => setOnlineMap(e.target.checked)}
           />
           <span>{t("settings.detailedMap.toggle")}</span>
@@ -232,6 +234,7 @@ export function SettingsScreen() {
             type="checkbox"
             checked={autoLoadGuides && !offlineMode}
             disabled={offlineMode}
+            title={t("settings.guides.toggle")}
             onChange={(e) => setAutoLoadGuides(e.target.checked)}
           />
           <span>{t("settings.guides.toggle")}</span>
@@ -259,6 +262,7 @@ export function SettingsScreen() {
           <input
             type="checkbox"
             checked={optimizeMarkers}
+            title={t("settings.map.optimize")}
             onChange={(e) => setOptimizeMarkers(e.target.checked)}
           />
           <span>{t("settings.map.optimize")}</span>
@@ -268,6 +272,7 @@ export function SettingsScreen() {
           <input
             type="checkbox"
             checked={showAllMarkers}
+            title={t("settings.map.showAll")}
             onChange={(e) => setShowAllMarkers(e.target.checked)}
           />
           <span>{t("settings.map.showAll")}</span>
@@ -278,6 +283,7 @@ export function SettingsScreen() {
           <select
             id="max-markers"
             className="select"
+            title={t("settings.detailedMap.maxMarkers")}
             value={maxMarkers}
             onChange={(e) => setMaxMarkers(Number(e.target.value))}
           >
@@ -293,6 +299,7 @@ export function SettingsScreen() {
           <input
             type="checkbox"
             checked={reduceMapWork}
+            title={t("settings.map.reduceWork")}
             onChange={(e) => setReduceMapWork(e.target.checked)}
           />
           <span>{t("settings.map.reduceWork")}</span>
@@ -306,7 +313,7 @@ export function SettingsScreen() {
       <section className="settings-section">
         <h3>{t("settings.map.title")}</h3>
         <details className="settings-details">
-          <summary>{t("settings.map.advanced")}</summary>
+          <summary title={t("settings.map.advanced")}>{t("settings.map.advanced")}</summary>
           <p className="muted small">{t("settings.offline.desc")}</p>
           {offlineMode && <p className="muted small">{t("settings.offline.offlineNote")}</p>}
           <ul className="region-list">
@@ -333,6 +340,11 @@ export function SettingsScreen() {
                     <button
                       className="mini-btn"
                       type="button"
+                      title={
+                        savedAt[r.id]
+                          ? t("settings.offline.redownload")
+                          : t("settings.offline.download")
+                      }
                       disabled={offlineMode}
                       onClick={() => void download(r)}
                     >
@@ -348,6 +360,7 @@ export function SettingsScreen() {
                       <button
                         className="link-danger"
                         type="button"
+                        title={t("common.cancel")}
                         onClick={() => controllers.current[r.id]?.abort()}
                       >
                         {t("common.cancel")}
@@ -379,6 +392,7 @@ export function SettingsScreen() {
               <button
                 className="mini-btn"
                 type="button"
+                title={t("settings.cities.download")}
                 disabled={offlineMode || citiesDl === "busy"}
                 onClick={() => void onDownloadCities()}
               >
@@ -389,7 +403,12 @@ export function SettingsScreen() {
             )}
           </div>
 
-          <button className="link-danger" type="button" onClick={() => setConfirmReset(true)}>
+          <button
+            className="link-danger"
+            type="button"
+            title={t("settings.offline.reset")}
+            onClick={() => setConfirmReset(true)}
+          >
             {t("settings.offline.reset")}
           </button>
         </details>
@@ -406,10 +425,21 @@ export function SettingsScreen() {
               <h2>{t("settings.offline.resetTitle")}</h2>
               <p className="muted">{t("settings.offline.resetBody")}</p>
               <div className="trip-form-actions">
-                <button className="btn" type="button" autoFocus onClick={() => void resetMaps()}>
+                <button
+                  className="btn"
+                  type="button"
+                  title={t("settings.offline.resetConfirm")}
+                  autoFocus
+                  onClick={() => void resetMaps()}
+                >
                   {t("settings.offline.resetConfirm")}
                 </button>
-                <button className="btn-ghost" type="button" onClick={() => setConfirmReset(false)}>
+                <button
+                  className="btn-ghost"
+                  type="button"
+                  title={t("common.cancel")}
+                  onClick={() => setConfirmReset(false)}
+                >
                   {t("common.cancel")}
                 </button>
               </div>
@@ -425,7 +455,12 @@ export function SettingsScreen() {
       <section className="settings-section">
         <h3>{t("settings.publish.title")}</h3>
         <p className="muted small">{t("settings.publish.desc")}</p>
-        <button className="btn" type="button" onClick={() => setPublishOpen(true)}>
+        <button
+          className="btn"
+          type="button"
+          title={t("settings.publish.button")}
+          onClick={() => setPublishOpen(true)}
+        >
           🌍 {t("settings.publish.button")}
         </button>
       </section>

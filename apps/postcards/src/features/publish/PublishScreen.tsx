@@ -291,6 +291,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             aria-label={t("publish.closeAria")}
+            title={t("publish.closeAria")}
           >
             {t("common.close")}
           </button>
@@ -316,6 +317,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
                 role="radio"
                 aria-checked={scope === id}
                 className={"mini-btn" + (scope === id ? " on" : "")}
+                title={label}
                 onClick={() => setScope(id)}
               >
                 {label}
@@ -329,6 +331,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
               <select
                 id="publish-trip"
                 className="select"
+                title={t("publish.tripField")}
                 value={tripId}
                 onChange={(e) => setTripId(e.target.value)}
               >
@@ -350,6 +353,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
               <select
                 id="publish-folder"
                 className="select"
+                title={t("publish.byTripLabel")}
                 value={folderName}
                 onChange={(e) => {
                   const name = e.target.value;
@@ -380,6 +384,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
                 <input
                   id="publish-from"
                   className="select"
+                  title={t("travel.from")}
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
@@ -390,6 +395,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
                 <input
                   id="publish-to"
                   className="select"
+                  title={t("travel.to")}
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
@@ -408,6 +414,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
               id="publish-name"
               ref={firstFieldRef}
               className="select"
+              title={t("journal.titleField")}
               type="text"
               maxLength={120}
               value={title}
@@ -420,6 +427,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
             <input
               id="publish-sub"
               className="select"
+              title={t("publish.subtitle")}
               type="text"
               maxLength={160}
               value={subtitle}
@@ -445,6 +453,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
                 role="radio"
                 aria-checked={layout === id}
                 className={"mini-btn" + (layout === id ? " on" : "")}
+                title={label}
                 onClick={() => setLayout(id)}
               >
                 {label}
@@ -464,6 +473,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
             <input
               id="publish-pass"
               className="select"
+              title={t("publish.passphrase")}
               type="password"
               autoComplete="new-password"
               value={passphrase}
@@ -528,7 +538,13 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
 
         {/* Export */}
         <div className="publish-actions">
-          <button className="btn" type="button" disabled={!canExport} onClick={onDownload}>
+          <button
+            className="btn"
+            type="button"
+            title={t("publish.download")}
+            disabled={!canExport}
+            onClick={onDownload}
+          >
             {busyKind === "download" ? t("publish.building") : t("publish.download")}
           </button>
           <button
@@ -536,6 +552,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
             type="button"
             disabled={empty}
             aria-pressed={preview}
+            title={preview ? t("publish.hidePreview") : t("publish.preview")}
             onClick={() => setPreview((p) => !p)}
           >
             {preview ? t("publish.hidePreview") : t("publish.preview")}
@@ -559,6 +576,7 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
             className="link"
             type="button"
             aria-expanded={ghOpen}
+            title={t("publish.ghToggle")}
             onClick={() => setGhOpen((v) => !v)}
           >
             {ghOpen ? "▾" : "▸"} {t("publish.ghToggle")}
@@ -573,14 +591,20 @@ export function PublishScreen({ onClose }: { onClose: () => void }) {
                 repoPlaceholder="my-journey"
               />
               <div className="publish-actions">
-                <button className="btn" type="button" disabled={!canExport} onClick={onPushGitHub}>
+                <button
+                  className="btn"
+                  type="button"
+                  title={t("publish.push")}
+                  disabled={!canExport}
+                  onClick={onPushGitHub}
+                >
                   {busyKind === "push" ? t("publish.pushing") : t("publish.push")}
                 </button>
               </div>
               {liveUrl && (
                 <p className="muted small publish-live">
                   {t("publish.liveSitePrefix")}{" "}
-                  <a href={liveUrl} target="_blank" rel="noreferrer noopener">
+                  <a href={liveUrl} target="_blank" rel="noreferrer noopener" title={liveUrl}>
                     {liveUrl}
                   </a>
                   <br />

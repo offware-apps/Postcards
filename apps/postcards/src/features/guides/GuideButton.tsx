@@ -257,7 +257,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
           </p>
         )}
         {!overview && state === "idle" && !autoLoad && !offlineMode && (
-          <button type="button" className="btn-ghost guide-overview-btn" onClick={loadOverview}>
+          <button
+            type="button"
+            className="btn-ghost guide-overview-btn"
+            title={t("guide.loadOverview")}
+            onClick={loadOverview}
+          >
             ↧ {t("guide.loadOverview")}
           </button>
         )}
@@ -276,7 +281,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
           !navigator.onLine && (
             <p className="muted small">
               {t("guide.offlineWait")}{" "}
-              <button type="button" className="mini-btn" onClick={loadOverview}>
+              <button
+                type="button"
+                className="mini-btn"
+                title={t("guide.retry")}
+                onClick={loadOverview}
+              >
                 {t("guide.retry")}
               </button>
             </p>
@@ -286,7 +296,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
             {isOffline()
               ? t("guide.emptyOffline")
               : t("guide.emptyOnline")}{" "}
-            <button type="button" className="mini-btn" onClick={loadOverview}>
+            <button
+              type="button"
+              className="mini-btn"
+              title={t("guide.retry")}
+              onClick={loadOverview}
+            >
               {t("guide.retry")}
             </button>
           </p>
@@ -312,7 +327,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
               ))}
             </blockquote>
             <figcaption className="muted small guide-cite">
-              <a href={cardUrl} target="_blank" rel="noopener noreferrer">
+              <a
+                href={cardUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={t("guide.readMore", { source: cardSource })}
+              >
                 {t("guide.readMore", { source: cardSource })}
               </a>{" "}
               · CC BY-SA · {t("guide.savedOffline")}
@@ -322,7 +342,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
 
         {/* The whole guide, readable right here — no trip to the website. */}
         {(overview || full) && !full && fullRestored && fullState === "idle" && !offlineMode && (
-          <button type="button" className="btn-ghost guide-overview-btn" onClick={() => void loadFullGuide()}>
+          <button
+            type="button"
+            className="btn-ghost guide-overview-btn"
+            title={t("guide.readWhole")}
+            onClick={() => void loadFullGuide()}
+          >
             📖 {t("guide.readWhole")}
           </button>
         )}
@@ -336,7 +361,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
             {isOffline()
               ? t("guide.fullOffline")
               : t("guide.fullEmpty")}{" "}
-            <button type="button" className="mini-btn" onClick={() => void loadFullGuide()}>
+            <button
+              type="button"
+              className="mini-btn"
+              title={t("guide.retry")}
+              onClick={() => void loadFullGuide()}
+            >
               {t("guide.retry")}
             </button>
           </p>
@@ -345,7 +375,7 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
           <div className="guide-full">
             {fullSections.map((s) => (
               <details key={s.heading} className="guide-full-section">
-                <summary>{s.heading}</summary>
+                <summary title={s.heading}>{s.heading}</summary>
                 {s.text.split(/\n{2,}/).map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
@@ -354,7 +384,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
             {full && (
               <p className="muted small guide-cite">
                 {t("guide.fullGuideLabel")} ·{" "}
-                <a href={full.url} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={full.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={full.attribution}
+                >
                   {full.attribution}
                 </a>{" "}
                 · {t("guide.savedOffline")}
@@ -373,7 +408,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
             <ul className="guide-links">
               {items.map((l) => (
                 <li key={l.id}>
-                  <a href={l.url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t(`guide.link.${l.kind}.label` as MessageKey, { name: l.name })}
+                  >
                     <span className="guide-link-label">
                       {t(`guide.link.${l.kind}.label` as MessageKey, { name: l.name })}
                     </span>
@@ -391,7 +431,12 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
       {/* Honest fallback: a search link always works, even when an exact article
           title doesn't match (name variants) or the overview fetch fails. */}
       <p className="muted small guide-search">
-        <a href={searchUrl(searchQuery)} target="_blank" rel="noopener noreferrer">
+        <a
+          href={searchUrl(searchQuery)}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={t("guide.searchFor", { query: searchQuery })}
+        >
           {t("guide.searchFor", { query: searchQuery })}
         </a>
       </p>

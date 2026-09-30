@@ -26,6 +26,7 @@ function Switch({
         checked={on}
         disabled={disabled}
         aria-label={label}
+        title={label}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="intro-switch-track" aria-hidden>
@@ -100,7 +101,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title">
-      <button className="intro-skip" type="button" onClick={onClose}>
+      <button className="intro-skip" type="button" title={t("intro.skip")} onClick={onClose}>
         {t("intro.skip")}
       </button>
 
@@ -125,6 +126,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="intro-seg-btn is-on intro-recommend-apply"
+              title={t("intro.recommend.apply")}
               onClick={applyPhoneRecommended}
             >
               {t("intro.recommend.apply")}
@@ -208,7 +210,13 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
 
       <p className="intro-more">{t("intro.more")}</p>
 
-      <button ref={startRef} className="intro-start" type="button" onClick={onClose}>
+      <button
+        ref={startRef}
+        className="intro-start"
+        type="button"
+        title={t("intro.start")}
+        onClick={onClose}
+      >
         {t("intro.start")}
       </button>
     </div>

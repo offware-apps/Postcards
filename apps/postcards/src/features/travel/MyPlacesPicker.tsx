@@ -51,6 +51,7 @@ export function MyPlacesPicker({
           type="button"
           aria-pressed={mode === "list"}
           className={mode === "list" ? "seg-on" : ""}
+          title={t("trip.compose.pickList")}
           onClick={() => setMode("list")}
         >
           ☰ {t("trip.compose.pickList")}
@@ -59,6 +60,7 @@ export function MyPlacesPicker({
           type="button"
           aria-pressed={mode === "map"}
           className={mode === "map" ? "seg-on" : ""}
+          title={t("trip.compose.pickMap")}
           onClick={() => setMode("map")}
         >
           🗺 {t("trip.compose.pickMap")}
@@ -73,6 +75,7 @@ export function MyPlacesPicker({
             value={q}
             placeholder={t("trip.compose.searchPlaceholder")}
             aria-label={t("trip.compose.searchPlaceholder")}
+            title={t("trip.compose.searchPlaceholder")}
             onChange={(e) => setQ(e.target.value)}
           />
           {searchRows ? (
@@ -86,6 +89,7 @@ export function MyPlacesPicker({
                       type="button"
                       className="myplaces-pick"
                       aria-label={t("trip.compose.pickAria", { name: r.place.name })}
+                      title={t("trip.compose.pickAria", { name: r.place.name })}
                       onClick={() => onPick(r.place)}
                     >
                       <span className="flag" aria-hidden>
@@ -108,6 +112,7 @@ export function MyPlacesPicker({
                     type="button"
                     className="myplaces-pick"
                     aria-label={t("trip.compose.pickAria", { name: p.name })}
+                    title={t("trip.compose.pickAria", { name: p.name })}
                     onClick={() => onPick(p.place)}
                   >
                     <span className="flag" aria-hidden>

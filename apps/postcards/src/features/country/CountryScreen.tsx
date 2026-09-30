@@ -40,7 +40,7 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
   if (!country) {
     return (
       <div className="screen city-page">
-        <button className="mini-btn back-btn" type="button" onClick={onBack}>
+        <button className="mini-btn back-btn" type="button" title={t("city.back")} onClick={onBack}>
           ← {t("city.back")}
         </button>
         <p className="notice">{t("country.unknownCode", { iso2 })}</p>
@@ -59,7 +59,7 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
 
   return (
     <div className="screen city-page">
-      <button className="mini-btn back-btn" type="button" onClick={onBack}>
+      <button className="mini-btn back-btn" type="button" title={t("city.back")} onClick={onBack}>
         ← {t("city.back")}
       </button>
 
@@ -90,7 +90,12 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
           </span>
         )}
         {cities.length > 0 && (
-          <button className="mini-btn" type="button" onClick={showOnMap}>
+          <button
+            className="mini-btn"
+            type="button"
+            title={t("city.showOnMap")}
+            onClick={showOnMap}
+          >
             {t("city.showOnMap")}
           </button>
         )}
@@ -135,6 +140,7 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
                 <button
                   className="city-focus"
                   type="button"
+                  title={t("places.row.openAria", { name: h.name })}
                   onClick={() => useUi.getState().openCity(h.id)}
                 >
                   <CityLine flag="🏛️" name={h.name} multiline />
@@ -166,6 +172,7 @@ export function CountryScreen({ iso2, onBack }: { iso2: string; onBack: () => vo
                 <button
                   className="city-focus"
                   type="button"
+                  title={t("places.row.openAria", { name: c.name })}
                   onClick={() => useUi.getState().openCity(c.id)}
                 >
                   <CityLine
