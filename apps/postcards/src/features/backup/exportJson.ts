@@ -25,7 +25,7 @@ function decodablePhotos<T extends { photos?: Photo[] }>(rec: T): T | Omit<T, "p
   return kept && kept.length ? { ...rest, photos: kept } : rest;
 }
 
-/** Drop a stored tag that sanitizes to nothing ("-", a lone bidi mark): the schema
+/** Drop a stored tag that sanitizes to nothing (a lone bidi mark or control): the schema
  *  rejects it, which would block every backup and sync of a device holding one. */
 function dropBlankTags(story: Story): Story {
   if (!story.tags) return story;

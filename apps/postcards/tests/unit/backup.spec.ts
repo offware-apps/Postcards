@@ -258,7 +258,7 @@ describe("import security (SC-008, Constitution VI)", () => {
 
 describe("postcard tags", () => {
   // A composer that stored tags as typed could save one that sanitizes to nothing
-  // ("-", a lone bidi mark); the file would then fail its own validation.
+  // (a lone bidi mark or control character); the file would then fail its own validation.
   const story = (tags: string[]): Story => ({
     storyId: "s1",
     date: "2026-05-02",
@@ -269,13 +269,13 @@ describe("postcard tags", () => {
   });
 
   it("still exports and syncs a postcard holding a tag that sanitizes away, without that tag", () => {
-    const result = importFile(serializeFile([], [], [story(["sunny", "-", "\u202e"])]));
+    const result = importFile(serializeFile([], [], [story(["sunny", "\u0000", "\u202e"])]));
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.stories[0]!.tags).toEqual(["sunny"]);
   });
 
   it("drops the tags key when no tag survives", () => {
-    const result = importFile(serializeFile([], [], [story(["-"])]));
+    const result = importFile(serializeFile([], [], [story(["\u202e"])]));
     expect(result.ok).toBe(true);
     if (result.ok) expect("tags" in result.stories[0]!).toBe(false);
   });
