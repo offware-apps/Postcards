@@ -12,11 +12,18 @@ export const UPDATE_POLL_MS = 30 * 60 * 1000;
  * listens for it), which activates the new worker; `controllerchange` then
  * reloads the page once into the fresh build. A 30-min poll lets an always-open
  * tab discover a deploy without a manual reload. The very first install (no
- * existing controller) never prompts — it just primes the offline cache.
+ * existing controller) never prompts — it just primes the offline cache, and
+ * takes control of the page (clientsClaim) without reloading it.
  */
 export function registerServiceWorker(): void {
   let reloading = false;
+  let controlled = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    // The first install claiming an uncontrolled page is not a new build.
+    if (!controlled) {
+      controlled = true;
+      return;
+    }
     if (reloading) return;
     reloading = true;
     window.location.reload();

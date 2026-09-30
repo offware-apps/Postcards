@@ -136,6 +136,7 @@ export const en = {
   "settings.offline.toast.savedPartial":
     "{region}: saved {saved} tiles ({failed} failed — try again on a better connection).",
   "settings.offline.toast.failed": "Couldn't download {region} — check your connection.",
+  "settings.offline.toast.notReady": "{region}: map tiles can't be kept offline here right now, so nothing was downloaded.",
   "settings.offline.toast.reset": "Map caches and view settings were reset.",
   "settings.guides.title": "Travel guides",
   "settings.guides.desc":

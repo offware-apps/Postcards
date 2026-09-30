@@ -103,6 +103,13 @@ export function SettingsScreen() {
 
   async function download(r: OfflineRegion) {
     if (progress[r.id] != null) return;
+    // The service worker's cache is what keeps the tiles; it sees these requests
+    // only while it controls the page (not after a hard reload, nor where service
+    // workers are unavailable). Without it nothing would be saved.
+    if (!navigator.serviceWorker?.controller) {
+      showToast(t("settings.offline.toast.notReady", { region: r.name }));
+      return;
+    }
     const ctl = new AbortController();
     controllers.current[r.id] = ctl;
     setProgress((p) => ({ ...p, [r.id]: 0 }));
@@ -115,6 +122,8 @@ export function SettingsScreen() {
       });
       if (ctl.signal.aborted) {
         showToast(t("settings.offline.toast.cancelled", { region: r.name }));
+      } else if (res.saved === 0) {
+        showToast(t("settings.offline.toast.failed", { region: r.name }));
       } else {
         const now = new Date().toISOString().slice(0, 10);
         try {
