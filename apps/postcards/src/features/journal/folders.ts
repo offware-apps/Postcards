@@ -26,11 +26,6 @@ export function matchesFolder(story: Pick<Story, "folder">, folder: string): boo
   return (story.folder ?? "") === folder;
 }
 
-/** The stories in a given folder — the feed's "By folder" narrowing. */
-export function storiesInFolder<T extends Pick<Story, "folder">>(stories: T[], folder: string): T[] {
-  return stories.filter((s) => matchesFolder(s, folder));
-}
-
 /** Does this trip belong to the story's context (same place/country, or same year)? */
 function tripInContext(trip: Trip, place: PlaceRef | null | undefined, date: string | undefined): boolean {
   if (place) {

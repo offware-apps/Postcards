@@ -92,8 +92,8 @@ interface VisitsState {
     visitId: string,
     details: { date?: string | null; note?: string | null; folder?: string | null },
   ) => Promise<void>;
-  /** Put ONE visit back (single-record undo): upsert by visitId, one write —
-   *  setAll would clear and rewrite the entire visits table. */
+  /** Put ONE visit back (single-record undo): upsert by visitId, one write,
+   *  never a rewrite of the entire visits table. */
   restoreVisit: (visit: Visit) => Promise<void>;
   /** Merge imported places into the existing visits, upserting by (kind,id):
    *  a NON-destructive add (trips, stories, and any place not in the file are
@@ -102,7 +102,6 @@ interface VisitsState {
   mergeVisits: (
     incoming: { place: PlaceRef; status: Visit["status"]; favorite?: boolean; date?: string | null }[],
   ) => Promise<{ added: number; updated: number }>;
-  setAll: (visits: Visit[]) => Promise<void>;
 }
 
 export const useVisits = create<VisitsState>((set, get) => ({
@@ -299,13 +298,5 @@ export const useVisits = create<VisitsState>((set, get) => ({
     // would drop what another tab wrote since this one last read it.
     await db.putVisits(touched);
     return { added, updated };
-  },
-  async setAll(visits) {
-    // Bulk load (restore/import): normalize photos and backfill `updatedAt` from
-    // `addedAt` for records that predate the field; never stamp "now" here, so an
-    // imported old record keeps its real age for newest-wins.
-    const normalized = visits.map(normalizeVisitPhotos).map(backfillUpdatedAt);
-    set({ visits: normalized });
-    await db.replaceAllVisits(normalized);
   },
 }));

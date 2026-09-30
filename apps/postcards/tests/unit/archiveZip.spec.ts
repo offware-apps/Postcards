@@ -109,6 +109,13 @@ describe('"Save everything" archive round-trip (data + photos-as-files)', () => 
     expect(() => buildArchive([{ ...visit(), photos: [{ src: nonB64, caption: null }] }], [], [])).not.toThrow();
   });
 
+  it("stores the raw byte of a percent-escape that is not UTF-8 (regression: URIError aborted export)", () => {
+    const src = "data:image/png;charset=utf-8,%89PNG%zz";
+    const bytes = buildArchive([{ ...visit(), photos: [{ src, caption: null }] }], [], []);
+    const photo = unzipStore(bytes).find((e) => e.name === "photos/0001.png");
+    expect([...photo!.data]).toEqual([0x89, ...enc("PNG%zz")]);
+  });
+
   it("drops an image-only story whose image went missing rather than aborting the whole restore", () => {
     const story: Story = {
       storyId: crypto.randomUUID(),

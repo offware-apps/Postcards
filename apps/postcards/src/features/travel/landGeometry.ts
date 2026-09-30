@@ -1,10 +1,11 @@
 import type { FeatureCollection } from "geojson";
 import { feature } from "topojson-client";
 
-// Bundled, offline land geometry for the composer's route map — the SAME public
-// Natural Earth asset the main map uses (public domain, SW-precached), fetched
-// as a plain URL so it comes from cache with zero extra network. Parsed at most
-// once per session; a failed load clears its slot so a later attempt can retry.
+// Bundled, offline land geometry for the route map, the coverage map and the
+// passport poster — the SAME public Natural Earth asset the main map uses (public
+// domain, SW-precached), fetched as a plain URL so it comes from cache with zero
+// extra network. Parsed at most once per session; a failed load clears its slot
+// so a later attempt can retry.
 // Kept independent of MapView so the route map can't perturb the production map.
 
 const LAND_URL = `${import.meta.env.BASE_URL}basemap/countries-50m.json`;
