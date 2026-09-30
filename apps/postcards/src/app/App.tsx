@@ -36,6 +36,7 @@ import { useAutoSync } from "../lib/hooks/useAutoSync";
 import { useT, type MessageKey } from "../lib/i18n";
 import { HOME, parseRoute, routeHash, type Route } from "./route";
 import { useReferenceExtrasPending } from "../lib/reference/useGazetteer";
+import { requestStations } from "../lib/reference/referenceData";
 
 // Code-split MapLibre so it loads only when the map is shown.
 const MapScreen = lazy(() =>
@@ -131,6 +132,11 @@ export function App() {
     extrasPending &&
     (!!cityPageId || !!tripEditId || !!storyEditId || tab === "trips" || tab === "journal");
   const firstRender = useRef(true);
+  // The railway stations wait for the map to load (see loadExtras); every other
+  // screen may read them, and has no map to compete with, so it asks at once.
+  useEffect(() => {
+    if (!mapVisible) requestStations();
+  }, [mapVisible]);
 
   // Scroll memory. <main> is the single scroll container reused across tabs and
   // detail pages, so its scrollTop leaks between views: open a city while scrolled

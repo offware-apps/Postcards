@@ -8,7 +8,11 @@ import maplibregl, {
 import { Protocol } from "pmtiles";
 import { feature } from "topojson-client";
 import type { FeatureCollection, Polygon, MultiPolygon, Point, Feature, LineString } from "geojson";
-import { getReferenceData, gazetteerGeneration } from "../../lib/reference/referenceData";
+import {
+  getReferenceData,
+  gazetteerGeneration,
+  requestStations,
+} from "../../lib/reference/referenceData";
 import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { bundledMapSource } from "../../lib/map-source/bundledMapSource";
 import { useVisits, findByPlace } from "../../lib/store/useVisits";
@@ -1573,6 +1577,7 @@ export function MapView({
         // No map will report a view, so hand the list the whole world: the
         // fallback below promises the cities list still works.
         onBoundsRef.current?.({ west: -180, south: -90, east: 180, north: 90 });
+        requestStations();
         return;
       }
       mapRef.current = map;
@@ -1635,6 +1640,8 @@ export function MapView({
       map.on("load", () => {
         if (cancelled || !map) return;
         loadedRef.current = true;
+        // The stations wait for the map to be up (see loadExtras).
+        requestStations();
         // The globe effect skips a change made before load: catch it up here.
         if (globeRef.current !== builtGlobe)
           map.setProjection({ type: globeRef.current ? "globe" : "mercator" });

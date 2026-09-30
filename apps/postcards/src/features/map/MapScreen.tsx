@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getReferenceData } from "../../lib/reference/referenceData";
+import { getReferenceData, requestStations } from "../../lib/reference/referenceData";
 import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
@@ -281,6 +281,11 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
   const [layersOpen, setLayersOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const mode = filters.mode;
+  // The Stations mode shows nothing but stations: fetch them without waiting
+  // for the map to load.
+  useEffect(() => {
+    if (mode === "stations") requestStations();
+  }, [mode]);
   const [dark, setDark] = useState(() => resolveDark(theme));
 
   // Offer the offline street basemap only when a PMTiles pack is actually

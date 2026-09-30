@@ -47,3 +47,19 @@ test("the map's station list fills in when the stations land after the map", asy
   release();
   await expect(page.locator(".view-list .city-row").first()).toBeVisible();
 });
+
+test("on the map the stations download only once the map has loaded", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("postcards-intro-seen", "1"));
+  const order: string[] = [];
+  page.on("request", (r) => order.push(r.url()));
+  const stations = page.waitForRequest("**/reference/railways.json");
+  await page.goto("/");
+  await expect(page.locator(".maplibregl-canvas")).toBeAttached();
+  await stations;
+  const at = (part: string) => order.findIndex((u) => u.includes(part));
+  // The map's code is asked for before the stations.
+  expect(at("/assets/maplibre-")).toBeGreaterThanOrEqual(0);
+  expect(at("/assets/maplibre-")).toBeLessThan(at("/reference/railways.json"));
+  await page.getByLabel("Search a city or country").fill("Part-Dieu");
+  await expect(page.getByRole("button", { name: "Mark Lyon Part-Dieu visited" }).first()).toBeVisible();
+});

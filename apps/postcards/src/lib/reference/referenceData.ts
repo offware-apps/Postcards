@@ -459,6 +459,14 @@ export async function initReferenceData(): Promise<ReferenceData> {
 
 let extrasPending = false;
 let stationsSwapped = false;
+let stationsWanted!: () => void;
+const stationsRequested = new Promise<void>((r) => (stationsWanted = r));
+
+/** Let the railway stations download: the map calls this once it has loaded,
+ *  and any other screen as soon as it shows (loadExtras). */
+export function requestStations(): void {
+  stationsWanted();
+}
 /** Whether the airports, heritage sites and stations are still on their way
  *  (loadExtras). */
 export function referenceExtrasPending(): boolean {
@@ -476,10 +484,11 @@ async function loadExtras(impl: ReferenceDataImpl): Promise<void> {
   // Railway stations: whichever dataset the user chose in Settings (default
   // Trainline; "None" loads nothing). A { _source, stations:[…] } wrapper;
   // absent file → []. Switching source later re-fetches via setStationData.
-  // The biggest file here (5 MB, a long parse on a phone), so it is asked for
-  // once the first render has settled, and never delays it.
+  // The biggest file here (5 MB, a long parse on a phone), so it waits for a
+  // screen to ask (requestStations): on the map, once the map has loaded, so it
+  // never competes with MapLibre's download or start-up.
   const stationSrc = stationSourceById(loadStationSource());
-  const stations = whenIdle().then(() =>
+  const stations = stationsRequested.then(() =>
     stationSrc.url
       ? json<{ stations?: Station[] }>(stationSrc.url, { stations: [] })
       : { stations: [] as Station[] },
