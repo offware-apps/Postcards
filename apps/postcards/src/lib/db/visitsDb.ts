@@ -68,8 +68,10 @@ export async function loadOrEmpty<T>(read: () => Promise<T[]>): Promise<T[]> {
 /**
  * One-time carry-over from the pre-rename ("placebeen") database, so users who
  * ran the old build keep their history (Constitution II: the device is the
- * source of truth). Best-effort: never throws, and only runs when the new store
- * is empty, so it can never clobber current data.
+ * source of truth). Runs only on the open that created the new database, so
+ * stores emptied later ("Erase everything") never take the old data back.
+ * Best-effort: never throws, and only runs when the new store is empty, so it
+ * can never clobber current data.
  */
 async function migrateLegacyDb(target: IDBPDatabase): Promise<void> {
   try {
@@ -99,8 +101,10 @@ async function migrateLegacyDb(target: IDBPDatabase): Promise<void> {
 /** Shared handle for every on-device store (visits, trips, stories). */
 export function getDb(): Promise<IDBPDatabase> {
   if (!dbPromise) {
+    let created = false;
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(database) {
+      upgrade(database, oldVersion) {
+        created = oldVersion === 0;
         if (!database.objectStoreNames.contains(STORE)) {
           database.createObjectStore(STORE, { keyPath: "visitId" });
         }
@@ -118,7 +122,7 @@ export function getDb(): Promise<IDBPDatabase> {
         }
       },
     }).then(async (database) => {
-      await migrateLegacyDb(database);
+      if (created) await migrateLegacyDb(database);
       return database;
     });
   }

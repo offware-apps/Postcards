@@ -6,7 +6,10 @@
 
 type Rows = Map<unknown, unknown>;
 
-export const databases = new Map<string, Map<string, Rows>>();
+// Held on globalThis so a spec that re-imports its modules, to model a relaunch,
+// still opens the same databases.
+const g = globalThis as { fakeIdbDatabases?: Map<string, Map<string, Rows>> };
+export const databases = (g.fakeIdbDatabases ??= new Map<string, Map<string, Rows>>());
 
 /** Empty every store, keeping the stores (an open handle stays valid). */
 export function clearDatabases(): void {
@@ -52,7 +55,7 @@ function storeApi(rows: Rows, name: string) {
 export async function openDB(
   name: string,
   _version?: number,
-  opts?: { upgrade?: (db: unknown) => void },
+  opts?: { upgrade?: (db: unknown, oldVersion: number) => void },
 ) {
   let stores = databases.get(name);
   const fresh = !stores;
@@ -76,6 +79,6 @@ export async function openDB(
       return { objectStore: api, store: api(list[0]!), done: Promise.resolve() };
     },
   };
-  if (fresh) opts?.upgrade?.(database);
+  if (fresh) opts?.upgrade?.(database, 0);
   return database;
 }
