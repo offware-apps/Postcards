@@ -141,12 +141,15 @@ export class GitHubTarget implements PublishTarget {
    * PULL for device sync: read a file's current text and its blob SHA (the SHA is
    * the version token a conditional write later checks). Returns null when the
    * file doesn't exist yet — a fresh/empty repo, which sync treats as "seed me".
-   * The Contents API returns the content base64-encoded; we decode it here.
+   * The Contents API returns the content base64-encoded up to 1 MB; above that it
+   * answers `encoding: "none"` with no content, and the text is read from the
+   * git blob of that same SHA instead. `no-store`: GitHub marks these answers
+   * cacheable for 60 s, and a pull must never see the file before our last push.
    */
   async getFile(path: string): Promise<{ content: string; version: string } | null> {
     const res = await this.fetchFn(
       `${this.contentsUrl(path)}?ref=${encodeURIComponent(this.cfg.branch)}`,
-      { headers: this.headers(), referrerPolicy: "no-referrer" },
+      { headers: this.headers(), referrerPolicy: "no-referrer", cache: "no-store" },
     );
     if (res.status === 404) return null;
     if (!res.ok) {
@@ -155,11 +158,19 @@ export class GitHubTarget implements PublishTarget {
     }
     const body = (await res.json()) as { content?: string; encoding?: string; sha?: string };
     if (!body.sha) return null;
-    const content =
-      body.encoding === "base64" && body.content != null
-        ? decodeContent(body.content)
-        : (body.content ?? "");
-    return { content, version: body.sha };
+    if (body.encoding === "base64" && body.content != null) {
+      return { content: decodeContent(body.content), version: body.sha };
+    }
+    const blob = await this.fetchFn(
+      `${this.apiBase}/repos/${this.cfg.owner}/${this.cfg.repo}/git/blobs/${body.sha}`,
+      {
+        headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" },
+        referrerPolicy: "no-referrer",
+        cache: "no-store",
+      },
+    );
+    if (!blob.ok) throw new Error(`GitHub read failed for ${path} (${blob.status}).`);
+    return { content: await blob.text(), version: body.sha };
   }
 
   /**

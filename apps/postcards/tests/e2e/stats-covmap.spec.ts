@@ -1,14 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
-import AxeBuilder from "@axe-core/playwright";
-
-async function assertNoSeriousViolations(page: Page, screen: string) {
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
-  const serious = results.violations.filter((v) => ["serious", "critical"].includes(v.impact ?? ""));
-  expect(serious, `${screen}: ${serious.map((v) => v.id).join(", ")}`).toEqual([]);
-}
+import { gotoTab, openAppWithVisits, assertNoSeriousViolations } from "./nav-helper";
 
 // Expanding a country card in Stats shows a coverage map (not the old text lists):
 // the country silhouette with visited-city dots and "still to explore" region
@@ -20,12 +11,7 @@ test("a country card's coverage map is a labelled button that opens the country 
 }: {
   page: Page;
 }) => {
-  await page.goto("/");
-  for (const c of ["Paris", "Lyon", "Marseille"]) {
-    await page.getByLabel("Search a city or country").fill(c);
-    await page.getByRole("button", { name: `Mark ${c} visited` }).first().click();
-    await page.keyboard.press("Escape");
-  }
+  await openAppWithVisits(page, ["Paris", "Lyon", "Marseille"]);
   await gotoTab(page, "Stats");
   await page.locator(".country-summary", { hasText: "France" }).click();
 
@@ -38,7 +24,7 @@ test("a country card's coverage map is a labelled button that opens the country 
   await expect(svg).toHaveAttribute("aria-hidden", "true");
   // The silhouette + at least one visited dot rendered.
   await expect(svg.locator("path.ccov-land")).toHaveCount(1);
-  expect(await svg.locator("circle.ccov-visited").count()).toBeGreaterThan(0);
+  await expect.poll(() => svg.locator("circle.ccov-visited").count()).toBeGreaterThan(0);
 
   await assertNoSeriousViolations(page, "stats country coverage map");
 

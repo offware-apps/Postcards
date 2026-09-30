@@ -16,8 +16,9 @@ import { AboutModal } from "../ui/AboutModal";
 import { IntroScreen } from "../ui/IntroScreen";
 import { Toast } from "../ui/Toast";
 import { UpdateBanner } from "../ui/UpdateBanner";
+import { LoadBoundary } from "../ui/LoadFailure";
 import { handoffRequested } from "../lib/moved/moved";
-import { loadPortable } from "../lib/store/portable";
+import { followOtherTabs, loadPortable } from "../lib/store/portable";
 import { ConnectionStatus } from "../ui/ConnectionStatus";
 import { MapIcon, ChartIcon, ListIcon, RouteIcon, BookIcon, GearIcon, InfoIcon } from "../ui/icons";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -43,9 +44,11 @@ const TABS: { id: Tab; label: MessageKey; keys: string[]; Icon: () => JSX.Elemen
 ];
 
 // An open modal/lightbox/popup/dirty-composer consumes Escape and the Back
-// gesture; these selectors detect one so an unobstructed press navigates.
+// gesture; these selectors detect one so an unobstructed press navigates. A popup
+// left open on the map counts only while the map shows: the map stays mounted,
+// hidden, behind the other tabs.
 const DIALOG_LAYER_SELECTOR =
-  ".modal-backdrop, .lightbox, .maplibregl-popup, .journal-composer-busy";
+  ".modal-backdrop, .lightbox, .maplibregl-popup:not(.map-keep-hidden *), .journal-composer-busy";
 
 // First run: show the "How it works" intro once so a newcomer learns what the
 // app is and what's optionally downloadable, before touching anything. Stored,
@@ -135,6 +138,7 @@ export function App() {
 
   useEffect(() => {
     loadPortable();
+    return followOtherTabs();
   }, []);
 
   // Opt-in background device sync (spec 013). No-op unless the user turned it on.
@@ -412,9 +416,11 @@ export function App() {
                 reloaded the whole map. Hidden it keeps its camera and tiles. */}
             {(mapShown.current || tab === "map") && (
               <div className={"map-keep" + (mapVisible ? "" : " map-keep-hidden")}>
-                <Suspense fallback={<p className="muted empty">{t("map.loading")}</p>}>
-                  <MapScreen active={mapVisible} />
-                </Suspense>
+                <LoadBoundary>
+                  <Suspense fallback={<p className="muted empty">{t("map.loading")}</p>}>
+                    <MapScreen active={mapVisible} />
+                  </Suspense>
+                </LoadBoundary>
               </div>
             )}
             {cityPageId ? (
@@ -465,9 +471,11 @@ export function App() {
       <Toast />
       <UpdateBanner />
       {handoffRequested && (
-        <Suspense fallback={null}>
-          <HandoffReceiver />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <HandoffReceiver />
+          </Suspense>
+        </LoadBoundary>
       )}
 
       {showHelp && <ShortcutsHelp onClose={() => setShowHelp(false)} />}

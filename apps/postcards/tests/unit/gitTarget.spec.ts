@@ -106,6 +106,38 @@ describe("GitHubTarget", () => {
     });
   });
 
+  describe("getFile (device sync pull)", () => {
+    it("reads a file over 1 MB, which the Contents API returns without content", async () => {
+      const text = JSON.stringify({ note: "café ☕", pad: "x".repeat(1_100_000) });
+      const calls: { url: string; init?: RequestInit }[] = [];
+      const fetchFn = mockFetch((url, init) => {
+        calls.push({ url, init });
+        if (url.includes("/git/blobs/abc123")) return new Response(text, { status: 200 });
+        // The shape GitHub answers for a file between 1 and 100 MB.
+        return new Response(JSON.stringify({ sha: "abc123", content: "", encoding: "none" }), {
+          status: 200,
+        });
+      });
+      const file = await new GitHubTarget({ ...cfg, fetchFn }).getFile("postcards-sync.json");
+      expect(file).toEqual({ content: text, version: "abc123" });
+      expect(calls.map((c) => c.init?.cache)).toEqual(["no-store", "no-store"]);
+    });
+
+    it("never reads a cached copy of a small file", async () => {
+      const calls: RequestInit[] = [];
+      const fetchFn = mockFetch((_url, init) => {
+        calls.push(init!);
+        const content = Buffer.from("{}").toString("base64");
+        return new Response(JSON.stringify({ sha: "s1", content, encoding: "base64" }), {
+          status: 200,
+        });
+      });
+      const file = await new GitHubTarget({ ...cfg, fetchFn }).getFile("postcards-sync.json");
+      expect(file).toEqual({ content: "{}", version: "s1" });
+      expect(calls[0]!.cache).toBe("no-store");
+    });
+  });
+
   describe("listDir (root index of travels)", () => {
     it("returns dir/file entries of the repo root, empty on failure", async () => {
       const ok = mockFetch((url) => {

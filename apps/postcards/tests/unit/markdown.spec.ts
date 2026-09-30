@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getReferenceData } from "../../src/lib/reference/referenceData";
 import { toMarkdown } from "../../src/features/backup/exportMarkdown";
-import type { Visit } from "../../src/lib/schema/models";
+import type { PlaceRef, Trip, Visit } from "../../src/lib/schema/models";
 
 const ref = getReferenceData();
 
@@ -36,4 +36,23 @@ describe("toMarkdown", () => {
     expect(md).not.toContain("<img"); // raw HTML must not survive to the shared file
     expect(md).toContain("&lt;img");
   });
+
+  it("lists a multi-stop trip's intermediate stops, every leg's mode and a vague date", () => {
+    const P = (id: string, cc: string): PlaceRef => ({ kind: "country", id, name: id, countryId: cc });
+    const hop: Trip = {
+      tripId: "t",
+      from: P("France", "FR"),
+      to: P("Japan", "JP"),
+      stops: [P("France", "FR"), P("Korea", "KR"), P("China", "CN"), P("Japan", "JP")],
+      mode: "flight",
+      legModes: ["flight", "train", "flight"],
+      date: "2024-03",
+      carrier: null,
+      note: null,
+      addedAt: "2024-03-01T00:00:00.000Z",
+    };
+    const row = toMarkdown([], [hop], ref).split("\n").find((l) => l.startsWith("| France"));
+    expect(row).toContain("| France | Japan (via Korea, China) | Flight, Train | Mar 2024 |");
+  });
 });
+

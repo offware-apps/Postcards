@@ -1,23 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoTab } from "./nav-helper";
+import { gotoTab, openAppWithVisits } from "./nav-helper";
 
 // The composer's real map picker (RouteMap): switching to the Map segment mounts an
 // actual MapLibre canvas (not the old SVG), and the companion list beneath it — the
 // keyboard/AT path — still builds the route, with the live arc reflecting each add.
-
-async function markVisited(page: Page, city: string): Promise<void> {
-  await page.getByLabel("Search a city or country").fill(city);
-  await page.getByRole("button", { name: `Mark ${city} visited` }).first().click();
-  await page.keyboard.press("Escape");
-}
 
 test("Map segment shows a real MapLibre map; the companion list builds the route", async ({
   page,
 }: {
   page: Page;
 }) => {
-  await page.goto("/");
-  for (const city of ["Paris", "Tokyo", "Osaka"]) await markVisited(page, city);
+  await openAppWithVisits(page, ["Paris", "Tokyo", "Osaka"]);
 
   await gotoTab(page, "Trips");
   await page.getByRole("button", { name: "Reconstruct a journey" }).click();
@@ -49,8 +42,7 @@ test("the map's city/airport filter narrows the pins (and the companion list)", 
 }: {
   page: Page;
 }) => {
-  await page.goto("/");
-  for (const city of ["Paris", "Tokyo", "Osaka"]) await markVisited(page, city);
+  await openAppWithVisits(page, ["Paris", "Tokyo", "Osaka"]);
 
   await gotoTab(page, "Trips");
   await page.getByRole("button", { name: "Reconstruct a journey" }).click();

@@ -105,6 +105,9 @@ export function PlaceSearch({
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
+      // Clearing a query spends this Escape; on an empty field it still
+      // reaches the app, which closes a page or steps back.
+      if (q) e.stopPropagation();
       setQ("");
       setActive(-1);
       return;

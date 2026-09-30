@@ -143,6 +143,18 @@ describe("coverage statistics (real gazetteer)", () => {
   });
 });
 
+describe("coverage under a country scope", () => {
+  it("counts a territory's city in neither the cities numerator nor its denominator", () => {
+    const hk = ref.citiesOf("HK")[0]!;
+    const all = computeCoverage([visitOf(hk), visitOf(paris)], ref, "all");
+    const un = computeCoverage([visitOf(hk), visitOf(paris)], ref, "un");
+    expect(all.citiesVisited).toBe(2);
+    expect(un.countriesVisited).toBe(1);
+    expect(un.citiesVisited).toBe(1);
+    expect(un.worldCityCount).toBeLessThan(all.worldCityCount);
+  });
+});
+
 describe("railway stations in coverage (spec 021)", () => {
   const stationVisit = (id: string, country: string): Visit => ({
     visitId: crypto.randomUUID(),

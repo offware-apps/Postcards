@@ -81,8 +81,14 @@ export function PhotoGallery({
     wasOpen.current = open;
   }, [open]);
 
+  // Closing keeps a caption being typed: Escape takes the field away with no blur.
+  function close() {
+    commitCaption();
+    setOpen(false);
+  }
+
   // Escape closes; arrows page; Tab is trapped within the dialog.
-  useModalKeys(dialogRef, () => setOpen(false), {
+  useModalKeys(dialogRef, close, {
     enabled: open,
     selector: "button:not([disabled]), input, textarea",
     onKey: (e) => {

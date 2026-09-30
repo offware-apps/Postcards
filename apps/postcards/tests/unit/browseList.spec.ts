@@ -3,6 +3,7 @@ import { browseList, __resetBrowseCache } from "../../src/features/visits/browse
 import { DEFAULT_FILTERS } from "../../src/lib/store/useFilters";
 import type { ReferenceData, City, HeritageSite, Airport, Country } from "../../src/lib/reference/types";
 import type { Visit } from "../../src/lib/schema/models";
+import { getReferenceData } from "../../src/lib/reference/referenceData";
 
 const cities: City[] = [
   { id: "paris", name: "Paris", countryIso2: "FR", subdivisionId: null, lat: 48.85, lon: 2.35, population: 2_100_000 },
@@ -25,6 +26,7 @@ const countries: Record<string, Country> = {
 const lc = (s: string) => s.toLowerCase();
 const ref = {
   allCities: () => cities,
+  cityById: (id: string) => cities.find((c) => c.id === id),
   allHeritage: () => heritage,
   allAirports: () => airports,
   citiesOf: (iso2: string) =>
@@ -132,5 +134,27 @@ describe("browseList — reference browse + personal status overlay (spec 018 US
     // Only the requested rows are built — never the whole pool.
     expect(browseList("airports", "all", F, ref, [], "", 1).rows).toHaveLength(1);
     expect(browseList("airports", "all", F, ref, [], "", 1).hasMore).toBe(true);
+  });
+});
+
+describe("browseList — your own cities beyond the populous pool", () => {
+  it("status = visited / wishlist / favorites list a small town you logged", () => {
+    const world = getReferenceData();
+    const town = [...world.allCities()].sort((a, b) => (a.population ?? 0) - (b.population ?? 0))[0]!;
+    const v = (status: "visited" | "wishlist", favorite = false): Visit =>
+      ({
+        visitId: `v-${town.id}`,
+        place: { kind: "city", id: town.id, name: town.name, countryId: town.countryIso2 },
+        status,
+        favorite,
+      }) as Visit;
+    expect(bl("cities", "visited", F, world, [v("visited")], "").map((r) => r.id)).toEqual([town.id]);
+    expect(bl("cities", "wishlist", F, world, [v("wishlist")], "").map((r) => r.id)).toEqual([town.id]);
+    expect(bl("cities", "favorites", F, world, [v("visited", true)], "").map((r) => r.id)).toEqual([town.id]);
+  });
+
+  it("orders your cities most-populous first, like the pool", () => {
+    const visits = [visit("city", "lyon", "visited"), visit("city", "tokyo", "visited")];
+    expect(bl("cities", "visited", F, ref, visits, "").map((r) => r.id)).toEqual(["tokyo", "lyon"]);
   });
 });

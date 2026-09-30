@@ -124,6 +124,8 @@ interface IndexedHeritage extends HeritageSite {
 // Community-pack places, indexed for search, merged into every ReferenceData
 // instance's city set. Module-level so they survive a gazetteer swap / reinit.
 let packCities: IndexedCity[] = [];
+// Other ids a pack place also answers to (alias -> its id); see packs/store.
+let packAliases = new Map<string, string>();
 
 class ReferenceDataImpl implements ReferenceData {
   readonly countries: Country[];
@@ -186,6 +188,10 @@ class ReferenceDataImpl implements ReferenceData {
     this.cities = packCities.length ? this.baseCities.concat(packCities) : this.baseCities;
     this.cityIndex.clear();
     for (const c of this.cities) this.cityIndex.set(c.id, c);
+    for (const [alias, id] of packAliases) {
+      const c = this.cityIndex.get(id);
+      if (c && !this.cityIndex.has(alias)) this.cityIndex.set(alias, c);
+    }
     this.citiesByCountry.clear(); // per-country slices rebuild lazily from the new set
   }
 
@@ -523,9 +529,10 @@ async function upgradeToFullGazetteer(impl: ReferenceDataImpl): Promise<void> {
  * mappable city set. Called by the packs store at startup and whenever a pack is
  * added or removed. Fires the gazetteer event so screens holding memoized city
  * snapshots refresh. Pack ids are namespaced (pack:<id>:<n>), so they never
- * collide with GeoNames ids.
+ * collide with GeoNames ids; `aliases` are further ids cityById resolves to them.
  */
-export function setPackPlaces(places: City[]): void {
+export function setPackPlaces(places: City[], aliases = new Map<string, string>()): void {
+  packAliases = aliases;
   packCities = places
     .map((c) => ({ ...c, search: normalize(c.name) }))
     .sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
@@ -563,21 +570,24 @@ async function applyFullGazetteer(impl: ReferenceDataImpl): Promise<boolean> {
 
 /**
  * User-triggered download of the full world city list (~17 MB) — the "rest" that
- * isn't bundled with the app. Records the opt-in (so future launches re-load it
- * from cache), fetches + swaps the set in, and resolves true on success. A no-op
- * that returns true if the full set is already loaded. Never throws.
+ * isn't bundled with the app. Fetches + swaps the set in, resolves true on
+ * success, and only then records it (so future launches re-load it from cache
+ * and Settings shows it downloaded). A no-op that returns true if the full set
+ * is already loaded. Never throws.
  */
 export async function downloadFullCities(): Promise<boolean> {
-  try {
-    localStorage.setItem(FULL_CITIES_KEY, "1");
-  } catch {
-    /* private mode: the download still works this session, just isn't remembered */
-  }
   const impl = instance as ReferenceDataImpl | null;
   if (!impl) return false;
   // Already the full set? (core is 10k; the full set is ~135k.)
-  if (impl.allCities().length >= 100_000) return true;
-  return applyFullGazetteer(impl);
+  const ok = impl.allCities().length >= 100_000 || (await applyFullGazetteer(impl));
+  if (ok) {
+    try {
+      localStorage.setItem(FULL_CITIES_KEY, "1");
+    } catch {
+      /* private mode: the download still works this session, just isn't remembered */
+    }
+  }
+  return ok;
 }
 
 // Bumped when the full gazetteer replaces the core set, so React consumers can

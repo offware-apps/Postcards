@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { backfillUpdatedAt, stampNow } from "../schema/helpers";
+import { backfillUpdatedAt, stampDeletion, stampNow } from "../schema/helpers";
 import type { Photo, PlaceRef, Story } from "../schema/models";
 import * as db from "../db/storiesDb";
 import * as visitsDb from "../db/visitsDb";
@@ -47,7 +47,8 @@ interface StoriesState {
     >,
   ) => Promise<void>;
   removeStory: (storyId: string) => Promise<void>;
-  setAll: (stories: Story[]) => Promise<void>;
+  /** Put ONE story back (the undo of a delete or an edit): upsert by storyId. */
+  restoreStory: (story: Story) => Promise<void>;
 }
 
 export const useStories = create<StoriesState>((set, get) => ({
@@ -55,7 +56,9 @@ export const useStories = create<StoriesState>((set, get) => ({
   loaded: false,
   async load() {
     // Backfill `updatedAt` from `addedAt` for stories made before sync existed.
-    const stories = sortStories((await db.getAllStories()).map(backfillUpdatedAt));
+    const stories = sortStories(
+      (await visitsDb.loadOrEmpty(db.getAllStories)).map(backfillUpdatedAt),
+    );
     set({ stories, loaded: true });
   },
   async addStory({ place = null, extraPlaces, date, endDate, title, text, photos = [], folder = null, tags, tripId }) {
@@ -113,15 +116,20 @@ export const useStories = create<StoriesState>((set, get) => ({
     await db.putStory(updated);
   },
   async removeStory(storyId) {
+    const gone = get().stories.find((s) => s.storyId === storyId);
     set({ stories: get().stories.filter((s) => s.storyId !== storyId) });
     await db.deleteStory(storyId);
     // Tombstone the deletion so it propagates on sync (spec 013, FR-009).
-    await visitsDb.putTombstone("story", storyId, stampNow());
+    await visitsDb.putTombstone("story", storyId, stampDeletion(gone));
   },
-  async setAll(stories) {
-    // Bulk load: backfill `updatedAt` without stamping "now" (keep real ages).
-    const sorted = sortStories(stories.map(backfillUpdatedAt));
-    set({ stories: sorted });
-    await db.replaceAllStories(sorted);
+  async restoreStory(story) {
+    // Bump `updatedAt` so the restored story wins on the next merge, over its own
+    // tombstone or over the undone edit a sync already pushed, and clear that
+    // tombstone so the restore is clean (mirrors useVisits.restoreVisit).
+    const restored: Story = { ...story, updatedAt: stampNow() };
+    const rest = get().stories.filter((s) => s.storyId !== restored.storyId);
+    set({ stories: sortStories([...rest, restored]) });
+    await db.putStory(restored);
+    await visitsDb.deleteTombstone("story", restored.storyId);
   },
 }));

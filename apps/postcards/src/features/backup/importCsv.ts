@@ -1,5 +1,6 @@
 import type { ReferenceData } from "../../lib/reference/types";
-import type { PlaceRef, Visit } from "../../lib/schema/models";
+import { PlaceRefSchema, type PlaceRef, type Visit } from "../../lib/schema/models";
+import { isCalendarDate } from "../../lib/schema/helpers";
 import { haversineKm } from "../travel/distance";
 
 /**
@@ -110,14 +111,18 @@ export function parsePlacesCsv(text: string, ref: ReferenceData): CsvImportResul
   let skipped = 0;
   for (let r = 1; r < lines.length; r++) {
     const f = splitLine(lines[r]!, delim);
-    const name = (f[idx.name] ?? "").trim();
+    // Our export writes a formula-like name as '=… so spreadsheets keep it inert;
+    // drop that apostrophe so the name round-trips as it was.
+    const name = (f[idx.name] ?? "").trim().replace(/^'(?=[=+\-@])/, "");
     const cc = (f[idx.country] ?? "").trim().toUpperCase();
     if (!name || !/^[A-Z]{2}$/.test(cc) || !ref.countryByIso2(cc)) {
       skipped++;
       continue;
     }
-    const lat = idx.lat !== undefined ? Number(f[idx.lat]) : NaN;
-    const lon = idx.lon !== undefined ? Number(f[idx.lon]) : NaN;
+    // An empty cell is "no coordinate" (Number("") would read it as 0).
+    const coord = (i: number | undefined) => (i !== undefined && f[i] ? Number(f[i]) : NaN);
+    const lat = coord(idx.lat);
+    const lon = coord(idx.lon);
     const hasCoord = Number.isFinite(lat) && Number.isFinite(lon);
 
     // State from the tag column (default: visited when there is no such column).
@@ -133,11 +138,21 @@ export function parsePlacesCsv(text: string, ref: ReferenceData): CsvImportResul
     const favorite = tags.some((t) => t === "fave" || t === "fav" || t === "favorite" || t === "star");
 
     // Preserve the visit date when the file carries one (our export does); accept
-    // only a plain ISO calendar date so nothing odd slips into the record.
-    const rawDate = idx.date !== undefined ? (f[idx.date] ?? "").trim() : "";
-    const date = /^\d{4}-\d{2}-\d{2}/.test(rawDate) ? rawDate.slice(0, 10) : null;
+    // only a real ISO calendar day so nothing odd slips into the record.
+    const rawDate = idx.date !== undefined ? (f[idx.date] ?? "").trim().slice(0, 10) : "";
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && isCalendarDate(rawDate) ? rawDate : null;
 
-    places.push({ place: resolvePlace(ref, name, cc, hasCoord ? lat : null, hasCoord ? lon : null), status, favorite, date });
+    // Hold each row to the portable file's own rules (coordinates in range, a
+    // bounded name): one bad row stored as-is would make every later export,
+    // backup and sync fail validation. Such a row is skipped and counted.
+    const place = PlaceRefSchema.safeParse(
+      resolvePlace(ref, name, cc, hasCoord ? lat : null, hasCoord ? lon : null),
+    );
+    if (!place.success) {
+      skipped++;
+      continue;
+    }
+    places.push({ place: place.data, status, favorite, date });
   }
   return { places, total: lines.length - 1, skipped };
 }

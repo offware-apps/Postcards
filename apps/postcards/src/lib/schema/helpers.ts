@@ -115,3 +115,31 @@ export function backfillUpdatedAt<T extends { addedAt: string; updatedAt?: strin
 /** Current instant as an ISO-8601 string — the `updatedAt`/tombstone timestamp every
  *  store stamps on a write (one definition instead of a copy per store). */
 export const stampNow = (): string => new Date().toISOString();
+
+/** Days in a month (1–12) of a proleptic Gregorian year. Pure arithmetic, so it
+ *  never depends on the device's time zone. */
+export function daysInMonth(year: number, month: number): number {
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  return [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1] ?? 0;
+}
+
+/** Whether a `YYYY`, `YYYY-MM` or `YYYY-MM-DD` string names a real year, month or
+ *  day: no month 13, no Feb 30. Anything else is false. */
+export function isCalendarDate(s: string): boolean {
+  const m = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(s);
+  if (!m) return false;
+  if (m[2] == null) return true;
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return false;
+  if (m[3] == null) return true;
+  const day = Number(m[3]);
+  return day >= 1 && day <= daysInMonth(Number(m[1]), month);
+}
+
+/** The stamp of a record's deletion: now, or just after the record's own stamp
+ *  when that is later (a device whose clock runs fast wrote it), so the tombstone
+ *  always sorts after the version it deletes and the merge keeps it deleted. */
+export function stampDeletion(r: { updatedAt?: string; addedAt: string } | undefined): string {
+  const own = r ? Date.parse(r.updatedAt ?? r.addedAt) + 1 : NaN;
+  return new Date(own > Date.now() ? own : Date.now()).toISOString();
+}

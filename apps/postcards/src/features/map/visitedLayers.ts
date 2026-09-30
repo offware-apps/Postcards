@@ -2,6 +2,7 @@ import type { Feature, FeatureCollection, LineString, Point } from "geojson";
 import type { PlaceRef, TravelMode, Trip, Visit } from "../../lib/schema/models";
 import type { ReferenceData } from "../../lib/reference/types";
 import { coordsOf } from "../travel/distance";
+import { tripChain } from "../travel/tripStops";
 
 function isVisited(v: Visit): boolean {
   return v.status !== "wishlist";
@@ -213,8 +214,7 @@ function greatCircle(
 export function tripArcs(trips: Trip[], ref: ReferenceData): FeatureCollection<LineString> {
   const features: Feature<LineString>[] = [];
   for (const t of trips) {
-    const chain = t.stops && t.stops.length >= 2 ? t.stops : [t.from, t.to];
-    features.push(...stopsArcs(chain, ref, t.mode, t.legModes).features);
+    features.push(...stopsArcs(tripChain(t), ref, t.mode, t.legModes).features);
   }
   return { type: "FeatureCollection", features };
 }

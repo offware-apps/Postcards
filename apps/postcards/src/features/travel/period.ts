@@ -1,4 +1,5 @@
 import type { Trip } from "../../lib/schema/models";
+import { tripDateSpan } from "./tripDate";
 
 /** Localized full month name for a 2-digit month ("01".."12"), via the platform
  *  Intl formatter — the same way the Journal calendar localizes months, so fr/ko
@@ -23,27 +24,6 @@ export function distinctYearsDesc(items: { date: string | null }[]): string[] {
 }
 
 /**
- * A date-bucket selection shared by the year filters (Places/Journal/Trips and
- * now the map): "all" = any date, "none" = undated only, else a 4-digit year.
- */
-export type DateFilter = "all" | "none" | string;
-
-/** Whether a (possibly missing) date falls in the selected bucket. */
-export function matchesDateFilter(date: string | null | undefined, filter: DateFilter): boolean {
-  if (filter === "all") return true;
-  if (filter === "none") return !date;
-  return typeof date === "string" && date.slice(0, 4) === filter;
-}
-
-/** Keep only the items whose date qualifies for the selected bucket. */
-export function itemsInDateBucket<T extends { date: string | null }>(
-  items: T[],
-  filter: DateFilter,
-): T[] {
-  return items.filter((it) => matchesDateFilter(it.date, filter));
-}
-
-/**
  * The map's richer date selection. The quick year chips are presets over this:
  *   • all — any date
  *   • undated — only places with no date
@@ -62,15 +42,18 @@ export function yearRange(year: string): { from: string; to: string } {
 }
 
 /** Whether a (possibly missing) date falls in the map's date selection. A bounded
- *  range excludes undated places; the fully-open "all" keeps them. */
+ *  range excludes undated places; the fully-open "all" keeps them. A month- or
+ *  year-dated trip matches when the range covers its whole span, so the 2024 chip
+ *  keeps a trip dated "2024" or "2024-01". */
 export function mapDateMatches(date: string | null | undefined, f: MapDate): boolean {
   if (f.mode === "all") return true;
   if (f.mode === "undated") return !date;
-  if (!date) return false;
-  if (f.from && date < f.from) return false;
-  // Compare on the date prefix so a `to` of "2024-06-30" still admits a stored
-  // "2024-06-30T…" timestamp; dates here are plain YYYY-MM-DD in practice.
-  if (f.to && date.slice(0, 10) > f.to) return false;
+  // Read the date prefix so a stored "2024-06-30T…" timestamp still counts as its
+  // day; dates here are plain YYYY-MM-DD (or a vague trip date) in practice.
+  const span = tripDateSpan(date ? date.slice(0, 10) : null);
+  if (!span) return false;
+  if (f.from && span.first < f.from) return false;
+  if (f.to && span.last > f.to) return false;
   return true;
 }
 

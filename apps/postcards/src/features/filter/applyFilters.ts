@@ -99,6 +99,7 @@ export function activeChips(s: FilterState, t: TFunction, ref?: ReferenceData): 
     chips.push({ field: "date", label: y ?? [s.date.from, s.date.to].filter(Boolean).join(" – ") });
   }
   if (s.folder) chips.push({ field: "folder", label: `📁 ${s.folder}` });
+  if (s.category) chips.push({ field: "category", label: t(`filter.category.${s.category}` as MessageKey) });
   if (s.mode !== "all") {
     chips.push({ field: "mode", label: t(`filter.mode.${s.mode}` as MessageKey) });
   }

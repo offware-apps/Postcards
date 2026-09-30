@@ -184,29 +184,6 @@ function persist(state: FilterState): void {
   );
 }
 
-/** True iff every dimension is at its default (⇒ no active filters, empty summary). */
-export function isDefault(s: FilterState): boolean {
-  return (
-    s.status.length === 0 &&
-    s.minPop === 0 &&
-    s.date.mode === "all" &&
-    s.folder === "" &&
-    s.sort === "pop" &&
-    s.mode === "all" &&
-    s.category === "" &&
-    s.country === "" &&
-    !s.favoritesOnly &&
-    !s.hasPhoto &&
-    !s.hasNote &&
-    s.continent === ""
-  );
-}
-
-/** A copy of `s` with exactly `field` reset to its default (for a chip's ✕). */
-export function withFieldCleared(s: FilterState, field: keyof FilterState): FilterState {
-  return { ...s, [field]: DEFAULT_FILTERS[field] } as FilterState;
-}
-
 interface FilterStore extends FilterState {
   set: (partial: Partial<FilterState>) => void;
   clearField: (field: keyof FilterState) => void;

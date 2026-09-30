@@ -1,5 +1,5 @@
 import type { Story } from "../schema/models";
-import { getDb, hasIndexedDB } from "./visitsDb";
+import { getDb, hasIndexedDB, trackWrite } from "./visitsDb";
 
 // Journal working store — shares the "postcards" IndexedDB opened by visitsDb
 // (v3 adds the "stories" object store). Local-first, no backend.
@@ -12,19 +12,10 @@ export async function getAllStories(): Promise<Story[]> {
 
 export async function putStory(story: Story): Promise<void> {
   if (!hasIndexedDB()) return;
-  await (await getDb()).put(STORE, story);
+  await trackWrite(async () => (await getDb()).put(STORE, story));
 }
 
 export async function deleteStory(storyId: string): Promise<void> {
   if (!hasIndexedDB()) return;
-  await (await getDb()).delete(STORE, storyId);
-}
-
-export async function replaceAllStories(stories: Story[]): Promise<void> {
-  if (!hasIndexedDB()) return;
-  const database = await getDb();
-  const tx = database.transaction(STORE, "readwrite");
-  await tx.store.clear();
-  for (const s of stories) await tx.store.put(s);
-  await tx.done;
+  await trackWrite(async () => (await getDb()).delete(STORE, storyId));
 }

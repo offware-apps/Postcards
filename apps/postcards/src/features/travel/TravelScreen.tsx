@@ -154,7 +154,7 @@ export function TravelScreen() {
   const addTrip = useTrips((s) => s.addTrip);
   const updateTrip = useTrips((s) => s.updateTrip);
   const removeTrip = useTrips((s) => s.removeTrip);
-  const setAll = useTrips((s) => s.setAll);
+  const restoreTrip = useTrips((s) => s.restoreTrip);
   const showToast = useToast((s) => s.show);
 
   // The form itself holds its fields (see TripForm); the parent only keeps what
@@ -278,15 +278,22 @@ export function TravelScreen() {
 
   async function saveTrip({ from, to, mode, date, note, name }: TripFields) {
     if (!from || !to) return;
-    const prev = useTrips.getState().trips;
     // `name` is stamped like the other fields; an emptied label clears the folder.
     const fields = { from, to, mode, date: date || null, note: note.trim() || null, name: name.trim() || undefined };
+    // Undo puts back the one trip it changed, as a fresh write, so it also holds
+    // once a sync has pushed the change it undoes.
     if (editingId) {
+      const before = useTrips.getState().trips.find((x) => x.tripId === editingId);
       await updateTrip(editingId, fields);
-      showToast(t("travel.toast.updated", { from: endpointLabel(from), to: endpointLabel(to) }), () => setAll(prev));
+      showToast(
+        t("travel.toast.updated", { from: endpointLabel(from), to: endpointLabel(to) }),
+        before && (() => restoreTrip(before)),
+      );
     } else {
-      await addTrip(fields);
-      showToast(t("travel.toast.added", { from: endpointLabel(from), to: endpointLabel(to) }), () => setAll(prev));
+      const added = await addTrip(fields);
+      showToast(t("travel.toast.added", { from: endpointLabel(from), to: endpointLabel(to) }), () =>
+        removeTrip(added.tripId),
+      );
     }
     resetForm();
     setAddOpen(false);
@@ -306,10 +313,9 @@ export function TravelScreen() {
     }
   }
 
-  function removeWithUndo(tripId: string, label: string) {
-    const prev = useTrips.getState().trips;
-    void removeTrip(tripId);
-    showToast(t("travel.toast.removed", { label }), () => setAll(prev));
+  function removeWithUndo(trip: Trip, label: string) {
+    void removeTrip(trip.tripId);
+    showToast(t("travel.toast.removed", { label }), () => restoreTrip(trip));
   }
 
   function airportRef(iata: string): PlaceRef | null {
@@ -356,29 +362,30 @@ export function TravelScreen() {
     }
 
     // Connection: log every fully-resolved leg as a flight, with a single undo.
-    const prev = useTrips.getState().trips;
-    let added = 0;
+    const added: string[] = [];
     const skipped: string[] = [];
     for (const leg of legs) {
       if (leg.from && leg.to) {
-        await addTrip({
+        const trip = await addTrip({
           from: leg.from,
           to: leg.to,
           mode: "flight",
           date: leg.date,
           note: leg.flight ? `Flight ${leg.flight}` : null,
         });
-        added++;
+        added.push(trip.tripId);
       } else {
         skipped.push(`${leg.codes[0]}→${leg.codes[1]}`);
       }
     }
     showToast(
       t("travel.toast.scanAdded", {
-        count: added,
+        count: added.length,
         skipped: skipped.length ? t("travel.toast.scanSkipped", { list: skipped.join(", ") }) : "",
       }),
-      () => setAll(prev),
+      async () => {
+        for (const id of added) await removeTrip(id);
+      },
     );
   }
 
@@ -423,7 +430,7 @@ export function TravelScreen() {
         <button
           className="link-danger"
           type="button"
-          onClick={() => removeWithUndo(trip.tripId, label)}
+          onClick={() => removeWithUndo(trip, label)}
           aria-label={t("travel.removeAria", { label })}
         >
           {t("common.remove")}

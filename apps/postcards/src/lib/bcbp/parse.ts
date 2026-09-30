@@ -79,7 +79,8 @@ export function julianToDate(julianDay: number, now: Date): string {
     const d = new Date(Date.UTC(year, 0, julianDay));
     return d.getUTCFullYear() === year ? d : new Date(Date.UTC(year, 11, 31));
   };
-  const year = now.getUTCFullYear();
+  // The pass's day is the traveller's local calendar day, so "this year" is too.
+  const year = now.getFullYear();
   let d = build(year);
   // Passes are often obtained weeks ahead of departure, so only assume "last year"
   // when the date is well beyond a plausible booking window (~3 months out).

@@ -97,7 +97,7 @@ describe("trips are portable (round-trip + backward compatible)", () => {
       expect(result.trips[0]!.name).toBe("Japan 2024");
       expect(result.trips).toEqual([named]);
     }
-    // A formula-prefixed name is neutralised to inert text on parse.
+    // A formula-prefixed name is plain text in the file; it round-trips as typed.
     const evil = { ...trip(airportRef("CDG"), airportRef("JFK")), name: "=Japan 2024" };
     const parsed = PostcardsFileSchema.safeParse({
       format: "postcards",
@@ -107,7 +107,7 @@ describe("trips are portable (round-trip + backward compatible)", () => {
       trips: [evil],
     });
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.trips[0]!.name).toBe("Japan 2024");
+    if (parsed.success) expect(parsed.data.trips[0]!.name).toBe("=Japan 2024");
   });
 
   it("adds no `name` key to a trip that has none (byte-identical round-trip)", () => {
@@ -182,7 +182,7 @@ describe("trips are portable (round-trip + backward compatible)", () => {
     };
     const parsed = PostcardsFileSchema.safeParse(evil);
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.trips[0]!.carrier!.startsWith("=")).toBe(false);
+    if (parsed.success) expect(parsed.data.trips[0]!.carrier).toBe("=cmd|' /c calc'!A1");
   });
 });
 
@@ -254,7 +254,7 @@ describe("multi-stop trips (spec 019)", () => {
       expect(parsed.success, `date ${date}`).toBe(true);
     }
     // A date that doesn't match the year/month/day digit shape is rejected by the
-    // schema (range-checking of month/day is the UI's job via isValidTripDate; the
+    // schema (range-checking of month/day is the UI's job via parseTripDate; the
     // portable schema stays as lenient as it was for full-day dates).
     const bad = PostcardsFileSchema.safeParse({
       format: "postcards",

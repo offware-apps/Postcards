@@ -4,22 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <!-- Content-Security-Policy — the ONE control the "token stays on device"
-         promise rests on. The GitHub sync token lives in this origin's
-         localStorage; the crucial defence is a strict `connect-src` (+ img-src,
-         object-src 'none', form-action 'none'): an injected or dependency-borne
-         script cannot POST the token to any host but the few the app legitimately
-         talks to (api.github.com + GitHub-raw for community data packs, OSM tiles,
-         Wikimedia — never an arbitrary host), nor smuggle it out via an <img>,
-         form or <object>. Delivered as
+    <!-- Content-Security-Policy. The GitHub sync token lives in this origin's
+         localStorage. A strict `connect-src` (+ img-src, object-src 'none',
+         form-action 'none') holds every request a script in this page makes to
+         the few hosts the app talks to (api.github.com + GitHub-raw for
+         community data packs, OSM tiles, Wikimedia — never an arbitrary host),
+         and none leaves via an <img>, form or <object>. What it does not hold:
+         api.github.com is on the list and serves every repository, so a script
+         running here can still send the token there, to a repository of its
+         choosing. Nor does it reach beyond this document: every page served
+         from the same origin shares its localStorage, so the token is only as
+         contained as the origin is dedicated to this app. offware-apps.github.io
+         currently also serves another app; a custom domain or another dedicated
+         origin removes that dependency, and a token scoped to the one sync
+         repository (Contents read and write only) bounds it meanwhile.
+         Delivered as
          a meta because GitHub Pages sends no headers and the Capacitor WebView
          never sees them for the bundled index.html — the only portable channel.
          script-src keeps 'unsafe-inline' ONLY because the Publish PREVIEW renders
          the generated reader in a `sandbox="allow-scripts"` srcdoc iframe, which
          inherits this policy and is all inline script; that frame has an opaque
          origin and cannot read this origin's token, and static hosting offers no
-         per-request nonce, so 'unsafe-inline' here does not widen the credential's
-         blast radius — the connect-src backstop still contains any exfiltration.
+         per-request nonce, so 'unsafe-inline' here does not widen what can
+         reach the token — that frame's requests keep to the same connect-src.
          NOTE: `frame-ancestors`/`sandbox` are ignored in a meta CSP, so there is
          no clickjacking protection on a header-less static host (a non-issue on
          native). connect-src omits self-hosted GitHub Enterprise apiBase hosts;
@@ -61,6 +68,9 @@
     <meta name="theme-color" content="#4338ca" />
     <meta name="description" content="Remember the places you've been — private, offline, in a file you own." />
     <title>Postcards</title>
+    <!-- Before the module entry, so a failed download of the app's own code shows
+         a reload message instead of a blank page (see the file). -->
+    <script src="%BASE_URL%boot-guard.js"></script>
     <!-- Apply the saved colour-theme choice before first paint, so an explicit
          Light/Dark selection never flashes the wrong palette while the app
          bundle loads. First-party, inert: it only reads our own localStorage key

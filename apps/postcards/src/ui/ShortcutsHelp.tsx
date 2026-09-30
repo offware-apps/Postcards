@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useModalKeys } from "../lib/hooks/useModalKeys";
+import { useT } from "../lib/i18n";
 
 /** Minimal keyboard-shortcuts overlay (opened with "?"). */
 export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -21,36 +23,38 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         className="modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Keyboard shortcuts"
+        aria-label={t("shortcuts.title")}
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2>Keyboard shortcuts</h2>
+        <h2>{t("shortcuts.title")}</h2>
         <ul className="shortcuts">
           <li>
-            <kbd>/</kbd> Search — <kbd>Enter</kbd> shows the place, <kbd>Shift</kbd>+
-            <kbd>Enter</kbd> marks it visited
+            <kbd>/</kbd> {t("shortcuts.search")} — <kbd>Enter</kbd> {t("shortcuts.searchShow")},{" "}
+            <kbd>Shift</kbd>+<kbd>Enter</kbd> {t("shortcuts.searchMark")}
           </li>
           <li>
-            <kbd>1</kbd>–<kbd>5</kbd> or <kbd>M</kbd> <kbd>P</kbd> <kbd>T</kbd> <kbd>J</kbd>{" "}
-            <kbd>S</kbd> — switch sections (Map, Places, Trips, Journal, Stats)
+            <kbd>1</kbd>–<kbd>5</kbd> · <kbd>M</kbd> <kbd>P</kbd> <kbd>T</kbd> <kbd>J</kbd>{" "}
+            <kbd>S</kbd> — {t("shortcuts.sections")} (
+            {[t("nav.map"), t("nav.places"), t("nav.trips"), t("nav.journal"), t("nav.stats")].join(", ")})
           </li>
           <li>
-            <kbd>F</kbd> Passport · <kbd>X</kbd> Moments (inside Places)
+            <kbd>F</kbd> {t("places.collection.passport")} · <kbd>X</kbd> {t("places.collection.moments")}{" "}
+            {t("shortcuts.inPlaces")}
           </li>
           <li>
-            <kbd>W</kbd> Write today's postcard — <kbd>Ctrl/⌘</kbd>+<kbd>Enter</kbd> saves,{" "}
-            <kbd>Ctrl/⌘</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> saves &amp; starts another
+            <kbd>W</kbd> {t("shortcuts.write")} — <kbd>Ctrl/⌘</kbd>+<kbd>Enter</kbd> {t("shortcuts.writeSave")},{" "}
+            <kbd>Ctrl/⌘</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> {t("shortcuts.writeSaveNew")}
           </li>
           <li>
-            <kbd>?</kbd> This help
+            <kbd>?</kbd> {t("shortcuts.help")}
           </li>
           <li>
-            <kbd>Esc</kbd> Close / clear search
+            <kbd>Esc</kbd> {t("shortcuts.escape")}
           </li>
         </ul>
         <button ref={closeRef} className="btn" type="button" onClick={onClose}>
-          Close
+          {t("common.close")}
         </button>
       </div>
     </div>

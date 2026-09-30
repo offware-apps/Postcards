@@ -45,7 +45,7 @@ describe("StoryComposer save", () => {
     await waitFor(() => expect(useStories.getState().stories).toHaveLength(1));
 
     const stored = useStories.getState().stories[0]!;
-    expect(stored.title).toBe("Lyon trip");
+    expect(stored.title).toBe("=Lyon trip");
     expect(stored.text).toBe("Rain all day");
     expect(stored.folder).toBe("Spring");
     expect(roundTrip()).toEqual([stored]);
@@ -54,7 +54,7 @@ describe("StoryComposer save", () => {
   it("stores tags and captions as the schema cleans them, and a tag that cleans away is not kept", async () => {
     const { container } = render(<StoryComposer storyId={null} onClose={() => {}} />);
     const tagInput = screen.getByPlaceholderText("Add a tag and press Enter…");
-    for (const tag of [`${RLO}sunny`, "-", "+beach"]) {
+    for (const tag of [`${RLO}sunny`, RLO, "+beach"]) {
       fireEvent.change(tagInput, { target: { value: tag } });
       fireEvent.keyDown(tagInput, { key: "Enter" });
     }
@@ -66,8 +66,8 @@ describe("StoryComposer save", () => {
     await waitFor(() => expect(useStories.getState().stories).toHaveLength(1));
 
     const stored = useStories.getState().stories[0]!;
-    expect(stored.tags).toEqual(["sunny", "beach"]);
-    expect(stored.photos?.map((p) => p.caption)).toEqual(["the view", null]);
+    expect(stored.tags).toEqual(["sunny", "+beach"]);
+    expect(stored.photos?.map((p) => p.caption)).toEqual(["@the view", null]);
     expect(roundTrip()).toEqual([stored]);
   });
 });

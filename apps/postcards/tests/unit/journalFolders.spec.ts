@@ -3,7 +3,6 @@ import {
   distinctFolders,
   folderSuggestions,
   matchesFolder,
-  storiesInFolder,
 } from "../../src/features/journal/folders";
 import type { PlaceRef, Story, Trip } from "../../src/lib/schema/models";
 
@@ -41,14 +40,8 @@ describe("distinctFolders", () => {
   });
 });
 
-describe("matchesFolder / storiesInFolder (feed 'By folder' filter)", () => {
+describe("matchesFolder (feed 'By folder' filter)", () => {
   it("keeps only the stories in a named folder; folder-less stories never match", () => {
-    const list = [
-      { folder: "A", id: 1 },
-      { folder: "B", id: 2 },
-      { id: 3 },
-    ];
-    expect(storiesInFolder(list, "A").map((s) => s.id)).toEqual([1]);
     expect(matchesFolder({ folder: "A" }, "A")).toBe(true);
     expect(matchesFolder({ folder: "B" }, "A")).toBe(false);
     expect(matchesFolder({}, "A")).toBe(false);
@@ -88,6 +81,13 @@ describe("folderSuggestions (proposed folders at creation)", () => {
     });
     // The trip touches Japan (Tokyo) → same country as the story's place.
     expect(out).toContain("JP & KR hop");
+  });
+
+  it("proposes a multi-stop trip whose middle stop is the story's country", () => {
+    const paris = place("paris-fr", "Paris", "FR");
+    const seoul = place("seoul-kr", "Seoul", "KR");
+    const hop = { ...trip("Round the world", paris, seoul, null), stops: [paris, tokyo, seoul] };
+    expect(folderSuggestions([], { place: kyoto, trips: [hop] })).toContain("Round the world");
   });
 
   it("proposes a trip name from the same year even without a place match", () => {

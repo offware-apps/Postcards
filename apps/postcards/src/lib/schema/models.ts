@@ -7,7 +7,9 @@ import {
   MAX_PLACES_PER_STORY,
   MAX_TAGS_PER_STORY,
   MAX_TAG_LEN,
+  isCalendarDate,
 } from "./helpers";
+import { isDecodableDataUrl } from "../image/photoBlobs";
 
 // Canonical, versioned schema for the portable data file.
 // Single source of truth: these Zod models generate TS types AND the published
@@ -45,8 +47,8 @@ export const PlaceRefSchema = z
       .min(1)
       .max(200)
       .transform((s) => sanitizeText(s, 200))
-      // min(1) runs on the INPUT; a name of only formula-prefix chars ("===")
-      // sanitizes to "" and would poison the file — reject it clearly instead.
+      // min(1) runs on the INPUT; a name of only invisible characters (a lone
+      // U+200B) sanitizes to "" and would poison the file — reject it clearly instead.
       .refine((s) => s.length > 0, { message: "Name is empty once sanitized" }),
     countryId: isoCountryId,
     // Coordinates carried on the record itself — only used by kind "custom"
@@ -77,7 +79,10 @@ const photoDataUrl = z
   .refine(
     (s) => /^data:image\/(png|jpe?g|webp|gif|avif);/i.test(s),
     "photo must be an inline raster image data URL",
-  );
+  )
+  // A base64 payload that does not decode renders as nothing and breaks the photo
+  // store and the archive, so the file is refused here with the normal error.
+  .refine(isDecodableDataUrl, "photo data does not decode");
 
 /**
  * One photo in a place's gallery: the inline image + an optional short caption
@@ -107,6 +112,13 @@ const optionalLabel = (max = 80) =>
       return s.length ? s : undefined;
     })
     .optional();
+
+/** An optional visit or trip date that has the right shape but names no real day
+ *  (2024-13-45, 2024-02-30) loads as undated instead of failing the whole file:
+ *  the CSV import once stored such dates, so files the app itself wrote carry them,
+ *  and a date nothing can place on a calendar is no date. */
+const calendarDateOrNull = (v: string | null | undefined): string | null =>
+  v != null && isCalendarDate(v) ? v : null;
 
 /** One personal tag on a postcard (a mood, a weather note, a free label) — a
  *  bounded, sanitized, non-empty string. Personal data, never reference data
@@ -138,7 +150,7 @@ export const VisitSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional()
-    .transform((v) => v ?? null),
+    .transform(calendarDateOrNull),
   note: nullableSanitized(2000),
   /**
    * Legacy single "postcard" photo (schema ≤ v2). Kept so v1/v2 files import
@@ -226,7 +238,8 @@ export const TripSchema = z
         z
           .string()
           .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/)
-          .nullable(),
+          .nullable()
+          .transform(calendarDateOrNull),
       )
       .max(200)
       .optional(),
@@ -239,7 +252,7 @@ export const TripSchema = z
       .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/)
       .nullable()
       .optional()
-      .transform((v) => v ?? null),
+      .transform(calendarDateOrNull),
     carrier: nullableSanitized(120),
     note: nullableSanitized(2000),
     addedAt: z.string().datetime({ offset: true }),
@@ -274,7 +287,10 @@ export const StorySchema = z
      */
     extraPlaces: z.array(PlaceRefSchema).max(MAX_PLACES_PER_STORY - 1).optional(),
     /** The day the postcard is about — required (the start day of any range). */
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(isCalendarDate, { message: "date must be a real calendar day" }),
     /**
      * Optional range END day. Additive & optional and NEVER injected on parse (no
      * default, no null transform) so v1–v12 files round-trip byte-identically:
@@ -283,6 +299,7 @@ export const StorySchema = z
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(isCalendarDate, { message: "endDate must be a real calendar day" })
       .optional(),
     // Title AND text are both optional so a journal entry can be image-only. Each
     // stays a (possibly empty) string — no key ripple for consumers — and the

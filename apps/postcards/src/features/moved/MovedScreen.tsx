@@ -7,13 +7,16 @@ import { initReferenceData } from "../../lib/reference/referenceData";
 import { useT } from "../../lib/i18n";
 import { deliver } from "../backup/Backup";
 import { HANDOFF_PARAM, MOVED_FLAG, readHandoff } from "../../lib/moved/moved";
+import { SYNC_KEYS } from "../../lib/sync/syncConfig";
+import { replaceAllPortable } from "../../lib/db/visitsDb";
 
 /**
  * What the OLD address shows once the app has moved (see lib/moved/moved.ts);
  * main.tsx has already redirected a visitor who moved before. Nothing stored
  * here: straight to the same page at the new address. Places stored here: one
  * button hands them to the new address, and a download is the way out when the
- * browser will not open it.
+ * browser will not open it. Once the new address has them, they and the sync
+ * settings are cleared here.
  */
 export default function MovedScreen({
   canonical,
@@ -84,10 +87,19 @@ export default function MovedScreen({
       }
       ctl.abort();
       if (msg.type === "postcards-handoff-done") {
+        // The new address holds the data now, and once the flag is set nothing
+        // here reads this copy again: drop it, and the sync token and settings
+        // with it, rather than leave them on an origin the app has left.
         try {
           localStorage.setItem(MOVED_FLAG, new Date().toISOString());
+          for (const key of Object.values(SYNC_KEYS)) localStorage.removeItem(key);
         } catch {
           /* storage unavailable: the screen simply shows again next visit */
+        }
+        try {
+          await replaceAllPortable([], [], [], []);
+        } catch {
+          /* left behind, unread: the flag already forwards every later visit */
         }
         setStatus({ kind: "ok", text: t("moved.done") });
       } else if (msg.type === "postcards-handoff-failed") {

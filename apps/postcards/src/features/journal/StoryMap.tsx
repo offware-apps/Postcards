@@ -4,8 +4,8 @@ import { useUi } from "../../lib/store/useUi";
 import { placeKey } from "../../lib/schema/helpers";
 import { countryFlag } from "../../lib/format/format";
 import { LAND_OUTLINE } from "../../lib/publish/landOutline";
-import type { Story, PlaceRef } from "../../lib/schema/models";
-import type { ReferenceData } from "../../lib/reference/types";
+import type { Story } from "../../lib/schema/models";
+import { coordsOf } from "../travel/distance";
 import { useT } from "../../lib/i18n";
 import { placesOf } from "./postcardModel";
 
@@ -20,30 +20,6 @@ const MIN_SPAN = 0.35; // guarantee regional context around a single/clustered p
 function mercY(lat: number): number {
   const la = Math.max(-85, Math.min(85, lat));
   return Math.log(Math.tan(Math.PI / 4 + (la * Math.PI) / 360));
-}
-
-/** Coordinates for a story's place (nothing invented — countries have no point). */
-function coordOf(ref: ReferenceData, p: PlaceRef): { lon: number; lat: number } | null {
-  if (p.kind === "city") {
-    const c = ref.cityById(p.id);
-    return c ? { lon: c.lon, lat: c.lat } : null;
-  }
-  if (p.kind === "heritage") {
-    const h = ref.heritageById(p.id);
-    return h && (h.lat !== 0 || h.lon !== 0) ? { lon: h.lon, lat: h.lat } : null;
-  }
-  if (p.kind === "airport") {
-    const a = ref.airportById(p.id);
-    return a ? { lon: a.lon, lat: a.lat } : null;
-  }
-  if (p.kind === "station") {
-    const s = ref.stationById(p.id);
-    return s ? { lon: s.lon, lat: s.lat } : null;
-  }
-  if (p.kind === "custom") {
-    return p.lat != null && p.lon != null ? { lon: p.lon, lat: p.lat } : null;
-  }
-  return null;
 }
 
 /**
@@ -64,7 +40,7 @@ export function StoryMap({ stories }: { stories: Story[] }) {
     // an entry once per place it's about.
     for (const s of stories) {
       for (const place of placesOf(s)) {
-        const c = coordOf(ref, place);
+        const c = coordsOf(place, ref);
         if (!c) continue;
         const k = placeKey(place);
         const g = m.get(k);

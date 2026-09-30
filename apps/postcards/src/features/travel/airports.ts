@@ -1,5 +1,6 @@
 import type { Trip, Visit } from "../../lib/schema/models";
 import type { Airport, ReferenceData } from "../../lib/reference/types";
+import { tripChain } from "./tripStops";
 
 export interface AirportCount {
   airport: Airport;
@@ -11,7 +12,9 @@ export interface AirportCount {
  * How many times each airport appears across your travel data, busiest first.
  *
  * Every trip leg that starts or ends at an airport counts once (a round trip
- * through a hub is two touches), and every explicitly-marked airport visit counts
+ * through a hub is two touches), the legs of a multi-stop trip included, so a
+ * connection logged as one journey counts as it would logged as two trips; and
+ * every explicitly-marked airport visit counts
  * once too — so the airport you keep connecting through rises to the top. Wishlist
  * airports (not yet been) are excluded, and IATA codes the gazetteer doesn't know
  * are skipped, so nothing is invented.
@@ -27,8 +30,10 @@ export function airportVisitCounts(
   const counts = new Map<string, number>();
   const bump = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
   for (const t of trips) {
-    if (t.from.kind === "airport") bump(t.from.id);
-    if (t.to.kind === "airport") bump(t.to.id);
+    const chain = tripChain(t);
+    for (let i = 0; i < chain.length - 1; i++) {
+      for (const end of [chain[i]!, chain[i + 1]!]) if (end.kind === "airport") bump(end.id);
+    }
   }
   for (const v of visits) {
     if (v.place.kind === "airport" && v.status !== "wishlist") bump(v.place.id);

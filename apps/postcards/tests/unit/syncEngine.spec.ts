@@ -324,3 +324,80 @@ describe("syncOnce safety guard (mass-deletion remediation)", () => {
     expect(result.visits.removed).toBe(0);
   });
 });
+
+describe("the same place marked on two devices", () => {
+  const PNG =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const PNG2 = PNG.replace("ggg==", "ggA=="); // a second image that still decodes
+  const paris = (id: string, updatedAt: string, src: string, note: string | null): Visit => ({
+    ...visit(id, updatedAt, note),
+    place: { kind: "city", id: "2988507", name: "Paris", countryId: "FR" },
+    photos: [{ src, caption: id }],
+  });
+
+  it("collapses into one record, the newest, with both galleries, on both devices", async () => {
+    const remote = new MemoryRemote();
+    const b = await sync(visits(paris("b", "2026-02-01T00:00:00.000Z", PNG, "from B")), remote);
+    const a = await sync(visits(paris("a", "2026-02-02T00:00:00.000Z", PNG2, "from A")), remote);
+    expect(a.persisted.visits.records).toHaveLength(1);
+    const kept = a.persisted.visits.records[0]!;
+    expect(kept.visitId).toBe("a");
+    expect(kept.note).toBe("from A");
+    expect(kept.photos!.map((p) => p.caption)).toEqual(["a", "b"]);
+    expect(a.persisted.visits.tombstones.map((t) => t.id)).toEqual(["b"]);
+
+    // B syncs again with what it holds and reaches the same state.
+    const b2 = await sync(b.persisted, remote);
+    expect(b2.persisted.visits).toEqual(a.persisted.visits);
+  });
+});
+
+describe("a sync with nothing new to push", () => {
+  const at = "2026-02-01T00:00:00.000Z";
+  const FR = { kind: "country" as const, id: "FR", name: "France", countryId: "FR" };
+  const JP = { kind: "country" as const, id: "JP", name: "Japan", countryId: "JP" };
+
+  it("does not push again a record whose keys sit in another order", async () => {
+    const remote = new MemoryRemote();
+    // An edit appends `folder` after the other keys; the parsed file has it before
+    // `photos`, so the local copy wins the tie-break on its key order alone.
+    const story = {
+      storyId: "s1",
+      place: FR,
+      date: "2026-01-20",
+      title: "Paris",
+      text: "t",
+      photos: [{ src: "data:image/png;base64,iVBORw0KGgo=", caption: null }],
+      addedAt: at,
+      updatedAt: at,
+      folder: "Europe",
+    };
+    const local: StoreSnapshots = {
+      ...emptySnapshots(),
+      stories: { records: [story], tombstones: [] },
+    };
+    for (let i = 0; i < 3; i++) await sync(local, remote);
+    expect(remote.pushes).toBe(1);
+  });
+
+  it("does not push again a text the import cleans up", async () => {
+    const remote = new MemoryRemote();
+    const trip = {
+      tripId: "t1",
+      from: FR,
+      to: JP,
+      mode: "flight" as const,
+      date: null,
+      carrier: null,
+      note: "Bon voyage​!",
+      addedAt: at,
+      updatedAt: at,
+    };
+    const local: StoreSnapshots = {
+      ...emptySnapshots(),
+      trips: { records: [trip], tombstones: [] },
+    };
+    for (let i = 0; i < 3; i++) await sync(local, remote);
+    expect(remote.pushes).toBe(1);
+  });
+});

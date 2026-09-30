@@ -16,6 +16,7 @@ import { download } from "../../lib/download";
 import { useT, useLocale } from "../../lib/i18n";
 import { distinctFolders, matchesFolder } from "./folders";
 import { placesOf, primaryPlace, isUnplaced, dateSpan } from "./postcardModel";
+import { ListPager } from "../../ui/ListPager";
 import {
   addMonths,
   hexToRgba,
@@ -26,6 +27,7 @@ import {
   type StoryDayCell,
 } from "./calendar";
 import { CONTINENT_ORDER, CONTINENT_FALLBACK, continentColor } from "../../lib/reference/continents";
+import { LoadBoundary } from "../../ui/LoadFailure";
 
 // Publish mode pulls in the site renderer + encryption + connector; load it
 // only when the user opens it, so the Journal's own path stays lean.
@@ -215,7 +217,7 @@ function JournalCalendar({
   );
   // Localized weekday abbreviations, ordered from FIRST_DAY_OF_WEEK (2023-01-01 is a Sunday).
   const weekdays = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
     return Array.from({ length: 7 }, (_, i) =>
       fmt.format(new Date(Date.UTC(2023, 0, 1 + ((FIRST_DAY_OF_WEEK + i) % 7)))),
     );
@@ -348,7 +350,7 @@ export function JournalScreen() {
   const ref = useMemo(() => getReferenceData(), []);
   const stories = useStories((s) => s.stories);
   const removeStory = useStories((s) => s.removeStory);
-  const setAll = useStories((s) => s.setAll);
+  const restoreStory = useStories((s) => s.restoreStory);
   const trips = useTrips((s) => s.trips);
   const showToast = useToast((s) => s.show);
 
@@ -563,15 +565,14 @@ export function JournalScreen() {
   }, [view, daySel]);
 
   function removeWithUndo(s: Story) {
-    const prev = useStories.getState().stories;
     void removeStory(s.storyId);
     const label = s.title || primaryPlace(s)?.name || t("journal.untitledEntry");
-    showToast(t("journal.toast.removed", { title: label }), () => setAll(prev));
+    showToast(t("journal.toast.removed", { title: label }), () => restoreStory(s));
   }
 
-  function exportMd() {
+  async function exportMd() {
     try {
-      download(JOURNAL_EXPORT_FILENAME, journalToMarkdown(stories, ref), "text/markdown");
+      await download(JOURNAL_EXPORT_FILENAME, journalToMarkdown(stories, ref), "text/markdown");
     } catch {
       showToast(t("journal.toast.exportErr"));
     }
@@ -590,7 +591,7 @@ export function JournalScreen() {
           ✍️ {t("journal.newStory")}
         </button>
         {stories.length > 0 && (
-          <button className="btn-ghost" type="button" onClick={exportMd}>
+          <button className="btn-ghost" type="button" onClick={() => void exportMd()}>
             {t("journal.exportMd")}
           </button>
         )}
@@ -602,9 +603,11 @@ export function JournalScreen() {
       </div>
 
       {publishOpen && (
-        <Suspense fallback={null}>
-          <PublishScreen onClose={() => setPublishOpen(false)} />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <PublishScreen onClose={() => setPublishOpen(false)} />
+          </Suspense>
+        </LoadBoundary>
       )}
       {stories.length > 0 && <p className="muted small">{t("journal.exportNote")}</p>}
 
@@ -989,18 +992,12 @@ export function JournalScreen() {
             })}
           </div>
           {filtered.length > feedShown && (
-            <div className="list-pager">
-              <span className="muted small">
-                {t("journal.showingCount", { shown: feedShown, total: filtered.length })}
-              </span>
-              <button
-                className="mini-btn"
-                type="button"
-                onClick={() => setFeedShown((n) => n + FEED_PAGE)}
-              >
-                {t("journal.showMore", { count: Math.min(FEED_PAGE, filtered.length - feedShown) })}
-              </button>
-            </div>
+            <ListPager
+              shown={feedShown}
+              total={filtered.length}
+              step={Math.min(FEED_PAGE, filtered.length - feedShown)}
+              onMore={() => setFeedShown((n) => n + FEED_PAGE)}
+            />
           )}
           </>
           )}

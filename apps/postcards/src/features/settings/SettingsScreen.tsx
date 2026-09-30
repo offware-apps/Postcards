@@ -1,7 +1,9 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
 import { useToast } from "../../lib/store/useToast";
 import { useSettings, MARKER_CAP_CHOICES } from "../../lib/store/useSettings";
+import { todayISO } from "../../lib/store/useVisits";
 import { saveAreaOffline } from "../map/offlineTiles";
 import { OFFLINE_REGIONS, REGION_MAX_TILES, estimateRegion, type OfflineRegion } from "./regions";
 import { ScopeToggle } from "../../ui/ScopeToggle";
@@ -15,6 +17,12 @@ import { formatInt } from "../../lib/format/format";
 import { downloadFullCities, fullCitiesEnabled } from "../../lib/reference/referenceData";
 import { STATION_SOURCES } from "../../lib/reference/stationSources";
 import { useT } from "../../lib/i18n";
+import { LoadBoundary } from "../../ui/LoadFailure";
+
+// The newest Android build of main, republished by .github/workflows/android-apk.yml
+// under a tag that never moves away from this URL.
+const ANDROID_APK_URL =
+  "https://github.com/offware-apps/Postcards/releases/download/android-latest/postcards.apk";
 
 // Publish mode is loaded on demand (it pulls in the site renderer + crypto).
 const PublishScreen = lazy(() =>
@@ -49,6 +57,20 @@ export function SettingsScreen() {
   // Downloads are cancelable, and each region remembers when it was last saved
   // (so the button honestly reads "Re-download" instead of pretending it's new).
   const controllers = useRef<Record<string, AbortController | undefined>>({});
+  // A region download stops the moment Offline mode is switched on, or Settings
+  // is left: every controller aborts, which cancels the requests in flight too.
+  useEffect(() => {
+    const abortAll = () => {
+      for (const c of Object.values(controllers.current)) c?.abort();
+    };
+    const unsubscribe = useSettings.subscribe((s) => {
+      if (s.offlineMode) abortAll();
+    });
+    return () => {
+      unsubscribe();
+      abortAll();
+    };
+  }, []);
   const [savedAt, setSavedAt] = useState<Record<string, string | undefined>>(() => {
     const out: Record<string, string | undefined> = {};
     for (const r of OFFLINE_REGIONS) {
@@ -106,6 +128,13 @@ export function SettingsScreen() {
 
   async function download(r: OfflineRegion) {
     if (progress[r.id] != null) return;
+    // The service worker's cache is what keeps the tiles; it sees these requests
+    // only while it controls the page (not after a hard reload, nor where service
+    // workers are unavailable). Without it nothing would be saved.
+    if (!navigator.serviceWorker?.controller) {
+      showToast(t("settings.offline.toast.notReady", { region: r.name }));
+      return;
+    }
     const ctl = new AbortController();
     controllers.current[r.id] = ctl;
     setProgress((p) => ({ ...p, [r.id]: 0 }));
@@ -114,12 +143,15 @@ export function SettingsScreen() {
         levels: r.levels,
         maxTiles: REGION_MAX_TILES,
         signal: ctl.signal,
+        stop: () => useSettings.getState().offlineMode,
         onProgress: (p) => setProgress((s) => ({ ...s, [r.id]: p.total ? p.done / p.total : 1 })),
       });
       if (ctl.signal.aborted) {
         showToast(t("settings.offline.toast.cancelled", { region: r.name }));
+      } else if (res.saved === 0) {
+        showToast(t("settings.offline.toast.failed", { region: r.name }));
       } else {
-        const now = new Date().toISOString().slice(0, 10);
+        const now = todayISO();
         try {
           localStorage.setItem(`postcards-region-saved:${r.id}`, now);
         } catch {
@@ -156,6 +188,17 @@ export function SettingsScreen() {
         <ThemeToggle />
         <LanguageToggle />
       </section>
+
+      {/* The Android app — offered on the web only; inside the app it is moot. */}
+      {!Capacitor.isNativePlatform() && (
+        <section className="settings-section">
+          <h3>📱 {t("settings.android.title")}</h3>
+          <p className="muted small">{t("settings.android.desc")}</p>
+          <a className="btn-ghost" href={ANDROID_APK_URL} title={t("settings.android.linkTitle")}>
+            ⬇ {t("settings.android.link")}
+          </a>
+        </section>
+      )}
 
       {/* Offline mode — the master "self-contained" switch. One flip guarantees
           zero optional egress across the whole app (map, guides, everything). */}
@@ -421,9 +464,11 @@ export function SettingsScreen() {
       <Attribution />
 
       {publishOpen && (
-        <Suspense fallback={null}>
-          <PublishScreen onClose={() => setPublishOpen(false)} />
-        </Suspense>
+        <LoadBoundary>
+          <Suspense fallback={null}>
+            <PublishScreen onClose={() => setPublishOpen(false)} />
+          </Suspense>
+        </LoadBoundary>
       )}
     </section>
   );

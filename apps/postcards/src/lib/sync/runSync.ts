@@ -12,19 +12,15 @@
 // connector. `serialize` builds the portable file from records + tombstones only —
 // the token is NEVER part of it — so it can't leak into the pushed file or a backup.
 
-import { normalizeVisitPhotos, backfillUpdatedAt } from "../schema/helpers";
+import { normalizeVisitPhotos, backfillUpdatedAt, stampDeletion } from "../schema/helpers";
 import type { SyncTombstone } from "../schema/models";
-import {
-  getAllTombstones,
-  replaceAllPortable,
-  type TombstoneRecord,
-  type TombstoneKind,
-} from "../db/visitsDb";
+import { getAllTombstones, mergeIntoPortable, type TombstoneKind } from "../db/visitsDb";
 import { useVisits } from "../store/useVisits";
 import { useTrips } from "../store/useTrips";
 import { sortStories, useStories } from "../store/useStories";
 import { useSyncStatus } from "../store/useSyncStatus";
 import type { StoreSnapshots, SyncResult } from "./engine";
+import { mergeById, type SyncSnapshot } from "./merge";
 import { markApplyingSync } from "./applyMark";
 import { SYNC_PATH, shouldGuardRemoval, type RemoteConfig } from "./syncConfig";
 
@@ -37,6 +33,34 @@ const partitionTombs = (list: SyncTombstone[], kind: TombstoneKind) =>
 /** The snapshot (records + tombstones) for one kind out of a merged set. */
 const snapFor = (merged: StoreSnapshots, kind: TombstoneKind) =>
   kind === "visit" ? merged.visits : kind === "trip" ? merged.trips : merged.stories;
+
+/**
+ * Fold the edits made WHILE a run was in flight onto its merged result. The run
+ * merged a snapshot of the store taken before its pull, so a record added, edited
+ * or deleted since would otherwise be overwritten by that older copy. Store writes
+ * are immutable, so a record edited since is a new object; one gone from the store
+ * was deleted here and gets a tombstone as of now. Newest still wins.
+ */
+function withEditsSince<R extends { updatedAt?: string; addedAt: string }>(
+  merged: SyncSnapshot<R>,
+  snapshot: R[],
+  current: R[],
+  idOf: (r: R) => string,
+): SyncSnapshot<R> {
+  if (current === snapshot) return merged;
+  const before = new Map(snapshot.map((r) => [idOf(r), r]));
+  const now = new Set(current.map(idOf));
+  const edited = current.filter((r) => before.get(idOf(r)) !== r);
+  const deleted = snapshot
+    .filter((r) => !now.has(idOf(r)))
+    .map((r) => ({ id: idOf(r), deletedAt: stampDeletion(r) }));
+  return mergeById(
+    merged,
+    { records: edited, tombstones: deleted },
+    idOf,
+    (r) => r.updatedAt ?? r.addedAt,
+  );
+}
 
 /** The result of one run — a discriminated union so callers branch without relying
  *  on thrown control-flow. `blocked` is the safety guard; `error` carries an i18n
@@ -100,6 +124,13 @@ export async function runDeviceSync(
       import("./engine"),
     ]);
 
+    // A store still loading reads as empty, and persist would write that over the
+    // device: "Sync now" can be pressed before the startup read is done (auto-sync
+    // waits for it), so finish loading first.
+    await Promise.all(
+      [useVisits, useTrips, useStories].map((s) => !s.getState().loaded && s.getState().load()),
+    );
+
     const localTombs = await getAllTombstones();
     const pickTombs = (kind: TombstoneKind) => partitionTombs(localTombs, kind);
 
@@ -138,30 +169,44 @@ export async function runDeviceSync(
     };
 
     const persist = async (merged: StoreSnapshots): Promise<void> => {
-      const records: TombstoneRecord[] = kinds.flatMap((kind) => {
-        const snap = snapFor(merged, kind);
-        return snap.tombstones.map((t) => ({
-          key: `${kind}:${t.id}`,
-          kind,
-          id: t.id,
-          deletedAt: t.deletedAt,
-        }));
+      // The user kept editing while the pull and push ran: keep those edits. They
+      // are pushed by the next run, which auto-sync schedules for any edit.
+      const withEdits = (): StoreSnapshots => ({
+        visits: withEditsSince(
+          merged.visits,
+          local.visits.records,
+          useVisits.getState().visits,
+          (v) => v.visitId,
+        ),
+        trips: withEditsSince(
+          merged.trips,
+          local.trips.records,
+          useTrips.getState().trips,
+          (t) => t.tripId,
+        ),
+        stories: withEditsSince(
+          merged.stories,
+          local.stories.records,
+          useStories.getState().stories,
+          (s) => s.storyId,
+        ),
       });
-      // Records AND tombstones in one transaction (FR-015).
-      await replaceAllPortable(
-        merged.visits.records,
-        merged.trips.records,
-        merged.stories.records,
-        records,
-      );
+      // Records AND tombstones in one transaction (FR-015), with what another tab
+      // wrote since this run read the stores merged in rather than written over.
+      await mergeIntoPortable(withEdits(), local);
+      // An edit made during that write lands in IndexedDB in its own, later
+      // transaction; fold it into memory too.
+      const inMemory = withEdits();
       // Bracket the store writes so auto-sync's own subscribers ignore them and
       // don't mistake a persisted pull for a fresh local edit (would loop forever).
       markApplyingSync(() => {
         useVisits.setState({
-          visits: merged.visits.records.map(normalizeVisitPhotos).map(backfillUpdatedAt),
+          visits: inMemory.visits.records.map(normalizeVisitPhotos).map(backfillUpdatedAt),
         });
-        useTrips.setState({ trips: merged.trips.records.map(backfillUpdatedAt) });
-        useStories.setState({ stories: sortStories(merged.stories.records.map(backfillUpdatedAt)) });
+        useTrips.setState({ trips: inMemory.trips.records.map(backfillUpdatedAt) });
+        useStories.setState({
+          stories: sortStories(inMemory.stories.records.map(backfillUpdatedAt)),
+        });
       });
     };
 

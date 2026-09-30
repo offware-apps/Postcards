@@ -197,7 +197,9 @@ form isn't duplicated between Publish and Sync.
 
 1. Create (or reuse) a git repo you own.
 2. Fill in **Owner**, **Repo**, **Branch** (defaults to `main`), and a **Token** — a
-   fine-grained GitHub PAT with `contents:write` on that repo.
+   fine-grained GitHub PAT with **Repository access: only that repo** and
+   **Permissions: Contents → Read and write**, nothing else. The hint under the
+   token field says the same.
 3. Tap **Sync now**.
 
 The file is written to `places.postcards.json` at the repo root. On the first sync
@@ -212,6 +214,14 @@ timestamp shown as "Last synced …". The **token is never written into the sync
 or any export** (FR-020) — it stays on-device. The heavy codec (Zod), the engine, and
 the connector are **loaded on demand** when you tap Sync, so this section costs the
 boot chunk nothing.
+
+**Why the narrow token.** Browser storage belongs to an origin, not to one app: every
+page served from the same origin shares it. On GitHub Pages the origin is the owner's
+`<owner>.github.io`, which serves every Pages site of that owner, and
+`offware-apps.github.io` currently serves another app beside Postcards. A token limited
+to the one sync repository, with Contents read and write only, bounds what the token
+can do wherever it is read from. Serving the app from its own origin (a custom domain,
+or the native app) removes that dependency.
 
 ---
 

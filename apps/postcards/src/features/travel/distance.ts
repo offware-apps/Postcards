@@ -1,6 +1,7 @@
 import type { PlaceRef, TravelMode, Trip } from "../../lib/schema/models";
 import type { ReferenceData } from "../../lib/reference/types";
 import { MODE_ORDER } from "./modes";
+import { tripChain } from "./tripStops";
 
 /** Resolve a place reference to coordinates, if it has any (cities, airports, heritage sites do). */
 export function coordsOf(place: PlaceRef, ref: ReferenceData): { lon: number; lat: number } | null {
@@ -101,7 +102,7 @@ export function travelTotals(trips: Trip[], ref: ReferenceData): TravelTotals {
   };
   let totalKm = 0;
   for (const t of trips) {
-    const chain = t.stops && t.stops.length >= 2 ? t.stops : [t.from, t.to];
+    const chain = tripChain(t);
     const modesUsed = new Set<TravelMode>();
     for (let i = 0; i < chain.length - 1; i++) {
       const mode = t.legModes?.[i] ?? t.mode;

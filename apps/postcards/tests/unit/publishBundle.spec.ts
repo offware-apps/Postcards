@@ -195,4 +195,61 @@ describe("buildJourney (visit photos)", () => {
     const j = buildJourney({ visits, trips, stories: [], resolveCoords }, { title: "Trip" });
     expect(j.steps.find((s) => s.place.name === "Rome")!.photos).toHaveLength(1);
   });
+
+  it("keeps a month- or year-dated trip in a range covering it", () => {
+    const year = trip("t1", paris, rome, "flight", "2026");
+    const march = trip("t2", rome, cairo, "ferry", "2026-03");
+    const sel = (dateFrom: string, dateTo: string) =>
+      buildJourney({ visits: [], trips: [year, march], stories: [], resolveCoords }, { title: "T", dateFrom, dateTo })
+        .steps.map((s) => s.place.name);
+    expect(sel("2026-03-01", "2026-03-31")).toEqual(["Rome", "Cairo"]);
+    expect(sel("2026-01-01", "2026-12-31")).toEqual(["Paris", "Rome", "Cairo"]);
+    expect(sel("2026-03-10", "2026-03-31")).toEqual([]); // the range covers part of March only
+  });
+
+  it("publishes every stop of a multi-stop trip with each leg's mode", () => {
+    const athens = city("ath", "Athens", "GR", 37.98, 23.73);
+    const hop: Trip = {
+      ...trip("t1", paris, cairo, "flight", "2026-05-02"),
+      stops: [paris, rome, athens, cairo],
+      legModes: ["flight", "train", "ferry"],
+    };
+    const j = buildJourney({ visits: [], trips: [hop], stories: [], resolveCoords }, { title: "T" });
+    expect(j.steps.map((s) => `${s.place.name}/${s.arriveBy}`)).toEqual([
+      "Paris/null",
+      "Rome/flight",
+      "Athens/train",
+      "Cairo/ferry",
+    ]);
+  });
+
+  it("leaves out photos of stories and visits outside the date range", () => {
+    const old: Story = {
+      storyId: "s-old",
+      place: rome,
+      date: "2019-05-05",
+      title: "Years ago",
+      text: "",
+      photos: [{ src: "data:image/png;base64,OLD1", caption: "2019 private" }],
+      addedAt: NOW,
+    };
+    const visit: Visit = {
+      visitId: "v-old",
+      place: rome,
+      status: "visited",
+      favorite: false,
+      photos: [{ src: "data:image/png;base64,OLD2", caption: "visit 2019" }],
+      date: "2019-05-05",
+      note: null,
+      addedAt: NOW,
+    };
+    const trips = [trip("t1", paris, rome, "flight", "2026-05-02")];
+    const input = { visits: [visit], trips, stories: [old], resolveCoords };
+    const captions = (sel: { dateFrom?: string; dateTo?: string }) =>
+      buildJourney(input, { title: "T", ...sel }).steps.flatMap((s) => s.photos.map((p) => p.caption));
+    expect(captions({ dateFrom: "2026-05-01", dateTo: "2026-05-31" })).toEqual([]);
+    // With no range the place's whole gallery still publishes.
+    expect(captions({})).toEqual(["visit 2019", "2019 private"]);
+  });
 });
+

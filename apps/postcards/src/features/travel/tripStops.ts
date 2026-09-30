@@ -1,18 +1,13 @@
-import type { PlaceRef, TravelMode } from "../../lib/schema/models";
+import type { PlaceRef, TravelMode, Trip } from "../../lib/schema/models";
 
 // Immutable ordered-stops helpers for the trip composer (spec 019). Pure, no I/O —
 // each returns a NEW array so React state updates stay predictable. A reconstructed
 // trip is an ordered chain of stops; `from`/`to` are just its first/last stop.
 
-/** Append a stop to the end of the chain. */
-export function addStop(stops: PlaceRef[], place: PlaceRef): PlaceRef[] {
-  return [...stops, place];
-}
-
-/** Remove the stop at `index` (out-of-range index is a no-op copy). */
-export function removeStop(stops: PlaceRef[], index: number): PlaceRef[] {
-  if (index < 0 || index >= stops.length) return [...stops];
-  return stops.filter((_, i) => i !== index);
+/** A saved trip's ordered stops: its `stops` when it has them, else `from → to`.
+ *  Leg i runs from stop i to stop i+1, in `legModes[i]` or the trip's `mode`. */
+export function tripChain(trip: Pick<Trip, "from" | "to" | "stops">): PlaceRef[] {
+  return trip.stops && trip.stops.length >= 2 ? trip.stops : [trip.from, trip.to];
 }
 
 /** Move a stop from one position to another; indices are clamped, so a drag past
@@ -34,13 +29,6 @@ function moveItem<T>(arr: T[], from: number, to: number): T[] {
   const [moved] = next.splice(src, 1);
   next.splice(dst, 0, moved!);
   return next;
-}
-
-/** The journey's endpoints (first/last stop), or null when there are fewer than two
- *  stops — a reconstructed trip needs at least two to have a `from → to`. */
-export function endpoints(stops: PlaceRef[]): { from: PlaceRef; to: PlaceRef } | null {
-  if (stops.length < 2) return null;
-  return { from: stops[0]!, to: stops[stops.length - 1]! };
 }
 
 // ── Per-leg transport (spec 019) ────────────────────────────────────────────────
@@ -143,13 +131,4 @@ export function setStopDate(chain: StopChain, stopIndex: number, date: string | 
   const stopDates = [...base];
   stopDates[stopIndex] = date;
   return { ...chain, stopDates };
-}
-
-/** The mode of leg `i`: its per-leg override if present, else the fallback default. */
-export function legModeAt(
-  legModes: TravelMode[] | undefined,
-  i: number,
-  fallback: TravelMode,
-): TravelMode {
-  return legModes?.[i] ?? fallback;
 }

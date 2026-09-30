@@ -3,6 +3,7 @@ import {
   PostcardsFileSchema,
   SCHEMA_VERSION,
   type PostcardsFile,
+  type Photo,
   type ReferenceSource,
   type Story,
   type SyncTombstone,
@@ -10,16 +11,21 @@ import {
   type Visit,
 } from "../../lib/schema/models";
 import { getReferenceData } from "../../lib/reference/referenceData";
+import { isDecodableDataUrl } from "../../lib/image/photoBlobs";
 import { MAX_TAG_LEN } from "../../lib/schema/helpers";
 import { sanitizeText } from "../../lib/schema/sanitize";
 
-/** Drop an empty `photos` array so a photo-less record stays lean in the file. */
-function dropEmptyPhotos<T extends { photos?: unknown[] }>(rec: T): T | Omit<T, "photos"> {
+/** Keep only the photos that decode, and drop an empty `photos` array so a
+ *  photo-less record stays lean in the file. A photo that does not decode can sit
+ *  on a device (a story restored before imports refused one); leaving it out keeps
+ *  every backup and sync push valid and restorable. */
+function decodablePhotos<T extends { photos?: Photo[] }>(rec: T): T | Omit<T, "photos"> {
   const { photos, ...rest } = rec;
-  return photos && photos.length ? { ...rest, photos } : rest;
+  const kept = photos?.filter((p) => isDecodableDataUrl(p.src));
+  return kept && kept.length ? { ...rest, photos: kept } : rest;
 }
 
-/** Drop a stored tag that sanitizes to nothing ("-", a lone bidi mark): the schema
+/** Drop a stored tag that sanitizes to nothing (a lone bidi mark or control): the schema
  *  rejects it, which would block every backup and sync of a device holding one. */
 function dropBlankTags(story: Story): Story {
   if (!story.tags) return story;
@@ -48,10 +54,10 @@ export function buildFile(
     format: FORMAT,
     schemaVersion: SCHEMA_VERSION,
     exportedAt: now.toISOString(),
-    // Drop empty `photos` arrays so a photo-less export stays lean and readable.
-    visits: visits.map(dropEmptyPhotos),
+    // Keep decodable photos only, and drop empty `photos` arrays (see above).
+    visits: visits.map(decodablePhotos),
     trips,
-    stories: stories.map((s) => dropEmptyPhotos(dropBlankTags(s))),
+    stories: stories.map((s) => decodablePhotos(dropBlankTags(s))),
     ...(tombstones.length ? { tombstones } : {}),
     referenceSources,
   };

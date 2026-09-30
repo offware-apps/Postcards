@@ -27,9 +27,12 @@ function coordOf(ref: ReferenceData, v: Visit): { lat: number; lon: number } | n
   return null;
 }
 
-/** Quote a CSV string field (doubling any embedded quote). */
+/** Quote a CSV string field (doubling any embedded quote). A field a spreadsheet
+ *  would run as a formula (leading = + - @, tab or CR) gets a leading apostrophe,
+ *  which spreadsheets show as text; importCsv drops it again on the way back in. */
 function q(s: string): string {
-  return `"${s.replace(/"/g, '""')}"`;
+  const inert = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return `"${inert.replace(/"/g, '""')}"`;
 }
 
 /**

@@ -64,6 +64,19 @@ function sortedMonuments(ref: ReferenceData): HeritageSite[] {
   return sorted;
 }
 
+/** The cities you hold a record for, most-populous first like the pool: the
+ *  visited / wishlist / favourites views list YOUR places, which the populous pool
+ *  would drop whenever one is a small town. */
+function recordedCities(ref: ReferenceData, visits: Visit[]): City[] {
+  const out = new Map<string, City>();
+  for (const v of visits) {
+    if (v.place.kind !== "city" || out.has(v.place.id)) continue;
+    const c = ref.cityById(v.place.id);
+    if (c) out.set(c.id, c);
+  }
+  return [...out.values()].sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
+}
+
 let staPool: { srcLen: number; stations: Station[] } | null = null;
 function sortedStations(ref: ReferenceData): Station[] {
   const all = ref.allStations();
@@ -125,12 +138,15 @@ export function browseList(
 
   if (kind === "cities") {
     // Country drill-down browses ALL of that country's cities (already population-
-    // desc), not just the global top-2000 pool, so nothing is missing from it.
+    // desc), not just the global top-2000 pool, so nothing is missing from it; so do
+    // the views of your own records, from the cities you logged.
     const base: City[] = q
       ? ref.searchCities(q, 500)
       : filter.country
         ? ref.citiesOf(filter.country)
-        : populousCities(ref);
+        : status === "visited" || status === "wishlist" || status === "favorites"
+          ? recordedCities(ref, visits)
+          : populousCities(ref);
     for (const c of base) {
       if (!countryOk(c.countryIso2)) continue;
       if (!continentOk(c.countryIso2)) continue;

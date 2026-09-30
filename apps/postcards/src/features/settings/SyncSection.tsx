@@ -117,7 +117,7 @@ export function SyncSection() {
       useTrips.getState().trips,
       useStories.getState().stories,
     );
-    download("places.postcards.json", text, "application/json");
+    await download("places.postcards.json", text, "application/json");
     setStatus({ kind: "ok", text: t("sync.downloadDone") });
   }
 

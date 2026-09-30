@@ -30,15 +30,3 @@ export async function getPersistenceState(): Promise<PersistenceState> {
     return "unknown";
   }
 }
-
-/** Best-effort usage/quota in bytes (for a rough "how much is stored" read). */
-export async function storageEstimate(): Promise<{ usage: number; quota: number } | null> {
-  try {
-    const s = typeof navigator !== "undefined" ? navigator.storage : undefined;
-    if (!s?.estimate) return null;
-    const e = await s.estimate();
-    return { usage: e.usage ?? 0, quota: e.quota ?? 0 };
-  } catch {
-    return null;
-  }
-}

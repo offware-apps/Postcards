@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { PostcardsFileSchema, VisitSchema } from "../../src/lib/schema/models";
+import { PostcardsFileSchema, StorySchema, TripSchema, VisitSchema } from "../../src/lib/schema/models";
 
 function baseVisit() {
   return {
@@ -58,10 +58,10 @@ describe("PostcardsFileSchema", () => {
     expect(r.favorite).toBe(true);
   });
 
-  it("sanitizes note on parse (leading formula char removed)", () => {
+  it("keeps a note's leading formula char (plain text in the file)", () => {
     const v = { ...baseVisit(), note: "=HYPERLINK(evil)" };
     const r = VisitSchema.parse(v);
-    expect(r.note).toBe("HYPERLINK(evil)");
+    expect(r.note).toBe("=HYPERLINK(evil)");
   });
 
   it("keeps an optional folder (sanitized) and never injects the key when absent", () => {
@@ -76,6 +76,56 @@ describe("PostcardsFileSchema", () => {
     const blank = VisitSchema.parse({ ...baseVisit(), folder: "   " });
     expect(blank.folder).toBeUndefined();
     expect(JSON.stringify(blank).includes("folder")).toBe(false);
+  });
+
+  it("keeps real calendar dates and loads an impossible visit or trip date as undated", () => {
+    expect(VisitSchema.parse({ ...baseVisit(), date: "2024-02-29" }).date).toBe("2024-02-29");
+    expect(VisitSchema.parse({ ...baseVisit(), date: "2024-13-45" }).date).toBeNull();
+    expect(VisitSchema.parse({ ...baseVisit(), date: "2023-02-29" }).date).toBeNull();
+    const trip = {
+      tripId: "t",
+      from: { kind: "country", id: "FR", name: "France", countryId: "FR" },
+      to: { kind: "country", id: "JP", name: "Japan", countryId: "JP" },
+      mode: "flight",
+      carrier: null,
+      note: null,
+      addedAt: new Date().toISOString(),
+    };
+    for (const d of ["2024", "2024-03", "2024-03-31"]) expect(TripSchema.parse({ ...trip, date: d }).date).toBe(d);
+    for (const d of ["2024-13", "2024-00", "2024-04-31"]) expect(TripSchema.parse({ ...trip, date: d }).date).toBeNull();
+    // A per-stop date takes the same rule: an impossible one loads as that stop undated.
+    const stops = [trip.from, trip.to];
+    expect(TripSchema.parse({ ...trip, stops, stopDates: ["2024-03", "2024-04-31"] }).stopDates).toEqual([
+      "2024-03",
+      null,
+    ]);
+    // A file the app wrote before dates were checked (a CSV import let 2024-13-45
+    // through) still loads whole.
+    const r = PostcardsFileSchema.safeParse({
+      format: "postcards",
+      schemaVersion: 12,
+      exportedAt: new Date().toISOString(),
+      visits: [{ ...baseVisit(), date: "2024-13-45" }, { ...baseVisit(), date: "2024-01-02" }],
+      trips: [{ ...trip, date: "2024-02-30" }],
+    });
+    expect(r.success).toBe(true);
+    expect(r.data?.visits.map((v) => v.date)).toEqual([null, "2024-01-02"]);
+  });
+
+  it("rejects a story dated on a day that does not exist", () => {
+    const story = {
+      storyId: "s",
+      place: { kind: "country", id: "FR", name: "France", countryId: "FR" },
+      title: "t",
+      text: "",
+      addedAt: new Date().toISOString(),
+    };
+    expect(StorySchema.safeParse({ ...story, date: "2024-02-29" }).success).toBe(true);
+    expect(StorySchema.safeParse({ ...story, date: "2024-13-45" }).success).toBe(false);
+    expect(StorySchema.safeParse({ ...story, date: "2024-02-30" }).success).toBe(false);
+    // A range's end day too.
+    expect(StorySchema.safeParse({ ...story, date: "2024-02-01", endDate: "2024-02-29" }).success).toBe(true);
+    expect(StorySchema.safeParse({ ...story, date: "2024-02-01", endDate: "2024-02-30" }).success).toBe(false);
   });
 
   it("can generate a JSON Schema for external tools (interoperability)", () => {
