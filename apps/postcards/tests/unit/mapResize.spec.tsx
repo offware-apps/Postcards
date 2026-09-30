@@ -54,6 +54,9 @@ const { FakeMap, maps, sizes } = vi.hoisted(() => {
       return true;
     }
     addImage() {}
+    listImages() {
+      return [];
+    }
     triggerRepaint() {}
     remove() {}
     queryRenderedFeatures() {

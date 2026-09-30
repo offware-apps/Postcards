@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
+import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { useVisits } from "../../lib/store/useVisits";
 import { useToast } from "../../lib/store/useToast";
 import { useUi, type PlacesView } from "../../lib/store/useUi";
@@ -40,6 +41,10 @@ import { placeMatches, sortPlaces, activeChips } from "../filter/applyFilters";
 import { FilterPanel } from "../../ui/FilterPanel";
 import { FilterSummary } from "../../ui/FilterSummary";
 import { useT, type TFunction } from "../../lib/i18n";
+import { useTrips } from "../../lib/store/useTrips";
+import { useStories } from "../../lib/store/useStories";
+import { isBackupDue } from "../../lib/backupReminder";
+import { BackupReminder, backUpNow } from "../backup/Backup";
 
 // The Places screen is ONE unified explore-&-track surface (spec 018): two
 // independent single-select axes drive it — a KIND (what you're looking at) and a
@@ -306,6 +311,7 @@ function RowMenu({
 const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: boolean }) {
   const t = useT();
   const ref = useMemo(() => getReferenceData(), []);
+  useGazetteerGeneration(); // a monument's glyph and an airport's place resolve once they land
   const toggleVisit = useVisits((s) => s.toggleVisit);
   const toggleFavorite = useVisits((s) => s.toggleFavorite);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -467,6 +473,29 @@ function NoMatch({ q, onClear }: { q: string; onClear: () => void }) {
 
 /** Browse and track every place kind — one kind axis × one status axis, plus the
  *  cross-cutting Moments / Photos / Passport collections. */
+/** The backup nudge used to live only 2,000 px down Settings, where nobody
+ *  scrolls: once a backup is due (lib/backupReminder) it heads Places too. */
+function PlacesBackupReminder() {
+  const visits = useVisits((s) => s.visits);
+  const trips = useTrips((s) => s.trips);
+  const stories = useStories((s) => s.stories);
+  const [dismissed, setDismissed] = useState(false);
+  const hasData = visits.length > 0 || trips.length > 0 || stories.length > 0;
+  if (dismissed || !isBackupDue(hasData, Date.now())) return null;
+  return (
+    <BackupReminder
+      compact
+      onBackUp={() =>
+        void backUpNow(visits, trips, stories).then(
+          () => setDismissed(true),
+          () => undefined, // not delivered: the nudge stays
+        )
+      }
+      onLater={() => setDismissed(true)}
+    />
+  );
+}
+
 export function PlacesScreen() {
   const t = useT();
   const ref = useMemo(() => getReferenceData(), []);
@@ -558,7 +587,9 @@ export function PlacesScreen() {
     });
   }, [collection]);
 
-  const heritageAvailable = useMemo(() => ref.allHeritage().length > 0, [ref]);
+  // Heritage sites and airports land a moment after first paint (initReferenceData).
+  const gazGen = useGazetteerGeneration();
+  const heritageAvailable = useMemo(() => ref.allHeritage().length > 0, [ref, gazGen]);
 
   // ── Personal records (kind = All): the user's own saved places, all kinds mixed,
   // narrowed by the status axis. ────────────────────────────────────────────────
@@ -683,7 +714,7 @@ export function PlacesScreen() {
       return { rows: [] as BrowseRow[], hasMore: false };
     return browseList(kind, status, currentFilters(filters), ref, visits, deferredFilter.trim(), shown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, status, filters.continent, filters.minPop, filters.category, filters.country, ref, visits, deferredFilter, shown]);
+  }, [kind, status, filters.continent, filters.minPop, filters.category, filters.country, ref, visits, deferredFilter, shown, gazGen]);
   const browseRows = browse.rows;
 
   // The years your visits span, newest first, for the date filter chips.
@@ -850,6 +881,8 @@ export function PlacesScreen() {
           ))}
         </div>
       </div>
+
+      <PlacesBackupReminder />
 
       {/* The two independent axes. Each place kind appears in exactly ONE control
           (the kind axis) — no kind duplicated in a status/collection row (US1). */}

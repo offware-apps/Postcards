@@ -8,7 +8,11 @@ import maplibregl, {
 import { Protocol } from "pmtiles";
 import { feature } from "topojson-client";
 import type { FeatureCollection, Polygon, MultiPolygon, Point, Feature, LineString } from "geojson";
-import { getReferenceData, gazetteerGeneration } from "../../lib/reference/referenceData";
+import {
+  getReferenceData,
+  gazetteerGeneration,
+  requestStations,
+} from "../../lib/reference/referenceData";
 import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { bundledMapSource } from "../../lib/map-source/bundledMapSource";
 import { useVisits, findByPlace } from "../../lib/store/useVisits";
@@ -20,6 +24,7 @@ import { mapDateMatches, type MapDate } from "../travel/period";
 import {
   airportPoints,
   optimizeVisitedPoints,
+  stackSameCountry,
   stationPoints,
   visitedCityPoints,
   wishlistCityPoints,
@@ -30,7 +35,7 @@ import { unwrapAntimeridian } from "./antimeridian";
 import { statusShows, type FilterStatus } from "../../lib/store/useFilters";
 import type { City } from "../../lib/reference/types";
 import type { PlaceRef, Visit } from "../../lib/schema/models";
-import { countryFlag, formatInt } from "../../lib/format/format";
+import { countryFlag, flagFontReady, FLAG_FONT, formatInt } from "../../lib/format/format";
 
 // Natural Earth 50m country geometry, served as a static asset (SW-cached for
 // offline). Fetched ONCE and cached at module scope so remounts (basemap change,
@@ -130,8 +135,25 @@ function getRivers(): Promise<FeatureCollection | null> {
   return riversPromise;
 }
 
-const EMOJI_FONT = '"Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
 const PILL_FONT = '600 21px "Inter Variable", system-ui, sans-serif';
+
+/** Gold favourite star, drawn as a shape: a ⭐ emoji drew nothing on systems
+ *  without a colour emoji font. White rim so it reads on any flag. */
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+  }
+  ctx.closePath();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineJoin = "round";
+  ctx.stroke();
+  ctx.fillStyle = "#f5b301";
+  ctx.fill();
+}
 
 /**
  * City marker, at ONE size for both states so a want-list city is never bigger
@@ -160,13 +182,11 @@ function makeCityPill(iso2: string, favorite: boolean, wish: boolean): ImageData
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
   } else {
-    ctx.font = `27px ${EMOJI_FONT}`;
-    ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 1);
+    // The bundled flag glyph sits above the middle baseline: set lower to centre.
+    ctx.font = `27px ${FLAG_FONT}`;
+    ctx.fillText(countryFlag(iso2), w / 2, h / 2 + 5);
   }
-  if (favorite) {
-    ctx.font = `14px ${EMOJI_FONT}`;
-    ctx.fillText("⭐", w - 9, 9);
-  }
+  if (favorite) drawStar(ctx, w - 9, 9, 7);
   return ctx.getImageData(0, 0, w, h);
 }
 
@@ -197,10 +217,10 @@ function makeMonumentPin(category: string, seen: boolean): ImageData {
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `29px ${EMOJI_FONT}`;
+  ctx.font = `29px ${FLAG_FONT}`;
   ctx.fillText(st.emoji, s / 2, s / 2 + 1);
   if (seen) {
-    ctx.font = `15px ${EMOJI_FONT}`;
+    ctx.font = `15px ${FLAG_FONT}`;
     ctx.fillText("✅", s - 10, 10);
   }
   return ctx.getImageData(0, 0, s, s);
@@ -223,7 +243,7 @@ function makeAirportDot(): ImageData {
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `17px ${EMOJI_FONT}`;
+  ctx.font = `17px ${FLAG_FONT}`;
   ctx.fillText("✈️", s / 2, s / 2 + 1);
   return ctx.getImageData(0, 0, s, s);
 }
@@ -233,7 +253,7 @@ function makeAirportPin(iata: string, wish: boolean, favorite: boolean): ImageDa
   const h = 30;
   const pad = 8;
   const gap = 5;
-  const planeFont = `16px ${EMOJI_FONT}`;
+  const planeFont = `16px ${FLAG_FONT}`;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
   const plane = "✈️";
@@ -288,7 +308,7 @@ function makeStationDot(): ImageData {
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `17px ${EMOJI_FONT}`;
+  ctx.font = `17px ${FLAG_FONT}`;
   ctx.fillText("🚉", s / 2, s / 2 + 1);
   return ctx.getImageData(0, 0, s, s);
 }
@@ -313,7 +333,7 @@ function makeStationPin(wish: boolean, favorite: boolean): ImageData {
   ctx.stroke();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `15px ${EMOJI_FONT}`;
+  ctx.font = `15px ${FLAG_FONT}`;
   ctx.fillText("🚉", s / 2, s / 2 + 1);
   return ctx.getImageData(0, 0, s, s);
 }
@@ -490,7 +510,14 @@ function openPlacePopup(
   body.type = "button";
   body.className = "map-popup-main";
   const name = document.createElement("strong");
-  name.textContent = info.name;
+  // The country's flag leads the name, as in every place list.
+  if (info.place.countryId) {
+    const flag = document.createElement("span");
+    flag.className = "map-popup-flag";
+    flag.setAttribute("aria-hidden", "true");
+    flag.textContent = countryFlag(info.place.countryId);
+    name.append(flag, info.name);
+  } else name.textContent = info.name;
   body.appendChild(name);
   if (info.sub) {
     const sub = document.createElement("span");
@@ -775,25 +802,8 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
         "icon-allow-overlap": true,
       },
     },
-    {
-      id: "cities-visited",
-      type: "symbol",
-      source: "cities",
-      layout: {
-        "icon-image": ["concat", "pill-", ["get", "cc"], "-", ["to-string", ["get", "fav"]], "-", ["to-string", ["get", "wish"]]],
-        // Grow with zoom so markers stay obvious on big screens & close views.
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.9, 5, 1.1, 10, 1.35],
-        "icon-padding": 1,
-        // Your flags are ALWAYS drawn (overlap allowed) — never hidden by collision
-        // or by browse monuments/airports — because seeing everywhere you've been
-        // is the whole point. Density is managed by "Show one city per area"
-        // (region-optimize), not by dropping flags. symbol-sort-key = -(population)
-        // keeps the biggest city on top where they stack; favourites are pinned.
-        // (Runtime-flipped by "Show every place at once": OFF re-enables thinning.)
-        "icon-allow-overlap": true,
-        "symbol-sort-key": ["get", "sortKey"],
-      },
-    },
+    // Your logged airports and stations sit UNDER your flags: at world zoom an
+    // airport's pill lands right on its city and hid that country's only flag.
     {
       id: "airports",
       type: "symbol",
@@ -808,7 +818,8 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
           "-",
           ["to-string", ["get", "fav"]],
         ],
-        "icon-size": 1,
+        // Smaller at world zoom, where a pill covers a small country outright.
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.75, 5, 1],
         "icon-padding": 1,
         "icon-allow-overlap": true,
       },
@@ -828,6 +839,27 @@ function overlayLayers(basemap: Basemap, dark: boolean): StyleSpecification["lay
         "icon-size": 1,
         "icon-padding": 1,
         "icon-allow-overlap": true,
+      },
+    },
+    {
+      id: "cities-visited",
+      type: "symbol",
+      source: "cities",
+      layout: {
+        "icon-image": ["concat", "pill-", ["get", "cc"], "-", ["to-string", ["get", "fav"]], "-", ["to-string", ["get", "wish"]]],
+        // Grow with zoom so markers stay obvious on big screens & close views.
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.9, 5, 1.1, 10, 1.35],
+        "icon-padding": 1,
+        // Your flags are ALWAYS drawn (overlap allowed) — never hidden by collision
+        // or by browse monuments/airports — because seeing everywhere you've been
+        // is the whole point. Density is managed by "Show one city per area"
+        // (region-optimize) and by stacking a country's own flags into one at
+        // low zoom (stackSameCountry), not by dropping countries. The sort key
+        // (favourites, then each country's main city, then population) is set
+        // for the mode by applyMarkerOverlap, with "Show every place at once":
+        // OFF re-enables thinning.
+        "icon-allow-overlap": true,
+        "symbol-sort-key": ["get", "sortKey"],
       },
     },
   ];
@@ -1181,7 +1213,12 @@ export function MapView({
     // rebuilds the source; toggling the setting does too. `undefined` = setting
     // off (show all); a null granularity = on but zoomed in enough to show all.
     const gran = optimizeMarkersRef.current ? optimizeGranularity(map.getZoom()) : undefined;
-    const optTag = optimizeMarkersRef.current ? `opt:${gran ?? "all"}|` : "all|";
+    // Same-country flags that would sit on each other collapse into one
+    // (stackSameCountry), measured at the zoom rounded down to a half step so
+    // a pan or a small zoom does not rebuild the sources.
+    const stackZoom = Math.floor(map.getZoom() * 2) / 2;
+    const optTag =
+      (optimizeMarkersRef.current ? `opt:${gran ?? "all"}|` : "all|") + `z${stackZoom}|`;
     const citiesKey =
       optTag +
       vis
@@ -1194,7 +1231,7 @@ export function MapView({
     if (citiesKey !== lastCitiesKey.current) {
       lastCitiesKey.current = citiesKey;
       const base = visitedCityPoints(vis, ref);
-      const fc = gran ? optimizeVisitedPoints(base, gran) : base;
+      const fc = stackSameCountry(gran ? optimizeVisitedPoints(base, gran) : base, stackZoom);
       (map.getSource("cities") as GeoJSONSource | undefined)?.setData(fc);
       // Warm the flag images up front — a later zoom-out must not have to fetch
       // any visited flag's image before it can paint (the "load in late" bug).
@@ -1211,7 +1248,7 @@ export function MapView({
       lastWishKey.current = wishKey;
       // Want-list cities get the SAME zoom-aware region optimisation as visited.
       const wbase = wishlistCityPoints(vis, ref);
-      const wfc = gran ? optimizeVisitedPoints(wbase, gran) : wbase;
+      const wfc = stackSameCountry(gran ? optimizeVisitedPoints(wbase, gran) : wbase, stackZoom);
       (map.getSource("wishlist") as GeoJSONSource | undefined)?.setData(wfc);
       ensurePillImages(map, wfc);
     }
@@ -1327,7 +1364,16 @@ export function MapView({
   function applyMarkerOverlap(map: MlMap) {
     const all = showAllRef.current;
     for (const id of ["cities-visited", "cities-wishlist"]) {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "icon-allow-overlap", all);
+      if (!map.getLayer(id)) continue;
+      map.setLayoutProperty(id, "icon-allow-overlap", all);
+      // A low sort key wins placement when markers collide, but when they
+      // overlap the HIGHEST key draws on top: negate it there, so favourites and
+      // each country's main city stay on top of a pile instead of under it.
+      map.setLayoutProperty(
+        id,
+        "symbol-sort-key",
+        all ? ["*", -1, ["get", "sortKey"]] : ["get", "sortKey"],
+      );
     }
   }
 
@@ -1532,6 +1578,7 @@ export function MapView({
         // No map will report a view, so hand the list the whole world: the
         // fallback below promises the cities list still works.
         onBoundsRef.current?.({ west: -180, south: -90, east: 180, north: 90 });
+        requestStations();
         return;
       }
       mapRef.current = map;
@@ -1555,6 +1602,17 @@ export function MapView({
       // OSM/ODbL + Natural Earth credit, bottom-LEFT so it clears the Filter and
       // Layers pills in the bottom-right (they were literally covering the ⓘ).
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
+
+      // A flag drawn before the bundled flag font loaded keeps its empty boxes:
+      // redraw every flag marker once the font is there (a no-op when cached).
+      void flagFontReady().then(() => {
+        if (cancelled || !map) return;
+        for (const id of map.listImages()) {
+          if (!id.startsWith("pill-")) continue;
+          const [, cc, fav, wish] = id.split("-");
+          map.updateImage(id, makeCityPill(cc ?? "", fav === "1", wish === "1"));
+        }
+      });
 
       // Marker images, generated lazily on demand.
       map.on("styleimagemissing", (e) => {
@@ -1583,6 +1641,8 @@ export function MapView({
       map.on("load", () => {
         if (cancelled || !map) return;
         loadedRef.current = true;
+        // The stations wait for the map to be up (see loadExtras).
+        requestStations();
         // The globe effect skips a change made before load: catch it up here.
         if (globeRef.current !== builtGlobe)
           map.setProjection({ type: globeRef.current ? "globe" : "mercator" });
@@ -1652,9 +1712,9 @@ export function MapView({
         // without waiting on a React render.
         applyViewportPoi(map);
         applyInViewCities(map);
-        // Zoom-aware "one city per area": rebuild your flags when the zoom crosses
-        // a granularity bucket (key-guarded, so a same-bucket pan is a no-op).
-        if (optimizeMarkersRef.current) applyVisited(map);
+        // Zoom-aware flags: rebuild them when the zoom crosses a stacking step
+        // or a "one city per area" bucket (key-guarded, so a pan is a no-op).
+        applyVisited(map);
         const wasProgrammatic = suppressBoundsRef.current;
         if (wasProgrammatic) {
           suppressBoundsRef.current = false; // programmatic fly — keep the list still
@@ -1966,6 +2026,9 @@ export function MapView({
     lastCitiesKey.current = "<init>";
     lastWishKey.current = "<init>";
     lastAirKey.current = "<init>";
+    // Heritage sites, airports and stations arrive after first paint.
+    lastStaKey.current = "<init>";
+    lastPoiKey.current = "<init>";
     applyVisited(map);
     applyInViewCities(map); // the full set changes which cities fall in view
     // eslint-disable-next-line react-hooks/exhaustive-deps

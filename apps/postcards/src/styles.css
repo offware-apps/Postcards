@@ -20,7 +20,7 @@
   --radius-lg: 18px;
   --shadow: 0 1px 2px rgba(30, 24, 16, 0.05), 0 6px 18px -6px rgba(30, 24, 16, 0.12);
   --shadow-sm: 0 1px 2px rgba(30, 24, 16, 0.06);
-  --display: "Space Grotesk Variable", "Inter Variable", system-ui, sans-serif;
+  --display: "Twemoji Country Flags", "Space Grotesk Variable", "Inter Variable", system-ui, sans-serif;
   /* Semantic colours that used to be hardcoded twice (light rule + a dark-only
      override). Now they're tokens so a single unconditional component rule works
      under system-dark, explicit-dark and light alike. Light values here. */
@@ -106,6 +106,21 @@
   color-scheme: dark;
 }
 
+/* Country flags on every platform. A flag is a pair of Unicode regional
+   indicators; Windows and minimal Linux have no colour glyphs for them and show
+   the two letters or an empty box. This flag-only Twemoji font (CC-BY 4.0, see
+   public/fonts/PROVENANCE.md) covers just those code points, so it leads every
+   font stack below and the browser fetches it only once a flag is on screen. */
+@font-face {
+  font-family: "Twemoji Country Flags";
+  src: url("/fonts/TwemojiCountryFlags.woff2") format("woff2");
+  unicode-range: U+1F1E6-1F1FF;
+  /* Its flags fill less of the em than colour-emoji flags: scale them to match,
+     so a flag keeps the size the layout was drawn for. */
+  size-adjust: 118%;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -129,8 +144,8 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.45 "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font: 15px/1.45 "Twemoji Country Flags", "Inter Variable", system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "cv02", "cv11"; /* Inter: open digits & disambiguated l/I */
 }
@@ -597,6 +612,12 @@ h1.brand {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+.map-popup strong .map-popup-flag {
+  display: inline;
+  margin: 0 6px 0 0;
+  font-size: 15px;
+  color: inherit;
+}
 
 /* Search */
 .search {
@@ -614,6 +635,12 @@ h1.brand {
 }
 .search-input::placeholder {
   color: var(--muted);
+}
+/* The field draws its own ✕ (.search-clear); Chromium's built-in one sat
+   beside it as a second clear button. */
+.search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }
 /* Inputs that carry a trailing ✕ clear button reserve room so typed text never
    slides under it. */
@@ -706,6 +733,15 @@ h1.brand {
   flex: 1;
   min-width: 0;
   width: auto;
+  justify-content: flex-start;
+}
+/* The country's flag leads each option, as in every other place list. */
+.result-flag {
+  flex: none;
+  width: 1.25em;
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
 }
 .results-split .result-add {
   flex: none;
@@ -2088,6 +2124,16 @@ a.btn-ghost {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+}
+/* The same nudge as a slim line atop Places. */
+.backup-reminder-line {
+  padding: 7px 12px;
+  gap: 6px 10px;
+}
+.backup-reminder-line .backup-reminder-text {
+  min-width: 0;
+  flex-basis: 220px;
+  font-size: 13px;
 }
 .attribution {
   margin-top: 22px;
@@ -4145,6 +4191,9 @@ textarea.select {
   padding: 2px;
 }
 .map-ctl-top .map-mode button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 4px 10px;
   font-size: 13px;
   line-height: 1.15;
@@ -4222,6 +4271,25 @@ textarea.select {
     height: 38px;
   }
 }
+/* A phone bar holds the brand, the search and four action buttons: the
+   wordmark alone left the field 85px wide at 375px, clipping its placeholder
+   to "Sea". Below 480px the brand keeps its pin mark (the text stays the
+   button's accessible name) and the search takes the room. */
+@media (max-width: 479.98px) {
+  .topbar .brand-wrap {
+    display: flex;
+  }
+  .topbar button.brand {
+    font-size: 0;
+    min-width: 32px;
+    min-height: 32px;
+    justify-content: center;
+  }
+  .topbar .brand::before {
+    width: 14px;
+    height: 14px;
+  }
+}
 /* Mid-width: icon-only tabs so the left-anchored row stays clear of the search. */
 @media (min-width: 900px) and (max-width: 1299.98px) {
   .bottom-nav .nav-item span {
@@ -4257,7 +4325,7 @@ button.brand:focus-visible {
    even when narrow-screen rules hide the action labels — without this the
    button collapsed to an empty pill. */
 .topbar-star .star-glyph {
-  display: inline;
+  display: inline-flex;
   color: #f5b301;
   font-size: 15px;
   line-height: 1;

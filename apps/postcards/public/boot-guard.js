@@ -64,9 +64,12 @@
     });
     shown.appendChild(p);
     shown.appendChild(b);
-    // Into the app's own container, empty while the app has not run; the page
-    // locks body scrolling and gives #root the full height.
-    (document.getElementById("root") || document.body).appendChild(shown);
+    // Into the app's own container, in place of the static shell index.html
+    // paints there (a full-height app frame that left the message below the
+    // fold); the page locks body scrolling and gives #root the full height.
+    var root = document.getElementById("root");
+    if (root) root.replaceChildren(shown);
+    else document.body.appendChild(shown);
   }
 
   // The entry script, or a module it imports (modulepreloaded), that fails to

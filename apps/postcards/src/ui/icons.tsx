@@ -83,3 +83,64 @@ export function InfoIcon() {
     </svg>
   );
 }
+
+// Small inline icons that replace emoji used as controls: without a colour
+// emoji font (Windows browsers, minimal Linux) the emoji drew as nothing.
+// `size` in CSS pixels; each inherits the text colour.
+
+export function SearchIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} strokeWidth={2.2}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.4-4.4" />
+    </svg>
+  );
+}
+
+export function StarIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} fill="currentColor" strokeWidth={1.2}>
+      <path d="M12 3.2 14.7 8.8l6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z" />
+    </svg>
+  );
+}
+
+export function CityIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} strokeWidth={2}>
+      <path d="M3 21h18" />
+      <path d="M5 21V8l6-3.5V21" />
+      <path d="M11 10.5h8V21" />
+      <path d="M8 10v.01M8 14v.01M15 14v.01M15 17.5v.01" />
+    </svg>
+  );
+}
+
+export function MonumentIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} strokeWidth={2}>
+      <path d="M12 3 3.5 8h17Z" />
+      <path d="M6 11v6M10 11v6M14 11v6M18 11v6" />
+      <path d="M4 20.5h16" />
+    </svg>
+  );
+}
+
+export function PlaneIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} fill="currentColor" strokeWidth={1}>
+      <path d="M12 2.5c.9 0 1.4 1 1.4 2.4v4.5l7.1 4.2v2l-7.1-2.2v4.3l2 1.5v1.6L12 19.8l-3.4 1v-1.6l2-1.5v-4.3l-7.1 2.2v-2l7.1-4.2V4.9c0-1.4.5-2.4 1.4-2.4Z" />
+    </svg>
+  );
+}
+
+export function TrainIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg {...common} width={size} height={size} strokeWidth={2}>
+      <path d="M9 3h6a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" />
+      <path d="M6 10h12" />
+      <path d="M9.5 13.5v.01M14.5 13.5v.01" />
+      <path d="m8 21 2-4M16 21l-2-4" />
+    </svg>
+  );
+}

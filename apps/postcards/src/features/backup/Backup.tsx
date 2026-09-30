@@ -16,6 +16,7 @@ import {
   snoozeReminder,
 } from "../../lib/backupReminder";
 import { useT } from "../../lib/i18n";
+import type { Story, Trip, Visit } from "../../lib/schema/models";
 
 /**
  * Get the file to the user, wherever they want it. Inside the native wrap
@@ -62,6 +63,64 @@ async function deliverBlob(filename: string, blob: Blob, type: string): Promise<
   await downloadBlob(filename, blob);
 }
 
+/** The full .json backup, delivered, and the reminder clock reset: a places-
+ *  only .csv/.md export is a share, not a backup. */
+export async function backUpNow(visits: Visit[], trips: Trip[], stories: Story[]): Promise<void> {
+  // Loaded on click: the codec pulls in the Zod schemas (~65 KB min), which
+  // nothing on the startup path needs — keep them out of the boot chunk.
+  const { serializeFile, EXPORT_FILENAME } = await import("./exportJson");
+  await deliver(EXPORT_FILENAME, serializeFile(visits, trips, stories), "application/json");
+  markBackedUp(Date.now());
+}
+
+/** "It's been N days since your last backup": the nudge Settings and Places
+ *  both show once a backup is due (lib/backupReminder decides when). */
+export function BackupReminder({
+  onBackUp,
+  onLater,
+  compact = false,
+}: {
+  onBackUp: () => void;
+  onLater: () => void;
+  /** One slim line, for a screen that is about something else. */
+  compact?: boolean;
+}) {
+  const t = useT();
+  const daysSince = daysSinceBackup(Date.now());
+  return (
+    <div className={"backup-reminder" + (compact ? " backup-reminder-line" : "")} role="status">
+      <span aria-hidden>🛟</span>
+      <span className="backup-reminder-text">
+        {daysSince == null
+          ? t("backup.reminder.never")
+          : t.plural("backup.reminder.days", daysSince)}{" "}
+        {t("backup.reminder.suffix")}
+      </span>
+      <span className="backup-reminder-actions">
+        <button
+          className={compact ? "mini-btn" : "btn"}
+          type="button"
+          title={t("backup.reminder.backupNow")}
+          onClick={onBackUp}
+        >
+          {t("backup.reminder.backupNow")}
+        </button>
+        <button
+          className="link"
+          type="button"
+          title={t("backup.reminder.later")}
+          onClick={() => {
+            snoozeReminder(Date.now());
+            onLater();
+          }}
+        >
+          {t("backup.reminder.later")}
+        </button>
+      </span>
+    </div>
+  );
+}
+
 export function Backup() {
   const t = useT();
   const ref = useMemo(() => getReferenceData(), []);
@@ -76,18 +135,12 @@ export function Backup() {
   const RESET_WORD = "RESET";
   const hasData = visits.length > 0 || trips.length > 0 || stories.length > 0;
   // Whether to nudge a backup right now (computed once on open, editable by the
-  // export/snooze actions). daysSince is for the wording ("N days" vs "never").
+  // export/snooze actions).
   const [reminderDue, setReminderDue] = useState(() => isBackupDue(hasData, Date.now()));
-  const daysSince = daysSinceBackup(Date.now());
 
   async function exportJson() {
     try {
-      // Loaded on click: the codec pulls in the Zod schemas (~65 KB min), which
-      // nothing on the startup path needs — keep them out of the boot chunk.
-      const { serializeFile, EXPORT_FILENAME } = await import("./exportJson");
-      await deliver(EXPORT_FILENAME, serializeFile(visits, trips, stories), "application/json");
-      // A full .json export is a real backup — reset the reminder clock.
-      markBackedUp(Date.now());
+      await backUpNow(visits, trips, stories);
       setReminderDue(false);
     } catch {
       setMessage({ kind: "err", text: t("backup.msg.exportJsonErr") });
@@ -212,36 +265,7 @@ export function Backup() {
       <DurabilityNote />
 
       {reminderDue && (
-        <div className="backup-reminder" role="status">
-          <span aria-hidden>🛟</span>
-          <span className="backup-reminder-text">
-            {daysSince == null
-              ? t("backup.reminder.never")
-              : t.plural("backup.reminder.days", daysSince)}{" "}
-            {t("backup.reminder.suffix")}
-          </span>
-          <span className="backup-reminder-actions">
-            <button
-              className="btn"
-              type="button"
-              title={t("backup.reminder.backupNow")}
-              onClick={() => void exportJson()}
-            >
-              {t("backup.reminder.backupNow")}
-            </button>
-            <button
-              className="link"
-              type="button"
-              title={t("backup.reminder.later")}
-              onClick={() => {
-                snoozeReminder(Date.now());
-                setReminderDue(false);
-              }}
-            >
-              {t("backup.reminder.later")}
-            </button>
-          </span>
-        </div>
+        <BackupReminder onBackUp={() => void exportJson()} onLater={() => setReminderDue(false)} />
       )}
 
       <p className="muted">{t("backup.intro")}</p>

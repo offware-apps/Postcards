@@ -53,18 +53,19 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <!-- Startup fetches otherwise wait for the whole bundle to download and
-         evaluate: preload the render-blocking reference JSONs (and the basemap
-         geometry the map needs right after) so the network runs in parallel.
-         %BASE_URL% matches the import.meta.env.BASE_URL the code fetches with;
-         `crossorigin` (anonymous) matches fetch()'s default credentials mode so
-         the preloaded response is consumed, not downloaded twice. On repeat
-         visits these resolve from the service-worker cache and cost nothing. -->
+    <!-- The first render waits for the city gazetteer and its regions only
+         (initReferenceData): preload those two so they download alongside the
+         bundle instead of after it. Nothing else is preloaded — airports,
+         heritage sites, railway stations and the basemap geometry are fetched
+         right after the first render, and preloading them made them compete with it (on a
+         throttled phone, dropping them brought the app up a second sooner and
+         the map too). %BASE_URL% matches the import.meta.env.BASE_URL the code
+         fetches with; `crossorigin` (anonymous) matches fetch()'s default
+         credentials mode so the preloaded response is consumed, not
+         downloaded twice. On repeat visits these resolve from the
+         service-worker cache and cost nothing. -->
     <link rel="preload" href="%BASE_URL%reference/cities.json" as="fetch" crossorigin />
-    <link rel="preload" href="%BASE_URL%reference/airports.json" as="fetch" crossorigin />
     <link rel="preload" href="%BASE_URL%reference/subdivisions.json" as="fetch" crossorigin />
-    <link rel="preload" href="%BASE_URL%reference/heritage.json" as="fetch" crossorigin />
-    <link rel="preload" href="%BASE_URL%basemap/countries-50m.json" as="fetch" crossorigin />
     <meta name="theme-color" content="#4338ca" />
     <meta name="description" content="Remember the places you've been — private, offline, in a file you own." />
     <title>Postcards</title>
@@ -83,7 +84,10 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- The app shell, painted as soon as the stylesheet lands: the bundle and
+         the reference data take seconds on a phone, and the page stayed blank
+         until they had. React replaces it on its first render. -->
+    <div id="root"><div class="app"><header class="topbar"><h1 class="brand-wrap"><span class="brand">Postcards</span></h1></header></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,10 +1,13 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { searchPlaces } from "../visits/search";
-import { RouteMap } from "./RouteMap";
 import { useT } from "../../lib/i18n";
 import type { PlaceRef, TravelMode } from "../../lib/schema/models";
 import { placeFlag, type MyPlace } from "./myPlaces";
+
+// MapLibre (~280 KB compressed) loads with the map view that needs it: a
+// static import here put it on every app start, ahead of the first paint.
+const RouteMap = lazy(() => import("./RouteMap").then((m) => ({ default: m.RouteMap })));
 
 // Pick trip stops fast. Two ways:
 //  • List — the places you've BEEN (visited + past trips) as instant taps, AND a
@@ -137,7 +140,9 @@ export function MyPlacesPicker({
       ) : places.length === 0 ? (
         <p className="muted empty">{t("trip.compose.noPlaces")}</p>
       ) : (
-        <RouteMap pool={places} stops={stops} mode={travelMode} addedKeys={addedKeys} onPick={onPick} />
+        <Suspense fallback={<p className="muted empty">{t("map.loading")}</p>}>
+          <RouteMap pool={places} stops={stops} mode={travelMode} addedKeys={addedKeys} onPick={onPick} />
+        </Suspense>
       )}
     </div>
   );

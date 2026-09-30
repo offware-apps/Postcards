@@ -20,11 +20,23 @@ import { LoadBoundary } from "../ui/LoadFailure";
 import { handoffRequested } from "../lib/moved/moved";
 import { followOtherTabs, loadPortable } from "../lib/store/portable";
 import { ConnectionStatus } from "../ui/ConnectionStatus";
-import { MapIcon, ChartIcon, ListIcon, RouteIcon, BookIcon, GearIcon, InfoIcon } from "../ui/icons";
+import {
+  MapIcon,
+  ChartIcon,
+  ListIcon,
+  RouteIcon,
+  BookIcon,
+  GearIcon,
+  InfoIcon,
+  StarIcon,
+} from "../ui/icons";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useInstallPrompt } from "../lib/hooks/useInstallPrompt";
 import { useAutoSync } from "../lib/hooks/useAutoSync";
 import { useT, type MessageKey } from "../lib/i18n";
+import { HOME, parseRoute, routeHash, type Route } from "./route";
+import { useReferenceExtrasPending } from "../lib/reference/useGazetteer";
+import { requestStations } from "../lib/reference/referenceData";
 
 // Code-split MapLibre so it loads only when the map is shown.
 const MapScreen = lazy(() =>
@@ -49,6 +61,16 @@ const TABS: { id: Tab; label: MessageKey; keys: string[]; Icon: () => JSX.Elemen
 // hidden, behind the other tabs.
 const DIALOG_LAYER_SELECTOR =
   ".modal-backdrop, .lightbox, .maplibregl-popup:not(.map-keep-hidden *), .journal-composer-busy";
+
+// Land on the screen the address names (a reload, a shared link) before the
+// first render, so reloading Places never spins the map up first.
+const initialRoute = typeof location === "undefined" ? null : parseRoute(location.hash);
+if (initialRoute) useUi.setState(initialRoute);
+
+/** What the address shows for the current screen (the composers stay out). */
+function currentRoute(s: Route): Route {
+  return { tab: s.tab, cityPageId: s.cityPageId, countryPageId: s.countryPageId };
+}
 
 // First run: show the "How it works" intro once so a newcomer learns what the
 // app is and what's optionally downloadable, before touching anything. Stored,
@@ -100,7 +122,21 @@ export function App() {
     }
   };
   const mapVisible = tab === "map" && !cityPageId && !countryPageId && !tripEditId && !storyEditId;
+  // Airports, heritage sites and stations land a moment after the first paint.
+  // The map, Places, Stats and country pages refresh when they do; trips
+  // (distances), the journal and its composer (story maps) and a place's page
+  // read them once, so a reload straight onto one waits that moment instead of
+  // showing it half-resolved.
+  const extrasPending = useReferenceExtrasPending();
+  const waitForExtras =
+    extrasPending &&
+    (!!cityPageId || !!tripEditId || !!storyEditId || tab === "trips" || tab === "journal");
   const firstRender = useRef(true);
+  // The railway stations wait for the map to load (see loadExtras); every other
+  // screen may read them, and has no map to compete with, so it asks at once.
+  useEffect(() => {
+    if (!mapVisible) requestStations();
+  }, [mapVisible]);
 
   // Scroll memory. <main> is the single scroll container reused across tabs and
   // detail pages, so its scrollTop leaks between views: open a city while scrolled
@@ -232,45 +268,74 @@ export function App() {
   // Back NEVER quits the app: at the home screen (map, empty history) it just
   // re-arms and stays put — like a native app, where you leave with the home/tab
   // gesture, not by backing out into a blank page.
-  useEffect(() => {
-    const arm = () => history.pushState({ pc: true }, "");
-    arm();
-    function onPop() {
+  // The screen also lives in the address (route.ts): each navigation pushes an
+  // entry carrying its position, so a reload lands where you were, Back after a
+  // reload walks the screens before it, and Forward re-opens what Back left.
+  // A layout effect, so a Back pressed as soon as the screen shows is caught.
+  useLayoutEffect(() => {
+    const state = history.state as { pc?: unknown } | null;
+    let at = typeof state?.pc === "number" ? state.pc : 0;
+    const hashNow = () => routeHash(currentRoute(useUi.getState()));
+    const onScreen = () => routeHash(parseRoute(location.hash) ?? HOME) === hashNow();
+    // The screen came from the address, so it is left as it is (its query and
+    // a fragment naming no screen included).
+    history.replaceState({ ...state, pc: at }, "");
+    // Point the address at the screen: a new entry when the screen moved, and
+    // one spare entry above the first, so Back from home has one to consume.
+    const sync = () => {
+      if (onScreen() && at > 0) return;
+      at += 1;
+      const url = onScreen() ? undefined : hashNow() || location.pathname + location.search;
+      history.pushState({ pc: at }, "", url);
+    };
+    sync();
+    const unsubscribe = useUi.subscribe((s, prev) => {
+      if (
+        s.tab !== prev.tab ||
+        s.cityPageId !== prev.cityPageId ||
+        s.countryPageId !== prev.countryPageId
+      )
+        sync();
+    });
+    function onPop(e: PopStateEvent) {
+      const to = (e.state as { pc?: unknown } | null)?.pc;
+      // A fragment link (the skip link) makes an entry of its own: not a screen.
+      if (typeof to !== "number") return;
+      const forward = to > at;
+      at = to;
       const ui = useUi.getState();
+      const landed = parseRoute(location.hash);
+      if (forward) {
+        if (landed) ui.openRoute(landed);
+        sync();
+        return;
+      }
       const dialogOpen = !!document.querySelector(DIALOG_LAYER_SELECTOR);
       if (dialogOpen) {
         // Let the open layer close via its own Escape handler.
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-        arm();
-        return;
-      }
-      // Step out of a local sub-view first (mirrors Escape), then the LAST
-      // screen: pop the app's own navigation history.
-      if (runEscapeInterceptors()) {
-        arm();
-        return;
-      }
-      if (ui.goBack()) {
-        arm();
-        return;
-      }
-      // A detail page is still open with no history behind it (e.g. deep-linked or
-      // opened from search): close it in place — Back must never fall through and
-      // quit the app while you're looking at a city/country page.
-      if (ui.cityPageId || ui.countryPageId || ui.tripEditId || ui.storyEditId) {
+      } else if (runEscapeInterceptors()) {
+        // Stepped out of a local sub-view first (mirrors Escape).
+      } else if (ui.goBack()) {
+        // The LAST screen: popped the app's own navigation history.
+      } else if (landed) {
+        // No history of its own (after a reload): the screen this entry names.
+        useUi.setState({ ...landed, tripEditId: null, storyEditId: null });
+      } else if (ui.cityPageId || ui.countryPageId || ui.tripEditId || ui.storyEditId) {
+        // A detail page with nothing behind it: close it in place — Back must
+        // never fall through and quit the app on a city/country page.
         ui.closePages();
-        arm();
-        return;
       }
-      // At the home screen (map) with nothing left in history: DON'T let Back quit
-      // the app — re-arm so the map is the terminal home for the Back gesture
-      // (matches a native app; use the tab/home gesture to actually leave). Fixes
+      // At the home screen with nothing left, this re-arms instead of letting
+      // Back quit the app (use the tab/home gesture to actually leave). Fixes
       // "map → places → country → back back … quit the application".
-      arm();
+      sync();
     }
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      unsubscribe();
+    };
   }, []);
 
   const currentTab = TABS.find((x) => x.id === tab);
@@ -324,7 +389,7 @@ export function App() {
                 aria-label={t("topbar.githubStar")}
               >
                 <span className="star-glyph" aria-hidden>
-                  ⭐
+                  <StarIcon />
                 </span>
                 <span>{t("topbar.github")}</span>
               </a>
@@ -423,7 +488,11 @@ export function App() {
                 </LoadBoundary>
               </div>
             )}
-            {cityPageId ? (
+            {waitForExtras ? (
+              <p className="muted empty" role="status">
+                {t("app.loading")}
+              </p>
+            ) : cityPageId ? (
               <CityScreen cityId={cityPageId} onBack={() => useUi.getState().closeCity()} />
             ) : countryPageId ? (
               <CountryScreen iso2={countryPageId} onBack={() => useUi.getState().closeCity()} />

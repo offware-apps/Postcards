@@ -95,3 +95,29 @@ describe("PlacesScreen filters on a world browse", () => {
     expect(panel.textContent).toContain("Date");
   });
 });
+
+describe("PlacesScreen backup reminder", () => {
+  const never = /You haven't backed up yet/;
+
+  it("heads Places once there is data and no backup, and Later snoozes it", () => {
+    useVisits.setState({ visits: [visitOf(site("cultural"))] });
+    render(<PlacesScreen />);
+    expect(screen.getByText(never)).toBeTruthy();
+    act(() => screen.getByRole("button", { name: "Later" }).click());
+    expect(screen.queryByText(never)).toBeNull();
+    // Snoozed for the week everywhere, Settings included (lib/backupReminder).
+    cleanup();
+    render(<PlacesScreen />);
+    expect(screen.queryByText(never)).toBeNull();
+  });
+
+  it("stays away with nothing to lose or a recent backup", () => {
+    render(<PlacesScreen />);
+    expect(screen.queryByRole("button", { name: "Back up now" })).toBeNull();
+    cleanup();
+    localStorage.setItem("postcards-last-backup", String(Date.now()));
+    useVisits.setState({ visits: [visitOf(site("cultural"))] });
+    render(<PlacesScreen />);
+    expect(screen.queryByRole("button", { name: "Back up now" })).toBeNull();
+  });
+});

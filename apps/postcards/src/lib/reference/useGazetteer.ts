@@ -1,5 +1,9 @@
 import { useSyncExternalStore } from "react";
-import { GAZETTEER_UPGRADED_EVENT, gazetteerGeneration } from "./referenceData";
+import {
+  GAZETTEER_UPGRADED_EVENT,
+  gazetteerGeneration,
+  referenceExtrasPending,
+} from "./referenceData";
 
 /**
  * Re-render when the background full-gazetteer upgrade lands (core ~24k cities
@@ -11,6 +15,12 @@ import { GAZETTEER_UPGRADED_EVENT, gazetteerGeneration } from "./referenceData";
  */
 export function useGazetteerGeneration(): number {
   return useSyncExternalStore(subscribe, gazetteerGeneration, gazetteerGeneration);
+}
+
+/** True until the airports, heritage sites and stations, which follow the
+ *  first paint, have landed (initReferenceData). */
+export function useReferenceExtrasPending(): boolean {
+  return useSyncExternalStore(subscribe, referenceExtrasPending, referenceExtrasPending);
 }
 
 function subscribe(onChange: () => void): () => void {

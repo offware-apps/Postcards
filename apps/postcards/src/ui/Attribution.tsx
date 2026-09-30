@@ -15,6 +15,9 @@ export function Attribution() {
           {p.dataset} ({p.license})
         </span>
       ))}
+      {/* A bundled asset, not a reference dataset, so it stays out of the
+          provenance an export records (public/fonts/PROVENANCE.md). */}
+      <span> · Country flags: Twemoji (CC-BY-4.0)</span>
     </div>
   );
 }

@@ -1,12 +1,15 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { searchPlaces } from "./search";
+import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { useVisits, findByPlace, visitIndex } from "../../lib/store/useVisits";
 import { useUi } from "../../lib/store/useUi";
 import { useToast } from "../../lib/store/useToast";
 import { placeKey } from "../../lib/schema/helpers";
 import type { PlaceRef } from "../../lib/schema/models";
 import { useT } from "../../lib/i18n";
+import { countryFlag } from "../../lib/format/format";
+import { SearchIcon } from "../../ui/icons";
 
 /**
  * Global place search. Picking a result NAVIGATES — it flies the map to a
@@ -35,7 +38,7 @@ export function PlaceSearch({
   // On a phone the top-bar field is narrow (it shares the row with the brand and
   // the action icons), so the full "Search a city or country…" placeholder gets
   // clipped mid-word. Use a short placeholder there — it stays fully readable,
-  // and the leading 🔍 plus the accessible name still convey what it searches.
+  // and the leading magnifier plus the accessible name still convey what it searches.
   const [narrow, setNarrow] = useState(
     () => typeof matchMedia !== "undefined" && matchMedia("(max-width: 899.98px)").matches,
   );
@@ -57,7 +60,9 @@ export function PlaceSearch({
   // if the next keystroke lands first). notFound keys on the deferred query so
   // the add-place form doesn't flash while results lag a beat behind.
   const dq = useDeferredValue(q);
-  const results = useMemo(() => searchPlaces(ref, dq), [ref, dq]);
+  // Airports, heritage sites and stations land a moment after first paint: search again then.
+  const gazGen = useGazetteerGeneration();
+  const results = useMemo(() => searchPlaces(ref, dq), [ref, dq, gazGen]);
   const notFound = dq.trim().length >= 2 && results.length === 0;
 
   // Keep the active option visible as arrows move it.
@@ -146,7 +151,7 @@ export function PlaceSearch({
 
   return (
     <div className="search">
-      {/* A leading 🔍 makes the field unmistakably a search even when the top-bar
+      {/* A leading magnifier makes the field unmistakably a search even when the top-bar
           squeezes the placeholder to "Search a…" on a phone. It's a pointer
           affordance that focuses the field on tap; the input already carries the
           accessible name, so this is aria-hidden + non-focusable (no duplicate
@@ -159,7 +164,7 @@ export function PlaceSearch({
         title={t("search.aria")}
         onClick={() => inputRef.current?.focus()}
       >
-        🔍
+        <SearchIcon />
       </button>
       <input
         ref={inputRef}
@@ -229,6 +234,9 @@ export function PlaceSearch({
                   }
                   onClick={() => pick(r.place)}
                 >
+                  <span className="result-flag" aria-hidden>
+                    {r.place.countryId ? countryFlag(r.place.countryId) : ""}
+                  </span>
                   <span className="result-main">
                     <span className="result-name">{r.place.name}</span>
                     <span className="result-detail">{r.detail}</span>

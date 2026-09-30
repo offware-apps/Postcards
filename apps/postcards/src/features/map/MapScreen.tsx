@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getReferenceData } from "../../lib/reference/referenceData";
+import { getReferenceData, requestStations } from "../../lib/reference/referenceData";
 import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { useVisits } from "../../lib/store/useVisits";
 import { useTrips } from "../../lib/store/useTrips";
@@ -35,6 +35,7 @@ import {
 import { activeChips } from "../filter/applyFilters";
 import { FilterPanel } from "../../ui/FilterPanel";
 import { FilterSummary } from "../../ui/FilterSummary";
+import { CityIcon, MonumentIcon, PlaneIcon, TrainIcon } from "../../ui/icons";
 import { useT, type MessageKey } from "../../lib/i18n";
 
 // Fewer rows, faster everything: the list pages in small steps, and the
@@ -280,6 +281,11 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
   const [layersOpen, setLayersOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const mode = filters.mode;
+  // The Stations mode shows nothing but stations: fetch them without waiting
+  // for the map to load.
+  useEffect(() => {
+    if (mode === "stations") requestStations();
+  }, [mode]);
   const [dark, setDark] = useState(() => resolveDark(theme));
 
   // Offer the offline street basemap only when a PMTiles pack is actually
@@ -529,9 +535,11 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
     return null;
     // visits deliberately via getState() — the header count refreshing on a
     // check is fine to defer to the next bounds/mode change. The date window /
-    // folder ARE deps so the "seen" counts re-derive when the selection changes.
+    // folder ARE deps so the "seen" counts re-derive when the selection changes,
+    // and gazGen so the list fills in when the monuments, airports and stations
+    // land after the first paint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, bounds, ref, dateFilter, folder]);
+  }, [mode, bounds, ref, dateFilter, folder, gazGen]);
   // The monument/airport list AFTER the visited/hide-visited filter — hoisted so
   // the list can show an honest empty message when the filter matches nothing
   // (before, the chips floated above a blank void and it read as broken).
@@ -597,9 +605,9 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
     if (place.kind === "city") {
       const c = ref.cityById(place.id);
       const region = c?.subdivisionId ? ref.subdivisionById(c.subdivisionId)?.name : null;
-      return `· ${country}${region ? ` - ${region}` : ""}`;
+      return `${country}${region ? ` - ${region}` : ""}`;
     }
-    return `· ${country}`;
+    return country;
   }
 
   // Fly to a place AND open its preview card — the SAME result as tapping the
@@ -731,7 +739,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
             </button>
           </div>
         )}
-        {/* Place-kind switch, front and centre. Cities / monuments / airports are
+        {/* Place-kind switch, front and centre. Cities / monuments / stations / airports are
             genuinely DIFFERENT data, not one more filter to bury in the panel — so
             it's a first-class map control (its own prominent pill), never a row in
             the Filter menu. */}
@@ -739,16 +747,16 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
           <div className="segmented map-mode" role="group" aria-label={t("filter.mode.title")}>
             {(["all", "cities", "monuments", "stations", "airports"] as FilterMode[]).map((m) => {
               const label = t(`filter.mode.${m}` as const);
-              const icon =
+              const Icon =
                 m === "cities"
-                  ? "🏙"
+                  ? CityIcon
                   : m === "monuments"
-                    ? "🏛"
+                    ? MonumentIcon
                     : m === "airports"
-                      ? "✈"
+                      ? PlaneIcon
                       : m === "stations"
-                        ? "🚉"
-                        : "";
+                        ? TrainIcon
+                        : null;
               const active = mode === m;
               return (
                 <button
@@ -765,8 +773,8 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                       dataset is legible in words, not just by the highlight. "All"
                       has no glyph, so it always shows its word. aria-label carries
                       the full name on every segment (screen readers + e2e). */}
-                  {icon}
-                  {active || !icon ? (icon ? " " : "") + label : ""}
+                  {Icon && <Icon />}
+                  {active || !Icon ? label : ""}
                 </button>
               );
             })}
@@ -975,7 +983,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                           lon: x.lon,
                           lat: x.lat,
                           name: x.name,
-                          sub: `· ${x.sub}`,
+                          sub: x.sub,
                           place: x.place,
                           hasPage: true,
                         })
@@ -1036,7 +1044,10 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                     selected && scrollToIdRef.current === c.id
                       ? (el) => {
                           if (el) {
-                            el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                            el.scrollIntoView({
+                              block: "nearest",
+                              behavior: reducedMotion ? "auto" : "smooth",
+                            });
                             scrollToIdRef.current = null;
                           }
                         }
@@ -1057,7 +1068,7 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                         lon: c.lon,
                         lat: c.lat,
                         name: c.name,
-                        sub: `· ${country}${region ? ` - ${region}` : ""}`,
+                        sub: `${country}${region ? ` - ${region}` : ""}`,
                         place,
                         hasPage: true,
                       })

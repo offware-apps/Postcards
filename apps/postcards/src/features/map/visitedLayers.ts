@@ -13,6 +13,20 @@ function isVisited(v: Visit): boolean {
 // bias drops favourites and your own custom pins BELOW every browse city so they
 // are never the one thinned out — your marks always stay on the map.
 const PINNED = 1_000_000_000;
+// Below the pins, each country's most-populous city outranks every other city,
+// so where flags collide every country keeps one before any keeps a second.
+// Larger than any city's population.
+const COUNTRY_REP = 100_000_000;
+
+/** Ids of the most-populous city per country among `cities`. */
+function countryReps(cities: { id: string; cc: string; pop: number }[]): Set<string> {
+  const best = new Map<string, { id: string; pop: number }>();
+  for (const c of cities) {
+    const b = best.get(c.cc);
+    if (!b || c.pop > b.pop) best.set(c.cc, c);
+  }
+  return new Set([...best.values()].map((b) => b.id));
+}
 
 /**
  * Point features for visited cities. Each carries what the flag marker needs
@@ -22,6 +36,12 @@ const PINNED = 1_000_000_000;
  */
 export function visitedCityPoints(visits: Visit[], ref: ReferenceData): FeatureCollection<Point> {
   const features: Feature<Point>[] = [];
+  const reps = countryReps(
+    visits.flatMap((v) => {
+      const c = isVisited(v) && v.place.kind === "city" ? ref.cityById(v.place.id) : undefined;
+      return c ? [{ id: c.id, cc: c.countryIso2, pop: c.population ?? 0 }] : [];
+    }),
+  );
   for (const v of visits) {
     if (!isVisited(v)) continue;
     // User-authored custom points carry their own coordinates on the record.
@@ -62,9 +82,11 @@ export function visitedCityPoints(visits: Visit[], ref: ReferenceData): FeatureC
         custom: 0,
         fav: v.favorite ? 1 : 0,
         wish: 0,
-        // Favourites are pinned below every non-favourite; within each group the
-        // most-populous city is kept when flags collide.
-        sortKey: (v.favorite ? -PINNED : 0) - (city.population ?? 0),
+        // Favourites are pinned below every non-favourite, then one city per
+        // country; within each group the most-populous city is kept when flags
+        // collide.
+        sortKey:
+          (v.favorite ? -PINNED : 0) - (reps.has(city.id) ? COUNTRY_REP : 0) - (city.population ?? 0),
       },
     });
   }
@@ -121,6 +143,48 @@ export function optimizeVisitedPoints(
   return { type: "FeatureCollection", features: kept };
 }
 
+// On-screen footprint of a flag marker, in CSS pixels.
+const MARKER_PX = 20;
+
+/**
+ * At world zoom a country's cities sit on top of each other, and their identical
+ * flags pile up over the neighbours' (Europe especially). This keeps, per
+ * country, only the markers at least one marker apart on screen at `zoom`,
+ * highest priority first (the symbol sort key): a marker left out would have
+ * drawn under the same flag, so no country, favourite or custom place leaves the
+ * map, and zooming in brings each city back. Different countries never hide
+ * each other here; the map's collision pass does that when it is on.
+ */
+export function stackSameCountry(
+  fc: FeatureCollection<Point>,
+  zoom: number,
+): FeatureCollection<Point> {
+  const world = 512 * 2 ** zoom;
+  const toPx = ([lon, lat]: number[]): [number, number] => {
+    const s = Math.sin((Math.max(-85, Math.min(85, lat!)) * Math.PI) / 180);
+    return [
+      ((lon! + 180) / 360) * world,
+      (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * world,
+    ];
+  };
+  const byPriority = [...fc.features].sort(
+    (a, b) => Number(a.properties?.sortKey ?? 0) - Number(b.properties?.sortKey ?? 0),
+  );
+  const keptByCountry = new Map<string, [number, number][]>();
+  const kept = new Set<Feature<Point>>();
+  for (const f of byPriority) {
+    const p = f.properties ?? {};
+    const at = toPx(f.geometry.coordinates);
+    const same = keptByCountry.get(p.cc) ?? [];
+    const pinned = p.custom === 1 || p.fav === 1;
+    if (!pinned && same.some(([x, y]) => Math.hypot(x - at[0], y - at[1]) < MARKER_PX)) continue;
+    same.push(at);
+    keptByCountry.set(p.cc, same);
+    kept.add(f);
+  }
+  return { type: "FeatureCollection", features: fc.features.filter((f) => kept.has(f)) };
+}
+
 /**
  * Point features for wish-to-go cities. Identical property shape to
  * {@link visitedCityPoints} (`wish: 1` is the only difference) so want-list
@@ -131,6 +195,12 @@ export function optimizeVisitedPoints(
  */
 export function wishlistCityPoints(visits: Visit[], ref: ReferenceData): FeatureCollection<Point> {
   const features: Feature<Point>[] = [];
+  const reps = countryReps(
+    visits.flatMap((v) => {
+      const c = v.status === "wishlist" && v.place.kind === "city" ? ref.cityById(v.place.id) : undefined;
+      return c ? [{ id: c.id, cc: c.countryIso2, pop: c.population ?? 0 }] : [];
+    }),
+  );
   for (const v of visits) {
     if (v.status !== "wishlist" || v.place.kind !== "city") continue;
     const city = ref.cityById(v.place.id);
@@ -148,7 +218,8 @@ export function wishlistCityPoints(visits: Visit[], ref: ReferenceData): Feature
         custom: 0,
         fav: v.favorite ? 1 : 0,
         wish: 1,
-        sortKey: (v.favorite ? -PINNED : 0) - (city.population ?? 0),
+        sortKey:
+          (v.favorite ? -PINNED : 0) - (reps.has(city.id) ? COUNTRY_REP : 0) - (city.population ?? 0),
       },
     });
   }

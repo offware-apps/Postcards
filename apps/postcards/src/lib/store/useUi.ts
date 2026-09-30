@@ -74,6 +74,8 @@ interface UiState {
   storyDraftPlace: PlaceRef | null;
   journalDraftRequest: { place: PlaceRef; nonce: number } | null;
   openJournalDraft: (place: PlaceRef) => void;
+  /** Open the screen an address names (browser Forward), as a new history step. */
+  openRoute: (r: Pick<NavState, "tab" | "cityPageId" | "countryPageId">) => void;
   history: NavState[];
   /** Return to the previous screen. True if there was somewhere to go back to. */
   goBack: () => boolean;
@@ -192,6 +194,7 @@ export const useUi = create<UiState>((set, get) => {
         countryPageId: null,
         tripEditId: null,
       }),
+    openRoute: (r) => set({ history: pushHistory(), ...r, tripEditId: null, storyEditId: null }),
     history: [],
     goBack: () => {
       const h = get().history;

@@ -5,7 +5,7 @@
 import type { FeatureCollection, MultiPolygon, Polygon, Position } from "geojson";
 import type { ReferenceData } from "../../lib/reference/types";
 import { CONTINENT_COLORS } from "../../lib/reference/continents";
-import { countryFlag } from "../../lib/format/format";
+import { countryFlag, flagFontReady, FLAG_FONT } from "../../lib/format/format";
 import { getLand } from "../travel/landGeometry";
 
 const W = 2000;
@@ -127,7 +127,8 @@ export async function renderPoster(
   }
 
   // Flag stamps on top (after all fills so nothing covers them).
-  ctx.font = '36px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+  await flagFontReady();
+  ctx.font = `36px ${FLAG_FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const s of stamps) ctx.fillText(s.flag, s.x, s.y);
