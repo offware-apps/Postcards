@@ -1,6 +1,6 @@
 import { it, expect, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
-import { JournalScreen } from "../../src/features/journal/JournalScreen";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { StoryComposer } from "../../src/features/journal/StoryComposer";
 import { useStories } from "../../src/lib/store/useStories";
 
 // The composer's crash-recovery draft keeps writing, not a story merely opened
@@ -17,35 +17,23 @@ const story = {
   updatedAt: "x",
 };
 const DRAFT_KEY = "postcards-journal-draft";
-const wait = () => act(() => new Promise((r) => setTimeout(r, 450))); // past the draft debounce
 
 beforeEach(() => {
   localStorage.clear();
-  Element.prototype.scrollIntoView = () => {};
   useStories.setState({ loaded: true, stories: [story] });
 });
 afterEach(cleanup);
 
-it("an untouched Edit, cancelled, does not reopen on the next visit", async () => {
-  const first = render(<JournalScreen />);
-  fireEvent.click(screen.getAllByRole("button", { name: "Edit story Bund walk" })[0]!);
-  await wait();
-  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+it("an untouched Edit, closed, does not reopen on the next new postcard", () => {
+  const first = render(<StoryComposer storyId="s1" onClose={() => {}} />);
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
   first.unmount();
-  render(<JournalScreen />);
-  expect(screen.queryByText("Editing a story")).toBeNull();
+  expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+  render(<StoryComposer storyId={null} onClose={() => {}} />);
+  expect(screen.getByLabelText("Title (optional)")).toHaveProperty("value", "");
 });
 
-it("an Edit with a change is still kept as a draft", async () => {
-  const first = render(<JournalScreen />);
-  fireEvent.click(screen.getAllByRole("button", { name: "Edit story Bund walk" })[0]!);
-  fireEvent.change(screen.getByLabelText("Title (optional)"), { target: { value: "Bund" } });
-  await wait();
-  first.unmount();
-  expect(JSON.parse(localStorage.getItem(DRAFT_KEY)!).title).toBe("Bund");
-});
-
-it("a draft left by an untouched Edit is dropped once seen to match its story", async () => {
+it("a draft an older build cached for an Edit does not fill a new postcard", () => {
   localStorage.setItem(
     DRAFT_KEY,
     JSON.stringify({
@@ -57,8 +45,6 @@ it("a draft left by an untouched Edit is dropped once seen to match its story", 
       folder: "",
     }),
   );
-  const first = render(<JournalScreen />);
-  await wait();
-  first.unmount();
-  expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+  render(<StoryComposer storyId={null} onClose={() => {}} />);
+  expect(screen.getByLabelText("Title (optional)")).toHaveProperty("value", "");
 });

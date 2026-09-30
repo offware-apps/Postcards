@@ -271,3 +271,28 @@ export function airportPoints(visits: Visit[], ref: ReferenceData): FeatureColle
   }
   return { type: "FeatureCollection", features };
 }
+
+/**
+ * Point features for logged railway stations. A station has no short code (unlike
+ * an airport's IATA), so its pin is an emoji chip tinted by been/wish/fav — the
+ * name is revealed on tap via the browsable `stations-all` layer beneath it, which
+ * carries the id/name/country. Kept separate from airports so a 🚉 never reads as
+ * a plane.
+ */
+export function stationPoints(visits: Visit[], ref: ReferenceData): FeatureCollection<Point> {
+  const features: Feature<Point>[] = [];
+  for (const v of visits) {
+    if (v.place.kind !== "station") continue;
+    const station = ref.stationById(v.place.id);
+    if (!station) continue;
+    features.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [station.lon, station.lat] },
+      properties: {
+        wish: v.status === "wishlist" ? 1 : 0,
+        fav: v.favorite ? 1 : 0,
+      },
+    });
+  }
+  return { type: "FeatureCollection", features };
+}

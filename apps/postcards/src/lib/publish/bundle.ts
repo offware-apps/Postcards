@@ -80,6 +80,7 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
   const storyByPlace = new Map<string, Story>();
   for (const s of stories) {
     if (!inRange(s.date, sel.dateFrom, sel.dateTo)) continue;
+    if (!s.place) continue; // a place-less postcard (spec 020) has no step on the map
     const k = placeKey(s.place);
     // Keep the earliest story for a place as its step story (feed order is newest
     // first; the book reads oldest→newest).
@@ -97,7 +98,7 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
   // Only photos of records inside the date range: a range is a privacy boundary,
   // so a 2019 story's photos never ride along on a 2024 journey's step.
   for (const v of visits) if (inRange(v.date ?? null, sel.dateFrom, sel.dateTo)) addPhotos(v.place, v.photos ?? []);
-  for (const s of stories) if (inRange(s.date, sel.dateFrom, sel.dateTo)) addPhotos(s.place, s.photos ?? []);
+  for (const s of stories) if (s.place && inRange(s.date, sel.dateFrom, sel.dateTo)) addPhotos(s.place, s.photos ?? []);
 
   // Ordered legs from the selected trips (date first, then a stable original order).
   const wanted = sel.tripIds ? new Set(sel.tripIds) : null;
@@ -136,7 +137,7 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
       .filter((s) => inRange(s.date, sel.dateFrom, sel.dateTo))
       .sort((a, b) => a.date.localeCompare(b.date));
     if (ordered.length > 0) {
-      for (const s of ordered) makeStep(s.place, s.date, null);
+      for (const s of ordered) if (s.place) makeStep(s.place, s.date, null);
     } else {
       // No trips AND no stories — plot the places you've been so the map isn't
       // empty (and a visits-only user can still publish "everywhere I've been").

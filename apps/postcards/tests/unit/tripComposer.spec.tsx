@@ -7,12 +7,13 @@ import type { PlaceRef, Trip } from "../../src/lib/schema/models";
 
 const P = (id: string, countryId: string): PlaceRef => ({ kind: "country", id, name: id, countryId });
 
-function editTrip(date: string, pick?: { month: string }) {
+function editTrip(date: string, stopDates?: (string | null)[]) {
   const trip: Trip = {
     tripId: "t1",
     from: P("FR", "FR"),
     to: P("JP", "JP"),
     stops: [P("FR", "FR"), P("KR", "KR"), P("JP", "JP")],
+    ...(stopDates ? { stopDates } : {}),
     mode: "flight",
     date,
     carrier: null,
@@ -23,7 +24,6 @@ function editTrip(date: string, pick?: { month: string }) {
   useTrips.setState({ trips: [trip], updateTrip });
   useVisits.setState({ visits: [] });
   render(<TripComposer tripId="t1" onClose={() => {}} />);
-  if (pick) fireEvent.change(screen.getByLabelText("Month"), { target: { value: pick.month } });
   fireEvent.click(screen.getByRole("button", { name: "Save trip" }));
   return updateTrip;
 }
@@ -36,8 +36,16 @@ describe("TripComposer editing a dated trip", () => {
     expect(updateTrip).toHaveBeenCalledWith("t1", expect.objectContaining({ date: "2024-03-15" }));
   });
 
-  it("saves the month alone once another month is picked", () => {
-    const updateTrip = editTrip("2024-03-15", { month: "04" });
-    expect(updateTrip).toHaveBeenCalledWith("t1", expect.objectContaining({ date: "2024-04" }));
+  it("keeps a month-dated trip's month", () => {
+    const updateTrip = editTrip("2024-03");
+    expect(updateTrip).toHaveBeenCalledWith("t1", expect.objectContaining({ date: "2024-03" }));
+  });
+
+  it("keeps each stop's day and dates the trip by its first", () => {
+    const updateTrip = editTrip("2024-03-16", [null, "2024-03-16", "2024-03-20"]);
+    expect(updateTrip).toHaveBeenCalledWith(
+      "t1",
+      expect.objectContaining({ date: "2024-03-16", stopDates: [null, "2024-03-16", "2024-03-20"] }),
+    );
   });
 });

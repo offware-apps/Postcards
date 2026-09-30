@@ -4,6 +4,7 @@ import {
   removeStopAt,
   moveStopTo,
   setLegMode,
+  setStopDate,
   type StopChain,
 } from "../../src/features/travel/tripStops";
 import { stopsArcs } from "../../src/features/map/visitedLayers";
@@ -44,6 +45,42 @@ describe("per-leg chain helpers keep legModes in sync with stops", () => {
     const c = moveStopTo({ stops: [P, T, O], legModes: ["flight", "train"] }, 2, 0, "flight");
     expect(c.stops[0]).toBe(O);
     expect(c.legModes).toHaveLength(2);
+  });
+});
+
+describe("per-stop dates travel with their stop (spec 021)", () => {
+  it("chains without dates stay untracked — no stopDates key is created", () => {
+    const c = appendStop(appendStop(empty, P, "flight"), T, "flight");
+    expect(c.stopDates).toBeUndefined(); // backward-compatible: absent by default
+  });
+
+  it("setStopDate initialises the array (all-null) and sets one entry", () => {
+    const c = setStopDate({ stops: [P, T, O], legModes: ["flight", "flight"] }, 1, "2024-05-02");
+    expect(c.stopDates).toEqual([null, "2024-05-02", null]);
+  });
+
+  it("appending a stop grows a tracked date array by one null", () => {
+    const base = setStopDate({ stops: [P, T], legModes: ["flight"] }, 0, "2024-05-01");
+    const c = appendStop(base, O, "train");
+    expect(c.stopDates).toEqual(["2024-05-01", null, null]);
+  });
+
+  it("a date MOVES with its stop on reorder (unlike leg modes)", () => {
+    // Dates: Paris=1st, Tokyo=2nd, Osaka=3rd. Move Osaka to the front.
+    let c: StopChain = { stops: [P, T, O], legModes: ["flight", "train"] };
+    c = setStopDate(c, 0, "2024-05-01");
+    c = setStopDate(c, 2, "2024-05-09");
+    const moved = moveStopTo(c, 2, 0, "flight");
+    expect(moved.stops[0]).toBe(O);
+    expect(moved.stopDates).toEqual(["2024-05-09", "2024-05-01", null]);
+  });
+
+  it("removing a stop removes its date too", () => {
+    let c: StopChain = { stops: [P, T, O], legModes: ["flight", "train"] };
+    c = setStopDate(c, 1, "2024-05-05");
+    const after = removeStopAt(c, 1, "flight");
+    expect(after.stops).toEqual([P, O]);
+    expect(after.stopDates).toEqual([null, null]); // Tokyo's date left with Tokyo
   });
 });
 

@@ -1,16 +1,19 @@
 // Build the bundled reference data from openly-licensed sources:
 //  - public/reference/cities.json        GeoNames cities >= 15k (all-the-cities, CC BY 4.0)
-//  - public/reference/subdivisions.json  first-level regions (GeoNames admin-1 taxonomy),
-//                                         named by nearest region centroid from the dr5hn
-//                                         countries-states-cities dataset (ODbL/OpenDB).
+//  - public/reference/subdivisions.json  first-level regions (GeoNames admin-1 taxonomy):
+//                                         each city's current code and each code's name from
+//                                         one GeoNames day (CC BY 4.0), vendored at scripts/data/
+//                                         by build-city-admin1.mjs and admin1CodesASCII.txt.
 //  - public/reference/airports.json      IATA-coded airports (OpenFlights, aggregated from the
 //                                         public-domain OurAirports), via `airport-data`.
-// Region names are matched GEOGRAPHICALLY (nearest centroid), not by code, because GeoNames
-// admin codes rarely equal ISO/other code schemes. Aggregator-only: reshapes existing data.
+// A city GeoNames no longer lists takes the region of its nearest city that it does, and a
+// code with no GeoNames name keeps one from the dr5hn countries-states-cities dataset
+// (ODbL), matched by nearest centroid. Aggregator-only: reshapes existing data.
 //
 // Run: node scripts/build-reference.mjs  (from apps/postcards)
 import { createRequire } from "node:module";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -26,14 +29,15 @@ countries.registerLocale(require("i18n-iso-countries/langs/en.json"));
 // (cached once by the service worker).
 const MIN_POPULATION = 0;
 
-// France: GeoNames admin-1 = the 13 metropolitan regions (dr5hn lists departments),
-// so name them directly by INSEE region code.
+// France: GeoNames names four of the 13 metropolitan regions in English
+// ("Brittany"), so all 13 take their own French names, by INSEE region code.
 const FR_REGION_NAMES = {
   11: "Île-de-France", 24: "Centre-Val de Loire", 27: "Bourgogne-Franche-Comté",
   28: "Normandie", 32: "Hauts-de-France", 44: "Grand Est", 52: "Pays de la Loire",
   53: "Bretagne", 75: "Nouvelle-Aquitaine", 76: "Occitanie", 84: "Auvergne-Rhône-Alpes",
   93: "Provence-Alpes-Côte d'Azur", 94: "Corse",
 };
+
 
 // dr5hn states per country, with usable centroids.
 const statesByCountry = new Map();
@@ -50,29 +54,83 @@ function statesOf(cc) {
 const here = dirname(fileURLToPath(import.meta.url));
 const refDir = join(here, "..", "public", "reference");
 
-// --- Cities + per-region centroid accumulation ---
+// GeoNames admin-1 names by "CC-code", from https://download.geonames.org/export/dump/admin1CodesASCII.txt
+const ADMIN1_NAMES = new Map(
+  gunzipSync(readFileSync(join(here, "data", "admin1CodesASCII.txt.gz")))
+    .toString("utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [code, name] = line.split("\t");
+      return [code.replace(".", "-"), name];
+    }),
+);
+
+// Each city's admin-1 code on the same GeoNames day as ADMIN1_NAMES, by geonameid.
+// all-the-cities carries codes from an older snapshot, and GeoNames has since given
+// some of them to other regions (Vietnam's 2025 provinces), so its own are not used.
+const CITY_ADMIN1 = new Map(
+  gunzipSync(readFileSync(join(here, "data", "city-admin1.tsv.gz")))
+    .toString("utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [id, code] = line.split("\t");
+      return [id, code];
+    }),
+);
+
+// --- Cities, each with its current region code where GeoNames still lists it ---
 const cities = [];
 const seen = new Set();
-const regions = new Map(); // "CC-code" -> { cc, adminCode, sumLat, sumLon, n }
 for (const c of allCities) {
   if ((c.population || 0) < MIN_POPULATION || !c.cityId || seen.has(c.cityId)) continue;
   const [lon, lat] = c.loc.coordinates;
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
   seen.add(c.cityId);
-  const subId = c.adminCode ? `${c.country}-${c.adminCode}` : null;
-  if (subId) {
-    let r = regions.get(subId);
-    if (!r) regions.set(subId, (r = { cc: c.country, adminCode: String(c.adminCode), sumLat: 0, sumLon: 0, n: 0 }));
-    r.sumLat += lat;
-    r.sumLon += lon;
-    r.n++;
-  }
+  const current = CITY_ADMIN1.get(String(c.cityId));
+  const [cc, admin1] = current ? current.split(".") : [];
   cities.push({
-    id: String(c.cityId), name: c.name, countryIso2: c.country, subdivisionId: subId,
+    id: String(c.cityId), name: c.name, countryIso2: c.country,
+    subdivisionId: cc === c.country && admin1 ? `${cc}-${admin1}` : null,
     lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4,
     // GeoNames uses 0 for "unknown population" — store null, never a fake 0.
     population: c.population > 0 ? c.population : null,
+    // Only a city GeoNames no longer lists falls back to its nearest neighbour.
+    unlisted: !current && !!c.adminCode,
   });
+}
+const coded = new Map(); // country -> cities carrying a current code
+for (const c of cities) {
+  if (!c.subdivisionId) continue;
+  if (!coded.has(c.countryIso2)) coded.set(c.countryIso2, []);
+  coded.get(c.countryIso2).push(c);
+}
+let borrowed = 0;
+for (const c of cities) {
+  if (c.unlisted) {
+    let best = null, bestD = Infinity;
+    for (const o of coded.get(c.countryIso2) ?? []) {
+      const d = (o.lat - c.lat) ** 2 + (o.lon - c.lon) ** 2;
+      if (d < bestD) { bestD = d; best = o; }
+    }
+    if (best) { c.subdivisionId = best.subdivisionId; borrowed++; }
+  }
+  delete c.unlisted;
+}
+console.log(`cities GeoNames no longer lists, placed by nearest neighbour: ${borrowed}`);
+
+const regions = new Map(); // "CC-code" -> { cc, adminCode, sumLat, sumLon, n }
+for (const c of cities) {
+  if (!c.subdivisionId) continue;
+  let r = regions.get(c.subdivisionId);
+  if (!r) {
+    const adminCode = c.subdivisionId.slice(c.countryIso2.length + 1);
+    regions.set(c.subdivisionId, (r = { cc: c.countryIso2, adminCode, sumLat: 0, sumLon: 0, n: 0 }));
+  }
+  r.sumLat += c.lat;
+  r.sumLon += c.lon;
+  r.n++;
 }
 cities.sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
 // Two tiers: a small CORE file — the world's top CORE_COUNT cities by population —
@@ -86,7 +144,7 @@ writeFileSync(join(refDir, "cities.json"), JSON.stringify(core) + "\n");
 writeFileSync(join(refDir, "cities-all.json"), JSON.stringify(cities) + "\n");
 console.log(`core cities: ${core.length} | full: ${cities.length}`);
 
-// --- Name each region by nearest state centroid (or FR override) ---
+// --- Name each region by its GeoNames code, else by nearest state centroid ---
 function nearestName(cc, lat, lon) {
   let best = null, bestD = Infinity;
   for (const s of statesOf(cc)) {
@@ -100,7 +158,10 @@ let named = 0;
 const subdivisions = [];
 for (const [id, r] of regions) {
   const cLat = r.sumLat / r.n, cLon = r.sumLon / r.n;
-  const name = r.cc === "FR" ? FR_REGION_NAMES[r.adminCode] : nearestName(r.cc, cLat, cLon);
+  const name =
+    (r.cc === "FR" ? FR_REGION_NAMES[r.adminCode] : undefined) ??
+    ADMIN1_NAMES.get(id) ??
+    nearestName(r.cc, cLat, cLon);
   if (name) named++;
   subdivisions.push({ id, countryIso2: r.cc, name: name ?? `${r.cc} region ${r.adminCode}` });
 }
@@ -109,6 +170,7 @@ writeFileSync(join(refDir, "subdivisions.json"), JSON.stringify(subdivisions) + 
 
 console.log(`cities: ${cities.length} | subdivisions: ${subdivisions.length}`);
 console.log(`named: ${named}/${subdivisions.length} (${Math.round((named / subdivisions.length) * 100)}%)`);
+console.log(`named by GeoNames code: ${subdivisions.filter((s) => ADMIN1_NAMES.has(s.id)).length}`);
 console.log(`countries with regions: ${new Set(subdivisions.map((s) => s.countryIso2)).size}`);
 console.log(`Paris subId: ${cities.find((c) => c.id === "2988507")?.subdivisionId}`);
 

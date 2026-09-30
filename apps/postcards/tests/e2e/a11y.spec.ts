@@ -2,6 +2,16 @@ import { test, expect } from "@playwright/test";
 import { gotoTab, openApp, openAppWithVisits, markVisited, assertNoSeriousViolations } from "./nav-helper";
 
 // WCAG 2.1 AA gate (SC-005): no serious/critical axe violations on any screen.
+test("the postcard composer passes the axe WCAG 2.1 AA gate", async ({ page }) => {
+  await openApp(page);
+  await gotoTab(page, "Journal");
+  await page.getByRole("button", { name: /Write a postcard/ }).click();
+  await expect(page.locator(".story-composer")).toBeVisible();
+  // Expand the optional "add details" so those controls are audited too.
+  await page.getByText("Add details", { exact: true }).click();
+  await assertNoSeriousViolations(page, "postcard composer");
+});
+
 test("map, stats and places screens pass the axe WCAG 2.1 AA gate", async ({ page }) => {
   await openApp(page);
 

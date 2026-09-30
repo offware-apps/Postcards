@@ -43,6 +43,10 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
             {t("shortcuts.inPlaces")}
           </li>
           <li>
+            <kbd>W</kbd> {t("shortcuts.write")} — <kbd>Ctrl/⌘</kbd>+<kbd>Enter</kbd> {t("shortcuts.writeSave")},{" "}
+            <kbd>Ctrl/⌘</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> {t("shortcuts.writeSaveNew")}
+          </li>
+          <li>
             <kbd>?</kbd> {t("shortcuts.help")}
           </li>
           <li>
