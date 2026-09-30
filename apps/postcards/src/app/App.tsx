@@ -33,6 +33,7 @@ import { useInstallPrompt } from "../lib/hooks/useInstallPrompt";
 import { useAutoSync } from "../lib/hooks/useAutoSync";
 import { useT, type MessageKey } from "../lib/i18n";
 import { parseRoute, routeHash, type Route } from "./route";
+import { useReferenceExtrasPending } from "../lib/reference/useGazetteer";
 
 // Code-split MapLibre so it loads only when the map is shown.
 const MapScreen = lazy(() =>
@@ -106,6 +107,13 @@ export function App() {
   const mapShown = useRef(false);
   if (tab === "map") mapShown.current = true;
   const mapVisible = tab === "map" && !cityPageId && !countryPageId && !tripEditId;
+  // Airports and heritage sites land a moment after the first paint. The map,
+  // Places, Stats and country pages refresh when they do; trips (distances),
+  // the journal (story maps) and a place's page read them once, so a reload
+  // straight onto one waits that moment instead of showing it half-resolved.
+  const extrasPending = useReferenceExtrasPending();
+  const waitForExtras =
+    extrasPending && (!!cityPageId || !!tripEditId || tab === "trips" || tab === "journal");
   const firstRender = useRef(true);
 
   // Scroll memory. <main> is the single scroll container reused across tabs and
@@ -410,7 +418,11 @@ export function App() {
                 </Suspense>
               </div>
             )}
-            {cityPageId ? (
+            {waitForExtras ? (
+              <p className="muted empty" role="status">
+                {t("app.loading")}
+              </p>
+            ) : cityPageId ? (
               <CityScreen cityId={cityPageId} onBack={() => useUi.getState().closeCity()} />
             ) : countryPageId ? (
               <CountryScreen iso2={countryPageId} onBack={() => useUi.getState().closeCity()} />

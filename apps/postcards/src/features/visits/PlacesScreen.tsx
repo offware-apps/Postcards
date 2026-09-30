@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
+import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { useVisits } from "../../lib/store/useVisits";
 import { useToast } from "../../lib/store/useToast";
 import { useUi, type PlacesView } from "../../lib/store/useUi";
@@ -303,6 +304,7 @@ function RowMenu({
 const VisitRow = memo(function VisitRow({ v, wishlist }: { v: Visit; wishlist?: boolean }) {
   const t = useT();
   const ref = useMemo(() => getReferenceData(), []);
+  useGazetteerGeneration(); // a monument's glyph and an airport's place resolve once they land
   const toggleVisit = useVisits((s) => s.toggleVisit);
   const toggleFavorite = useVisits((s) => s.toggleFavorite);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -574,7 +576,9 @@ export function PlacesScreen() {
     });
   }, [collection]);
 
-  const heritageAvailable = useMemo(() => ref.allHeritage().length > 0, [ref]);
+  // Heritage sites and airports land a moment after first paint (initReferenceData).
+  const gazGen = useGazetteerGeneration();
+  const heritageAvailable = useMemo(() => ref.allHeritage().length > 0, [ref, gazGen]);
 
   // ── Personal records (kind = All): the user's own saved places, all kinds mixed,
   // narrowed by the status axis. ────────────────────────────────────────────────
@@ -699,7 +703,7 @@ export function PlacesScreen() {
       return { rows: [] as BrowseRow[], hasMore: false };
     return browseList(kind, status, currentFilters(filters), ref, visits, deferredFilter.trim(), shown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, status, filters.continent, filters.minPop, filters.category, filters.country, ref, visits, deferredFilter, shown]);
+  }, [kind, status, filters.continent, filters.minPop, filters.category, filters.country, ref, visits, deferredFilter, shown, gazGen]);
   const browseRows = browse.rows;
 
   // The years your visits span, newest first, for the date filter chips.

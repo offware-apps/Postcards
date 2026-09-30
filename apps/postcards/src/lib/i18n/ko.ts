@@ -32,6 +32,7 @@ export const ko: Messages = {
   "nav.sectionsAria": "섹션",
   "nav.sectionStatus": "{section} 섹션",
   "app.skipToContent": "본문으로 건너뛰기",
+  "app.loading": "불러오는 중…",
   "topbar.goToMap": "지도로 이동",
   "topbar.install": "앱 설치",
   "topbar.installAria": "앱 설치",

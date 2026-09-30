@@ -31,6 +31,7 @@ export const fr: Messages = {
   "nav.sectionsAria": "Sections",
   "nav.sectionStatus": "Section {section}",
   "app.skipToContent": "Aller au contenu",
+  "app.loading": "Chargement…",
   "topbar.goToMap": "Aller à la carte",
   "topbar.install": "Installer l'appli",
   "topbar.installAria": "Installer l'application",

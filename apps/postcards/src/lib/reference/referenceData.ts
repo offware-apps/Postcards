@@ -125,8 +125,8 @@ class ReferenceDataImpl implements ReferenceData {
   readonly countries: Country[];
   readonly provenance: ReferenceProvenance[] = provenance;
   private cities: IndexedCity[] = [];
-  private airports: IndexedAirport[];
-  private heritage: IndexedHeritage[];
+  private airports: IndexedAirport[] = [];
+  private heritage: IndexedHeritage[] = [];
   private byIso2 = new Map<string, Country>();
   private byNumeric = new Map<string, Country>();
   private cityIndex = new Map<string, City>();
@@ -136,8 +136,8 @@ class ReferenceDataImpl implements ReferenceData {
   private subIndex = new Map<string, Subdivision>();
   private subsByCountry = new Map<string, Subdivision[]>();
   private countrySearch: { c: Country; search: string }[];
-  private languages: Record<string, Language[]>;
-  private articleNames: Record<string, string>;
+  private languages: Record<string, Language[]> = {};
+  private articleNames: Record<string, string> = {};
 
   // The world gazetteer (bundled core → optional full set). Kept separate from the
   // community-pack places so a gazetteer swap never drops installed packs.
@@ -194,16 +194,12 @@ class ReferenceDataImpl implements ReferenceData {
     languages: Record<string, Language[]> = {},
     articleNames: Record<string, string> = {},
   ) {
-    this.languages = languages;
-    this.articleNames = articleNames;
     // Population-descending order is the contract everywhere (search relevance,
     // the cities-in-view list's presorted fast path). The bundled file is already
     // sorted, so this is a near-free adaptive pass; it guarantees injected data too.
     this.baseCities = cities
       .map((c) => ({ ...c, search: normalize(c.name) }))
       .sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
-    this.airports = airports.map((a) => ({ ...a, search: normalize(a.name) }));
-    this.heritage = heritage.map((h) => ({ ...h, search: normalize(h.name) }));
     this.countries = buildCountries(cities, subdivisions);
     this.countrySearch = this.countries.map((c) => ({ c, search: normalize(c.name) }));
     for (const c of this.countries) {
@@ -212,18 +208,36 @@ class ReferenceDataImpl implements ReferenceData {
     }
     // Build the live city set (world gazetteer + any installed pack places).
     this.remergeCities();
-    for (const a of this.airports) this.airportIndex.set(a.id, a);
-    for (const h of this.heritage) {
-      this.heritageIndex.set(h.id, h);
-      const arr = this.heritageByCountry.get(h.countryIso2);
-      if (arr) arr.push(h);
-      else this.heritageByCountry.set(h.countryIso2, [h]);
-    }
+    this.setExtras(airports, heritage, languages, articleNames);
     for (const s of subdivisions) {
       this.subIndex.set(s.id, s);
       const arr = this.subsByCountry.get(s.countryIso2);
       if (arr) arr.push(s);
       else this.subsByCountry.set(s.countryIso2, [s]);
+    }
+  }
+
+  /** Install the airports, heritage sites, languages and article names, which
+   *  arrive after first paint (see initReferenceData). */
+  setExtras(
+    airports: Airport[],
+    heritage: HeritageSite[],
+    languages: Record<string, Language[]>,
+    articleNames: Record<string, string>,
+  ): void {
+    this.languages = languages;
+    this.articleNames = articleNames;
+    this.airports = airports.map((a) => ({ ...a, search: normalize(a.name) }));
+    this.heritage = heritage.map((h) => ({ ...h, search: normalize(h.name) }));
+    this.airportIndex.clear();
+    for (const a of this.airports) this.airportIndex.set(a.id, a);
+    this.heritageIndex.clear();
+    this.heritageByCountry.clear();
+    for (const h of this.heritage) {
+      this.heritageIndex.set(h.id, h);
+      const arr = this.heritageByCountry.get(h.countryIso2);
+      if (arr) arr.push(h);
+      else this.heritageByCountry.set(h.countryIso2, [h]);
     }
   }
 
@@ -366,23 +380,16 @@ export function initReferenceDataSync(
 export async function initReferenceData(): Promise<ReferenceData> {
   if (instance) return instance;
   try {
-    const [cities, subdivisions, airports, heritage, landmarks, languages, articleNames] = await Promise.all([
+    // The first render waits only for what every first screen reads: the city
+    // gazetteer and its regions. On a phone the rest used to hold the first
+    // paint back by seconds; it follows in the background (loadExtras).
+    const [cities, subdivisions] = await Promise.all([
       fetch(CITIES_URL).then((r) => (r.ok ? r.json() : Promise.reject(new Error("cities")))),
       fetch(SUBDIVISIONS_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(AIRPORTS_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(HERITAGE_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(LANDMARKS_URL).then((r) => (r.ok ? r.json() : [])),
-      fetch(LANGUAGES_URL).then((r) => (r.ok ? r.json() : {})),
-      fetch(ARTICLE_NAMES_URL).then((r) => (r.ok ? r.json() : {})),
     ]);
-    const ref = initReferenceDataSync(
-      cities as City[],
-      subdivisions as Subdivision[],
-      airports as Airport[],
-      [...(heritage as HeritageSite[]), ...(landmarks as HeritageSite[])],
-      languages as Record<string, Language[]>,
-      articleNames as Record<string, string>,
-    );
+    const ref = initReferenceDataSync(cities as City[], subdivisions as Subdivision[]);
+    extrasPending = true;
+    void loadExtras(ref as ReferenceDataImpl);
     // The full 135k-city set is NOT auto-fetched — it's a one-tap download in
     // Settings (like a tile pack). Only re-load it here if the user already opted
     // in on a previous run; then it comes straight from the SW cache.
@@ -392,6 +399,33 @@ export async function initReferenceData(): Promise<ReferenceData> {
     console.warn("Postcards: reference data failed to load; continuing without cities.");
     return initReferenceDataSync([], [], [], [], {}, {});
   }
+}
+
+let extrasPending = false;
+/** Whether the airports and heritage sites are still on their way (loadExtras). */
+export function referenceExtrasPending(): boolean {
+  return extrasPending;
+}
+
+/** Airports, heritage sites + landmarks, languages and article names, merged
+ *  in once they arrive; the gazetteer event lets screens that hold snapshots
+ *  (the map's markers, stats, country pages) refresh. */
+async function loadExtras(impl: ReferenceDataImpl): Promise<void> {
+  const json = <T,>(url: string, empty: T): Promise<T> =>
+    fetch(url)
+      .then((r) => (r.ok ? (r.json() as Promise<T>) : empty))
+      .catch(() => empty);
+  const [airports, heritage, landmarks, languages, articleNames] = await Promise.all([
+    json<Airport[]>(AIRPORTS_URL, []),
+    json<HeritageSite[]>(HERITAGE_URL, []),
+    json<HeritageSite[]>(LANDMARKS_URL, []),
+    json<Record<string, Language[]>>(LANGUAGES_URL, {}),
+    json<Record<string, string>>(ARTICLE_NAMES_URL, {}),
+  ]);
+  impl.setExtras(airports, [...heritage, ...landmarks], languages, articleNames);
+  extrasPending = false;
+  generation++;
+  window.dispatchEvent(new Event(GAZETTEER_UPGRADED_EVENT));
 }
 
 /** Wait for a calm moment — the 17 MB gazetteer must never race first paint,

@@ -38,6 +38,7 @@ export const en = {
   "nav.sectionsAria": "Sections",
   "nav.sectionStatus": "{section} section",
   "app.skipToContent": "Skip to content",
+  "app.loading": "Loading…",
   "topbar.goToMap": "Go to the map",
   "topbar.install": "Install app",
   "topbar.installAria": "Install the app",

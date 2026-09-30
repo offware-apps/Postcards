@@ -34,6 +34,10 @@ export default defineConfig({
           // chunk stays lazy — a blanket node_modules split would instead pull
           // MapLibre into the eager entry graph (via react) and parse it on first
           // paint, a real regression on low-end phones.
+          // Its stylesheet stays out: main.tsx imports it, and a stylesheet in
+          // this chunk made the entry import the chunk, so all of MapLibre
+          // loaded and ran before the first paint.
+          if (id.endsWith(".css")) return undefined;
           if (id.includes("maplibre-gl") || id.includes("/pmtiles/")) return "maplibre";
           return undefined;
         },

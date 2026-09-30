@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { searchPlaces } from "./search";
+import { useGazetteerGeneration } from "../../lib/reference/useGazetteer";
 import { useVisits, findByPlace, visitIndex } from "../../lib/store/useVisits";
 import { useUi } from "../../lib/store/useUi";
 import { useToast } from "../../lib/store/useToast";
@@ -59,7 +60,9 @@ export function PlaceSearch({
   // if the next keystroke lands first). notFound keys on the deferred query so
   // the add-place form doesn't flash while results lag a beat behind.
   const dq = useDeferredValue(q);
-  const results = useMemo(() => searchPlaces(ref, dq), [ref, dq]);
+  // Airports and heritage sites land a moment after first paint: search again then.
+  const gazGen = useGazetteerGeneration();
+  const results = useMemo(() => searchPlaces(ref, dq), [ref, dq, gazGen]);
   const notFound = dq.trim().length >= 2 && results.length === 0;
 
   // Keep the active option visible as arrows move it.
