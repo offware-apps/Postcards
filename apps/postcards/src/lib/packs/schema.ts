@@ -66,7 +66,7 @@ export type DataPack = z.infer<typeof DataPackSchema>;
 
 /** An installed pack (validated data + when it was added + where from). */
 export interface InstalledPack {
-  id: string; // stable local id
+  id: string; // packNamespace(pack); a pack installed before that keeps its random id
   addedAt: string;
   sourceUrl: string | null; // the URL it was fetched from, if any
   pack: DataPack;

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
 import { useToast } from "../../lib/store/useToast";
@@ -53,6 +53,20 @@ export function SettingsScreen() {
   // Downloads are cancelable, and each region remembers when it was last saved
   // (so the button honestly reads "Re-download" instead of pretending it's new).
   const controllers = useRef<Record<string, AbortController | undefined>>({});
+  // A region download stops the moment Offline mode is switched on, or Settings
+  // is left: every controller aborts, which cancels the requests in flight too.
+  useEffect(() => {
+    const abortAll = () => {
+      for (const c of Object.values(controllers.current)) c?.abort();
+    };
+    const unsubscribe = useSettings.subscribe((s) => {
+      if (s.offlineMode) abortAll();
+    });
+    return () => {
+      unsubscribe();
+      abortAll();
+    };
+  }, []);
   const [savedAt, setSavedAt] = useState<Record<string, string | undefined>>(() => {
     const out: Record<string, string | undefined> = {};
     for (const r of OFFLINE_REGIONS) {
@@ -110,6 +124,13 @@ export function SettingsScreen() {
 
   async function download(r: OfflineRegion) {
     if (progress[r.id] != null) return;
+    // The service worker's cache is what keeps the tiles; it sees these requests
+    // only while it controls the page (not after a hard reload, nor where service
+    // workers are unavailable). Without it nothing would be saved.
+    if (!navigator.serviceWorker?.controller) {
+      showToast(t("settings.offline.toast.notReady", { region: r.name }));
+      return;
+    }
     const ctl = new AbortController();
     controllers.current[r.id] = ctl;
     setProgress((p) => ({ ...p, [r.id]: 0 }));
@@ -118,10 +139,13 @@ export function SettingsScreen() {
         levels: r.levels,
         maxTiles: REGION_MAX_TILES,
         signal: ctl.signal,
+        stop: () => useSettings.getState().offlineMode,
         onProgress: (p) => setProgress((s) => ({ ...s, [r.id]: p.total ? p.done / p.total : 1 })),
       });
       if (ctl.signal.aborted) {
         showToast(t("settings.offline.toast.cancelled", { region: r.name }));
+      } else if (res.saved === 0) {
+        showToast(t("settings.offline.toast.failed", { region: r.name }));
       } else {
         const now = todayISO();
         try {

@@ -135,6 +135,7 @@ export const fr: Messages = {
   "settings.offline.toast.savedPartial":
     "{region} : {saved} tuiles enregistrées ({failed} échouées — réessayez avec une meilleure connexion).",
   "settings.offline.toast.failed": "Impossible de télécharger {region} — vérifiez votre connexion.",
+  "settings.offline.toast.notReady": "{region} : les tuiles de carte ne peuvent pas être gardées hors ligne ici pour l'instant, rien n'a été téléchargé.",
   "settings.offline.toast.reset": "Les caches de carte et les réglages d'affichage ont été réinitialisés.",
   "settings.guides.title": "Guides de voyage",
   "settings.guides.desc":

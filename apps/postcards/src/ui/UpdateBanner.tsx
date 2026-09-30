@@ -3,9 +3,9 @@ import { useT } from "../lib/i18n";
 
 /**
  * "A new version is available — reload." Shown once the service worker has a
- * newer deployed build waiting (wired up in main.tsx). One tap applies it and
- * reloads, so an open tab never keeps serving a stale cached build. Dismissible;
- * the next poll or navigation will offer it again.
+ * newer deployed build waiting (wired up in lib/serviceWorker.ts). One tap
+ * applies it and reloads, so an open tab never keeps serving a stale cached
+ * build. Dismissible; the next poll or navigation will offer it again.
  */
 export function UpdateBanner() {
   const t = useT();

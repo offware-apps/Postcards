@@ -67,7 +67,7 @@ export async function fetchSummary(
     return {
       title: j.title ?? title,
       extract,
-      url: j.content_urls?.desktop?.page ?? articleUrl(title, lang),
+      url: j.content_urls?.desktop?.page ?? articleUrl(title, lang, undefined, project),
       attribution: `${project === "wikipedia" ? "Wikipedia" : "Wikivoyage"} · CC BY-SA 4.0`,
       ...(thumb ? { thumb } : {}),
     };

@@ -135,6 +135,7 @@ export const ko: Messages = {
   "settings.offline.toast.savedPartial":
     "{region}: 타일 {saved}개 저장 ({failed}개 실패 — 연결 상태가 좋을 때 다시 시도하세요).",
   "settings.offline.toast.failed": "{region}을(를) 내려받을 수 없습니다 — 연결을 확인하세요.",
+  "settings.offline.toast.notReady": "{region}: 지금은 여기서 지도 타일을 오프라인으로 보관할 수 없어 아무것도 내려받지 않았습니다.",
   "settings.offline.toast.reset": "지도 캐시와 보기 설정이 초기화되었습니다.",
   "settings.guides.title": "여행 가이드",
   "settings.guides.desc":

@@ -2,10 +2,10 @@ import { create } from "zustand";
 
 /**
  * Bridges the service-worker "a new build is waiting" event into the React tree.
- * The registration itself lives in `main.tsx` (the entry, outside the test
- * graph) so unit tests never import Vite's `virtual:pwa-register`. When a new
- * version is ready, `main.tsx` flags it here and hands over the `apply` function
- * that activates the waiting worker and reloads to the fresh build.
+ * The registration itself lives in `lib/serviceWorker.ts` (plain
+ * navigator.serviceWorker, no Vite `virtual:pwa-register`). When a new version is
+ * ready, it flags it here and hands over the `apply` function that activates the
+ * waiting worker and reloads to the fresh build.
  */
 interface UpdateState {
   /** True once a newer deployed build is installed and waiting to take over. */

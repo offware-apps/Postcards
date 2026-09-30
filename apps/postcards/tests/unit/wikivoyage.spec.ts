@@ -88,6 +88,17 @@ describe("fetchSummary (opt-in, degrades gracefully)", () => {
       })) as unknown as typeof fetch;
     expect(await fetchSummary("Springfield", { fetchFn })).toBeNull();
   });
+
+  it("links a Wikipedia summary to Wikipedia, not Wikivoyage", async () => {
+    // No content_urls in the reply, so the link is built from the title.
+    const fetchFn = (async () =>
+      new Response(JSON.stringify({ type: "standard", title: "Lyon", extract: "Lyon is a city." }), {
+        status: 200,
+      })) as unknown as typeof fetch;
+    const s = await fetchSummary("Lyon", { project: "wikipedia", lang: "fr", fetchFn });
+    expect(s?.url).toBe("https://fr.wikipedia.org/wiki/Lyon");
+    expect(s?.attribution).toContain("Wikipedia");
+  });
 });
 
 describe("splitSections (full-guide plain text)", () => {
@@ -154,5 +165,16 @@ describe("fetchFullText (opt-in, degrades gracefully)", () => {
         status: 200,
       })) as unknown as typeof fetch;
     expect(await fetchFullText("Nope", { fetchFn })).toBeNull();
+  });
+
+  it("links the Wikipedia fallback to Wikipedia, not Wikivoyage", async () => {
+    const fetchFn = (async () =>
+      new Response(
+        JSON.stringify({ query: { pages: [{ title: "Lyon", extract: "Lyon is a city.\n== History ==\nOld." }] } }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const full = await fetchFullText("Lyon", { project: "wikipedia", fetchFn });
+    expect(full?.url).toBe("https://en.wikipedia.org/wiki/Lyon");
+    expect(full?.attribution).toContain("Wikipedia");
   });
 });
