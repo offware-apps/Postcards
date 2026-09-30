@@ -1039,7 +1039,10 @@ export function MapScreen({ active = true }: { active?: boolean } = {}) {
                     selected && scrollToIdRef.current === c.id
                       ? (el) => {
                           if (el) {
-                            el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                            el.scrollIntoView({
+                              block: "nearest",
+                              behavior: reducedMotion ? "auto" : "smooth",
+                            });
                             scrollToIdRef.current = null;
                           }
                         }
