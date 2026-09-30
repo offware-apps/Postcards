@@ -96,6 +96,9 @@ function bootApp(el: HTMLElement) {
     // Merge any installed community data packs into the reference set (off the
     // critical path; fires the gazetteer event so screens refresh when it lands).
     void import("./lib/packs/store").then((m) => m.useDataPacks.getState().load());
+    // Whole guides saved in localStorage by earlier builds filled it until
+    // settings stopped saving; move them to their IndexedDB store.
+    void import("./features/guides/guideCache").then((m) => m.moveLocalGuides());
   });
 
   // Warm the code-split MapScreen chunk (~1 MB, mostly MapLibre) — the map is the

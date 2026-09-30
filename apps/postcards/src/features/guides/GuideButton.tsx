@@ -13,6 +13,7 @@ import {
 import type { PlaceRef } from "../../lib/schema/models";
 import { useOnlineStatus } from "../../lib/hooks/useOnlineStatus";
 import { useT, type MessageKey } from "../../lib/i18n";
+import { readGuide, saveGuide } from "./guideCache";
 
 // Stable, language-independent group keys (translated at render via guide.group.*);
 // the grouping logic never touches display text.
@@ -154,21 +155,29 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
   const [state, setState] = useState<"idle" | "loading" | "empty">("idle");
 
   // The WHOLE guide, readable in the app (the summary is just the lead and was
-  // often visibly cut off, pushing people to the website). Saved on-device too.
+  // often visibly cut off, pushing people to the website). Saved on-device too,
+  // in IndexedDB (guideCache), so it arrives a moment after the card opens.
   const fullKey = (proj: string) => `postcards-guidefull:${proj}:${countryIso2}:${summaryTitle}`;
-  const readSavedFull = (): WikiFullText | null => {
-    for (const proj of ["wikivoyage", "wikipedia"] as const) {
-      try {
-        const raw = localStorage.getItem(fullKey(proj));
-        if (raw) return JSON.parse(raw) as WikiFullText;
-      } catch {
-        /* unreadable / private mode */
-      }
-    }
-    return null;
-  };
-  const [full, setFull] = useState<WikiFullText | null>(() => readSavedFull());
+  const [full, setFull] = useState<WikiFullText | null>(null);
+  const [fullRestored, setFullRestored] = useState(false);
   const [fullState, setFullState] = useState<"idle" | "loading" | "empty">("idle");
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      for (const proj of ["wikivoyage", "wikipedia"] as const) {
+        const saved = await readGuide<WikiFullText>(fullKey(proj));
+        if (saved) {
+          if (live) setFull((f) => f ?? saved);
+          break;
+        }
+      }
+      if (live) setFullRestored(true);
+    })();
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function loadFullGuide() {
     if (offlineMode) return; // self-contained: never reach Wikimedia
@@ -176,13 +185,7 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
     const wv = await fetchFullText(summaryTitle);
     const got = wv ?? (await fetchFullText(summaryTitle, { project: "wikipedia" }));
     setFull(got);
-    if (got) {
-      try {
-        localStorage.setItem(fullKey(wv ? "wikivoyage" : "wikipedia"), JSON.stringify(got));
-      } catch {
-        /* private mode / full: shown but not saved */
-      }
-    }
+    if (got) void saveGuide(fullKey(wv ? "wikivoyage" : "wikipedia"), got);
     setFullState(got ? "idle" : "empty");
   }
 
@@ -318,7 +321,7 @@ function GuideContent({ placeName, names }: { placeName: string; names: GuideNam
         )}
 
         {/* The whole guide, readable right here — no trip to the website. */}
-        {(overview || full) && !full && fullState === "idle" && !offlineMode && (
+        {(overview || full) && !full && fullRestored && fullState === "idle" && !offlineMode && (
           <button type="button" className="btn-ghost guide-overview-btn" onClick={() => void loadFullGuide()}>
             📖 {t("guide.readWhole")}
           </button>
