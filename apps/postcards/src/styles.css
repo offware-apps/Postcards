@@ -12,7 +12,7 @@
   /* Signature accent: a confident indigo, deliberately off the default blue. */
   --accent: #4338ca;
   --accent-soft: #ecebfb;
-  --visited: #15803d;
+  --visited: #157a3a;
   --visited-soft: #e7f4ea;
   --danger: #c2410c;
   --radius: 13px;
@@ -24,7 +24,7 @@
   /* Semantic colours that used to be hardcoded twice (light rule + a dark-only
      override). Now they're tokens so a single unconditional component rule works
      under system-dark, explicit-dark and light alike. Light values here. */
-  --stat-been: #15803d;
+  --stat-been: #157a3a;
   --stat-air: #0369a1;
   --stat-want: #b45309;
   --stat-fav: #be185d;
@@ -745,6 +745,7 @@ h1.brand {
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
+  background: none;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   padding: 3px 10px;
@@ -2412,7 +2413,6 @@ a.btn-ghost {
 .about-version {
   margin: 10px 0 0;
   text-align: center;
-  opacity: 0.7;
 }
 .about-foot a,
 .guide-search a {
@@ -3768,7 +3768,7 @@ textarea.select {
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.75);
 }
 .journal-actions {
   display: flex;
@@ -4183,7 +4183,7 @@ button.brand:focus-visible {
   margin-top: 3px;
 }
 .map-popup.popup-visited .map-popup-main em {
-  color: #15803d;
+  color: var(--visited);
 }
 
 /* Favorite is a heart now, and only appears once you've been there. */
