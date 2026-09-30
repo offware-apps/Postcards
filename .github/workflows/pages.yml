@@ -5,17 +5,10 @@ name: Deploy to GitHub Pages
 # base path (VITE_BASE); local dev and the Capacitor native wrap keep base "/".
 
 on:
-  # Pages deploys from THIS branch, not main: the repo's `github-pages`
-  # environment restricts deployments to claude/repo-setup-speckit-3magw3, so a
-  # deploy from main is rejected at the environment gate. Finished changes are
-  # mirrored here to publish:
-  #   git push origin <sha>:refs/heads/claude/repo-setup-speckit-3magw3
-  # To deploy straight from main instead, allow `main` under
-  # Settings → Environments → github-pages → deployment branches, then set this
-  # trigger to `main`.
+  # Every push to main deploys.
   push:
     branches:
-      - claude/repo-setup-speckit-3magw3
+      - main
   workflow_dispatch:
 
 permissions:

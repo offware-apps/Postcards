@@ -52,8 +52,7 @@ observed working:
 ## Deploy topology
 
 - Feature branch: `claude/monument-display-optimize-x1j6le`
-- Deployed / GitHub-Pages branch: `claude/repo-setup-speckit-3magw3`
-  (`git push origin HEAD:claude/repo-setup-speckit-3magw3`)
+- GitHub Pages deploys `main`: a merged pull request ships.
 
 ## Stale-build gotcha (PWA)
 
