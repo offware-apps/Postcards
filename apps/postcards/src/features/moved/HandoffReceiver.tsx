@@ -14,7 +14,10 @@ import { restoreFromJson } from "../backup/restore";
  * The NEW address's half of the move (see lib/moved/moved.ts), mounted by App
  * only when this tab was opened with ?handoff=1. It says ready to the old
  * address, takes the portable file and restores it like a manual restore does:
- * validated, and confirmed first when this address already holds data.
+ * validated, and never without the visitor's word. The old origin can host other
+ * sites than Postcards (a GitHub Pages user site serves every repository of its
+ * owner), so a file from it is shown by its counts and waits for a confirm even
+ * when this address holds nothing yet.
  */
 export default function HandoffReceiver() {
   const t = useT();
@@ -34,7 +37,9 @@ export default function HandoffReceiver() {
       const msg = readHandoff(e, from, opener);
       if (msg?.type !== "postcards-handoff-file") return;
       window.removeEventListener("message", onMessage);
-      const outcome = await restoreFromJson(msg.text, t);
+      const outcome = await restoreFromJson(msg.text, t, (n) =>
+        t("moved.confirm", { ...n, from: from.replace(/^https?:\/\//, "") }),
+      );
       reply(
         outcome.ok
           ? { type: "postcards-handoff-done" }

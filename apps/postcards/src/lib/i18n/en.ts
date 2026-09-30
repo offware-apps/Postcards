@@ -1090,6 +1090,8 @@ export const en = {
   "moved.cancelled": "The move was cancelled at the new address; nothing changed there.",
   "moved.failed": "The move did not finish. Download a backup, then import it at the new address under Your data.",
   "moved.received": "Moved {places} places, {trips} trips and {stories} stories from the old address.",
+  "moved.confirm":
+    "{from} is handing over {places} places, {trips} trips and {stories} stories. Save them at this address? Continue only if you just chose Move my places at the old address.",
   "toast.dismiss": "Dismiss",
 } as const;
 
