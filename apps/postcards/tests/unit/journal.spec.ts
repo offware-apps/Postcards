@@ -21,6 +21,16 @@ function story(): Story {
 }
 
 describe("journal round-trip", () => {
+  it("export -> import keeps text that starts with - + = @ verbatim", () => {
+    const s: Story = { ...story(), title: "-20°C in Tromsø", text: "- packed: boots\n- thermos" };
+    const r = importFile(serializeFile([], [], [s]));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.stories[0]!.title).toBe("-20°C in Tromsø");
+      expect(r.stories[0]!.text).toBe("- packed: boots\n- thermos");
+    }
+  });
+
   it("export -> import restores an identical story (photo included)", () => {
     const original = [{ ...story(), photos: [{ src: dataUrl, caption: "the view" }] }];
     const result = importFile(serializeFile([], [], original));
@@ -120,17 +130,17 @@ describe("StorySchema (strict, sanitized)", () => {
     expect(StorySchema.safeParse({ ...story(), evil: 1 }).success).toBe(false);
   });
 
-  it("sanitizes formula-like title and text instead of executing them", () => {
+  it("keeps formula-like title and text as inert text", () => {
     const r = StorySchema.parse({ ...story(), title: "=HYPERLINK(evil)", text: "=IMPORTXML(evil)" });
-    expect(r.title).toBe("HYPERLINK(evil)");
-    expect(r.text).toBe("IMPORTXML(evil)");
+    expect(r.title).toBe("=HYPERLINK(evil)");
+    expect(r.text).toBe("=IMPORTXML(evil)");
   });
 
   it("a title that sanitizes to empty is allowed only when there's other content", () => {
-    // "===" sanitizes to "" — fine here because the story still has text.
-    expect(StorySchema.safeParse({ ...story(), title: "===" }).success).toBe(true);
+    // A lone U+200B sanitizes to "" — fine here because the story still has text.
+    expect(StorySchema.safeParse({ ...story(), title: "\u200b" }).success).toBe(true);
     // With no text and no photos, that empty-sanitizing title leaves nothing → rejected.
-    expect(StorySchema.safeParse({ ...story(), title: "===", text: "" }).success).toBe(false);
+    expect(StorySchema.safeParse({ ...story(), title: "\u200b", text: "" }).success).toBe(false);
   });
 
   it("caps a story's gallery at 24 photos", () => {
@@ -139,10 +149,11 @@ describe("StorySchema (strict, sanitized)", () => {
   });
 
   it("sanitizes a folder label, and drops one that sanitizes away (never stored empty)", () => {
-    // A leading formula char is neutralized like every other stored string.
-    expect(StorySchema.parse({ ...story(), folder: "=Japan 2024" }).folder).toBe("Japan 2024");
-    // "===" sanitizes to "" → the optional folder is dropped, not stored empty.
-    expect(StorySchema.parse({ ...story(), folder: "===" }).folder).toBeUndefined();
+    // Invisible characters are stripped; a leading formula char is plain text.
+    expect(StorySchema.parse({ ...story(), folder: "\u200bJapan 2024" }).folder).toBe("Japan 2024");
+    expect(StorySchema.parse({ ...story(), folder: "=Japan 2024" }).folder).toBe("=Japan 2024");
+    // A lone U+200B sanitizes to "" → the optional folder is dropped, not stored empty.
+    expect(StorySchema.parse({ ...story(), folder: "\u200b" }).folder).toBeUndefined();
   });
 });
 

@@ -11,6 +11,7 @@ import { appendStop, moveStopTo, removeStopAt, setLegMode, type StopChain } from
 import { tripPathKm } from "./distance";
 import { MODE_ORDER, MODE_GLYPH } from "./modes";
 import { parseTripDate } from "./tripDate";
+import { monthName } from "./period";
 
 const MONTHS = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
@@ -70,13 +71,15 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
   const { km, unresolvedLegs } = useMemo(() => tripPathKm(stops, ref), [stops, ref]);
   const canSave = stops.length >= 2;
 
-  const monthName = (mm: string) =>
-    new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(Date.UTC(2000, Number(mm) - 1, 1)));
-
   function composeDate(): string | null {
     const y = year.trim();
     if (!/^\d{4}$/.test(y)) return null;
-    return month ? `${y}-${month}` : y;
+    if (!month) return y;
+    // The composer picks a year and a month only: a trip saved with a full day
+    // keeps it while that year and month are left as they were.
+    const kept = existing?.date;
+    if (kept && kept.length === 10 && kept.startsWith(`${y}-${month}-`)) return kept;
+    return `${y}-${month}`;
   }
 
   async function save() {
@@ -248,7 +251,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
             <option value="">{t("trip.compose.monthAny")}</option>
             {MONTHS.map((mm) => (
               <option key={mm} value={mm}>
-                {monthName(mm)}
+                {monthName(mm, locale)}
               </option>
             ))}
           </select>

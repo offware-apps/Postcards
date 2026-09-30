@@ -57,6 +57,21 @@ describe("serializePlacesCsv", () => {
     expect(places[0]!.date).toBe("2025-06-14"); // the visit date round-trips
   });
 
+  it("writes a formula-like name inert for spreadsheets and reads it back as typed", () => {
+    const evil = visit({
+      place: { kind: "custom", id: "csv:FR:x", name: '=HYPERLINK("http://x")', countryId: "FR", lat: 1, lon: 2 },
+    });
+    const minus = visit({
+      place: { kind: "custom", id: "csv:FR:y", name: "-Le Bout du Monde", countryId: "FR", lat: 3, lon: 4 },
+    });
+    const csv = serializePlacesCsv([evil, minus], ref);
+    const lines = csv.trim().split("\n");
+    expect(lines[1]).toContain(`"'=HYPERLINK(""http://x"")"`);
+    expect(lines[2]).toContain(`"'-Le Bout du Monde"`);
+    const { places } = parsePlacesCsv(csv, ref);
+    expect(places.map((p) => p.place.name)).toEqual(['=HYPERLINK("http://x")', "-Le Bout du Monde"]);
+  });
+
   it("skips bare country records (nothing to place on a map)", () => {
     const csv = serializePlacesCsv([visit({ place: { kind: "country", id: "FR", name: "France", countryId: "FR" } })], ref);
     expect(csv.trim().split("\n")).toHaveLength(1); // header only

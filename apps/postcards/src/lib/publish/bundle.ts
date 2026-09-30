@@ -9,6 +9,8 @@
 import type { PlaceRef, Story, TravelMode, Trip, Visit } from "../schema/models";
 import { placeKey } from "../schema/helpers";
 import { haversineKm } from "../../features/travel/distance";
+import { tripDateSpan } from "../../features/travel/tripDate";
+import { tripChain } from "../../features/travel/tripStops";
 
 export interface JourneyStep {
   place: PlaceRef;
@@ -59,10 +61,14 @@ function coordsOf(
   return resolve(place);
 }
 
+/** Whether a date lies in [from, to]. A month- or year-dated trip is in range
+ *  when the range covers its whole span; an undated record only when unbounded. */
 function inRange(date: string | null, from?: string, to?: string): boolean {
-  if (!date) return !from && !to ? true : false;
-  if (from && date < from) return false;
-  if (to && date > to) return false;
+  if (!from && !to) return true;
+  const span = tripDateSpan(date);
+  if (!span) return false;
+  if (from && span.first < from) return false;
+  if (to && span.last > to) return false;
   return true;
 }
 
@@ -88,8 +94,10 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
     for (const p of photos) if (!list.some((q) => q.src === p.src)) list.push(p);
     photosByPlace.set(k, list);
   };
-  for (const v of visits) addPhotos(v.place, v.photos ?? []);
-  for (const s of stories) addPhotos(s.place, s.photos ?? []);
+  // Only photos of records inside the date range: a range is a privacy boundary,
+  // so a 2019 story's photos never ride along on a 2024 journey's step.
+  for (const v of visits) if (inRange(v.date ?? null, sel.dateFrom, sel.dateTo)) addPhotos(v.place, v.photos ?? []);
+  for (const s of stories) if (inRange(s.date, sel.dateFrom, sel.dateTo)) addPhotos(s.place, s.photos ?? []);
 
   // Ordered legs from the selected trips (date first, then a stable original order).
   const wanted = sel.tripIds ? new Set(sel.tripIds) : null;
@@ -116,9 +124,11 @@ export function buildJourney(input: JourneyInput, sel: JourneySelection): Publis
 
   if (legs.length > 0) {
     for (const t of legs) {
+      // Every stop of a multi-stop trip, each arrived at by its own leg's mode.
+      const chain = tripChain(t);
       const last = steps[steps.length - 1];
-      if (!last || placeKey(last.place) !== placeKey(t.from)) makeStep(t.from, t.date, null);
-      makeStep(t.to, t.date, t.mode);
+      if (!last || placeKey(last.place) !== placeKey(chain[0]!)) makeStep(chain[0]!, t.date, null);
+      for (let i = 1; i < chain.length; i++) makeStep(chain[i]!, t.date, t.legModes?.[i - 1] ?? t.mode);
     }
   } else {
     // No trips selected — publish the stories in date order as the steps.

@@ -1008,6 +1008,7 @@ export const en = {
     "Saved index.html — drop it on any host, or open it straight from the folder.",
   "publish.toast.buildErr": "Couldn't build the site. Your data is unchanged.",
   "publish.toast.missingFields": "Fill in owner, repo, branch and a token to push to GitHub.",
+  "publish.toast.syncRepo": "That is your device-sync repository: publishing there would put your private sync file on a public website. Pick another repository.",
   "publish.toast.pushed": "Pushed to {owner}/{repo} — GitHub Pages will update shortly.",
   "publish.toast.pushedLive": "Published — GitHub Pages is switched on and building your site.",
   "publish.liveSitePrefix": "Your site:",

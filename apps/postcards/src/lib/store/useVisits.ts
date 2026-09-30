@@ -46,7 +46,7 @@ export function visitIndex(list: Visit[]): Map<string, Visit> {
 }
 
 /** Today as a local YYYY-MM-DD — the default "visited on" for a new visit. */
-function todayISO(): string {
+export function todayISO(): string {
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");

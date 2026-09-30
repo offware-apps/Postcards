@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { sanitizeText } from "../../src/lib/schema/sanitize";
 
 describe("sanitizeText (inert data)", () => {
-  it("neutralizes leading formula characters", () => {
-    expect(sanitizeText("=SUM(A1)")).toBe("SUM(A1)");
-    expect(sanitizeText("+cmd")).toBe("cmd");
-    expect(sanitizeText("@ref")).toBe("ref");
-    expect(sanitizeText("-danger")).toBe("danger");
+  it("keeps a leading - + = @ (formulas are neutralized by the CSV writer only)", () => {
+    expect(sanitizeText("=SUM(A1)")).toBe("=SUM(A1)");
+    expect(sanitizeText("- packed: boots\n- thermos")).toBe("- packed: boots\n- thermos");
+    expect(sanitizeText("-20°C in Tromsø")).toBe("-20°C in Tromsø");
+    expect(sanitizeText("@home")).toBe("@home");
   });
 
   it("strips control characters but keeps normal text and newlines", () => {
@@ -21,6 +21,13 @@ describe("sanitizeText (inert data)", () => {
 
   it("leaves ordinary text unchanged", () => {
     expect(sanitizeText("Paris, France")).toBe("Paris, France");
+  });
+
+  it("keeps the zero-width joiners that emoji and scripts need", () => {
+    const zwj = "\u200d", zwnj = "\u200c";
+    const coder = `👩${zwj}💻`; // one emoji, not a woman and a laptop
+    const persian = `می${zwnj}خواهم`; // the joiner is part of the spelling
+    expect(sanitizeText(`with ${coder} and ${persian}`)).toBe(`with ${coder} and ${persian}`);
   });
 
   it("strips zero-width and bidi-override characters (Trojan Source)", () => {

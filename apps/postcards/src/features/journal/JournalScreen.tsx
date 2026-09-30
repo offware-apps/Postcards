@@ -321,7 +321,7 @@ function JournalCalendar({
   );
   // Localized weekday abbreviations, ordered from FIRST_DAY_OF_WEEK (2023-01-01 is a Sunday).
   const weekdays = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
     return Array.from({ length: 7 }, (_, i) =>
       fmt.format(new Date(Date.UTC(2023, 0, 1 + ((FIRST_DAY_OF_WEEK + i) % 7)))),
     );

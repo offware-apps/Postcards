@@ -167,6 +167,31 @@ describe("renderReaderHtml (blog layout, mounted)", () => {
     dom.window.close();
   });
 
+  it("dates a month- or year-dated step at its own precision, west of UTC too", async () => {
+    const saved = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      const vague: PublishedJourney = {
+        ...journey,
+        dateRange: { start: "2024", end: "2024-03" },
+        steps: [
+          { ...journey.steps[0]!, date: "2024", story: undefined },
+          { ...journey.steps[1]!, date: "2024-03", story: undefined },
+          { ...journey.steps[2]!, date: "2024-03-05" },
+        ],
+      };
+      const dom = await mount(renderReaderHtml(vague, { layout: "blog" }));
+      const dates = [...dom.window.document.querySelectorAll(".pc-post-date")].map((e) => e.textContent);
+      const fmt = (o: Intl.DateTimeFormatOptions) =>
+        new Intl.DateTimeFormat(undefined, { ...o, timeZone: "UTC" }).format(Date.UTC(2024, 2, 5));
+      expect(dates).toEqual(["2024", fmt({ year: "numeric", month: "short" }), fmt({ dateStyle: "medium" })]);
+      dom.window.close();
+    } finally {
+      if (saved === undefined) delete process.env.TZ;
+      else process.env.TZ = saved;
+    }
+  });
+
   it("keeps the fitted route map with a labeled marker per city", async () => {
     const dom = await mount(renderReaderHtml(journey, { layout: "blog" }));
     const doc = dom.window.document;

@@ -63,6 +63,15 @@ describe("airportVisitCounts", () => {
     expect(out[0]!.count).toBe(2);
   });
 
+  it("counts the intermediate stops of a multi-stop trip like separate legs", () => {
+    const hop: Trip = { ...trip(air("CDG"), air("KIX")), stops: [air("CDG"), air("NRT"), air("KIX")] };
+    const legs = [trip(air("CDG"), air("NRT")), trip(air("NRT"), air("KIX"))];
+    const counts = (trips: Trip[]) =>
+      airportVisitCounts(trips, [], ref).map((a) => `${a.airport.id}:${a.count}`).sort();
+    expect(counts([hop])).toEqual(["CDG:1", "KIX:1", "NRT:2"]);
+    expect(counts([hop])).toEqual(counts(legs));
+  });
+
   it("returns an empty list when there's no airport data", () => {
     expect(airportVisitCounts([], [], ref)).toEqual([]);
     expect(airportVisitCounts([trip(cityRef, cityRef)], [], ref)).toEqual([]);

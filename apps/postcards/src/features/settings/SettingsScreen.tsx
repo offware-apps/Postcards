@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { useModalKeys } from "../../lib/hooks/useModalKeys";
 import { useToast } from "../../lib/store/useToast";
 import { useSettings, MARKER_CAP_CHOICES } from "../../lib/store/useSettings";
+import { todayISO } from "../../lib/store/useVisits";
 import { saveAreaOffline } from "../map/offlineTiles";
 import { OFFLINE_REGIONS, REGION_MAX_TILES, estimateRegion, type OfflineRegion } from "./regions";
 import { ScopeToggle } from "../../ui/ScopeToggle";
@@ -116,7 +117,7 @@ export function SettingsScreen() {
       if (ctl.signal.aborted) {
         showToast(t("settings.offline.toast.cancelled", { region: r.name }));
       } else {
-        const now = new Date().toISOString().slice(0, 10);
+        const now = todayISO();
         try {
           localStorage.setItem(`postcards-region-saved:${r.id}`, now);
         } catch {

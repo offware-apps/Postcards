@@ -4,6 +4,7 @@ import {
   isValidTripDate,
   formatTripDate,
   compareTripDate,
+  tripDateSpan,
 } from "../../src/features/travel/tripDate";
 
 describe("tripDate — approximate trip dates (spec 019)", () => {
@@ -20,6 +21,10 @@ describe("tripDate — approximate trip dates (spec 019)", () => {
     expect(isValidTripDate("2024-13")).toBe(false); // no month 13
     expect(isValidTripDate("2024-00")).toBe(false);
     expect(isValidTripDate("2024-08-40")).toBe(false); // no day 40
+    expect(isValidTripDate("2024-02-30")).toBe(false); // no Feb 30
+    expect(isValidTripDate("2023-02-29")).toBe(false); // not a leap year
+    expect(isValidTripDate("2024-02-29")).toBe(true);
+    expect(formatTripDate("2024-02-31", "en")).toBe(""); // never rolled into March
     expect(isValidTripDate("abc")).toBe(false);
     expect(isValidTripDate("24-08")).toBe(false);
   });
@@ -30,6 +35,15 @@ describe("tripDate — approximate trip dates (spec 019)", () => {
     // A full day reuses the app-wide medium format (matches visits/journal rows).
     expect(formatTripDate("2024-08-12", "en")).toBe("Aug 12, 2024");
     expect(formatTripDate(null, "en")).toBe("");
+  });
+
+  it("spans the days a vague date covers", () => {
+    expect(tripDateSpan("2024")).toEqual({ first: "2024-01-01", last: "2024-12-31" });
+    expect(tripDateSpan("2024-02")).toEqual({ first: "2024-02-01", last: "2024-02-29" });
+    expect(tripDateSpan("2023-02")).toEqual({ first: "2023-02-01", last: "2023-02-28" });
+    expect(tripDateSpan("2024-08-12")).toEqual({ first: "2024-08-12", last: "2024-08-12" });
+    expect(tripDateSpan(null)).toBeNull();
+    expect(tripDateSpan("2024-13")).toBeNull();
   });
 
   it("sorts ascending with undated last; year-only orders at its start", () => {

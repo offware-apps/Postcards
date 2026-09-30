@@ -90,6 +90,13 @@ describe("folderSuggestions (proposed folders at creation)", () => {
     expect(out).toContain("JP & KR hop");
   });
 
+  it("proposes a multi-stop trip whose middle stop is the story's country", () => {
+    const paris = place("paris-fr", "Paris", "FR");
+    const seoul = place("seoul-kr", "Seoul", "KR");
+    const hop = { ...trip("Round the world", paris, seoul, null), stops: [paris, tokyo, seoul] };
+    expect(folderSuggestions([], { place: kyoto, trips: [hop] })).toContain("Round the world");
+  });
+
   it("proposes a trip name from the same year even without a place match", () => {
     const out = folderSuggestions([], {
       date: "2024-07-01",

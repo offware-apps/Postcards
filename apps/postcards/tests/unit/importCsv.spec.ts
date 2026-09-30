@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { getReferenceData } from "../../src/lib/reference/referenceData";
 import { parsePlacesCsv } from "../../src/features/backup/importCsv";
+import { serializeFile } from "../../src/features/backup/exportJson";
+import type { Visit } from "../../src/lib/schema/models";
 
 const ref = getReferenceData();
 
@@ -67,5 +69,39 @@ describe("parsePlacesCsv (multi-format place import)", () => {
     const { places, skipped } = parsePlacesCsv("foo;bar\n1;2", ref);
     expect(places).toHaveLength(0);
     expect(skipped).toBe(1);
+  });
+
+  it("skips and counts a row the portable file would reject, so export still works", () => {
+    const csv = [
+      "lat;lon;country;city;been",
+      '999;10;"fr";"Nowhere";"been"', // latitude out of range
+      `1;2;"fr";"${"x".repeat(300)}";"been"`, // name over the 200 cap
+      '1;2;"fr";"Somewhere";"been"',
+    ].join("\n");
+    const { places, total, skipped } = parsePlacesCsv(csv, ref);
+    expect({ total, skipped }).toEqual({ total: 3, skipped: 2 });
+    expect(places.map((p) => p.place.name)).toEqual(["Somewhere"]);
+    const visits: Visit[] = places.map((p, i) => ({
+      visitId: `v${i}`,
+      place: p.place,
+      status: p.status,
+      favorite: p.favorite,
+      date: p.date,
+      note: null,
+      addedAt: "2024-01-01T00:00:00.000Z",
+    }));
+    expect(() => serializeFile(visits)).not.toThrow();
+  });
+
+  it("reads empty coordinates as none, not 0,0", () => {
+    const { places } = parsePlacesCsv('lat;lon;country;city;been\n;;"fr";"My Cabin";"been"\n', ref);
+    expect(places[0]!.place.kind).toBe("custom");
+    expect(places[0]!.place.lat).toBeUndefined();
+    expect(places[0]!.place.lon).toBeUndefined();
+  });
+
+  it("keeps a real visit date and drops one that names no day", () => {
+    const csv = 'lat;lon;country;city;been;date\n1;2;"fr";"A";"been";2024-02-29\n3;4;"fr";"B";"been";2024-13-45\n';
+    expect(parsePlacesCsv(csv, ref).places.map((p) => p.date)).toEqual(["2024-02-29", null]);
   });
 });

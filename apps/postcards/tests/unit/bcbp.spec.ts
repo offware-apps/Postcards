@@ -59,6 +59,19 @@ describe("julianToDate", () => {
     expect(julianToDate(360, new Date("2026-01-02T00:00:00Z"))).toBe("2025-12-26");
   });
 
+  it("reads 'this year' on the local calendar, not UTC's", () => {
+    const saved = process.env.TZ;
+    // 08:00 on 1 Jan 2026 in Tokyo is still 31 Dec 2025 in UTC; a day-1 pass
+    // scanned then is today's flight, not one a year ago.
+    process.env.TZ = "Asia/Tokyo";
+    try {
+      expect(julianToDate(1, new Date("2025-12-31T23:00:00Z"))).toBe("2026-01-01");
+    } finally {
+      if (saved === undefined) delete process.env.TZ;
+      else process.env.TZ = saved;
+    }
+  });
+
   it("clamps day 366 in a non-leap year to Dec 31 instead of rolling into January", () => {
     // 2025 is not a leap year; day 366 must not become 2026-01-01.
     expect(julianToDate(366, new Date("2025-12-30T00:00:00Z"))).toBe("2025-12-31");

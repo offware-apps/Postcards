@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { sanitizeText } from "./sanitize";
-import { FORMAT, MAX_PHOTOS_PER_STORY, MAX_PHOTOS_PER_VISIT } from "./helpers";
+import { FORMAT, MAX_PHOTOS_PER_STORY, MAX_PHOTOS_PER_VISIT, isCalendarDate } from "./helpers";
 
 // Canonical, versioned schema for the portable data file.
 // Single source of truth: these Zod models generate TS types AND the published
@@ -35,8 +35,8 @@ export const PlaceRefSchema = z
       .min(1)
       .max(200)
       .transform((s) => sanitizeText(s, 200))
-      // min(1) runs on the INPUT; a name of only formula-prefix chars ("===")
-      // sanitizes to "" and would poison the file — reject it clearly instead.
+      // min(1) runs on the INPUT; a name of only invisible characters (a lone
+      // U+200B) sanitizes to "" and would poison the file — reject it clearly instead.
       .refine((s) => s.length > 0, { message: "Name is empty once sanitized" }),
     countryId: isoCountryId,
     // Coordinates carried on the record itself — only used by kind "custom"
@@ -98,6 +98,13 @@ const optionalLabel = (max = 80) =>
     })
     .optional();
 
+/** An optional visit or trip date that has the right shape but names no real day
+ *  (2024-13-45, 2024-02-30) loads as undated instead of failing the whole file:
+ *  the CSV import once stored such dates, so files the app itself wrote carry them,
+ *  and a date nothing can place on a calendar is no date. */
+const calendarDateOrNull = (v: string | null | undefined): string | null =>
+  v != null && isCalendarDate(v) ? v : null;
+
 export const PhotoSchema = z
   .object({
     src: photoDataUrl,
@@ -117,7 +124,7 @@ export const VisitSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional()
-    .transform((v) => v ?? null),
+    .transform(calendarDateOrNull),
   note: nullableSanitized(2000),
   /**
    * Legacy single "postcard" photo (schema ≤ v2). Kept so v1/v2 files import
@@ -200,7 +207,7 @@ export const TripSchema = z
       .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/)
       .nullable()
       .optional()
-      .transform((v) => v ?? null),
+      .transform(calendarDateOrNull),
     carrier: nullableSanitized(120),
     note: nullableSanitized(2000),
     addedAt: z.string().datetime({ offset: true }),
@@ -220,7 +227,10 @@ export const StorySchema = z
     storyId: idString,
     place: PlaceRefSchema,
     /** The day the story is about — required, unlike a visit's optional date. */
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(isCalendarDate, { message: "date must be a real calendar day" }),
     // Title AND text are both optional so a journal entry can be image-only. Each
     // stays a (possibly empty) string — no key ripple for consumers — and the
     // whole-story refine below still requires a title, some text, OR a photo, so a

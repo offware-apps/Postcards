@@ -108,8 +108,9 @@ strictly inert (parsed, never executed), and validated against this schema on ev
 1. Reject if not valid JSON or missing `format: "postcards"`.
 2. Validate against the schema; reject on unknown keys or type errors.
 3. Refuse a `schemaVersion` newer than supported; migrate older versions forward.
-4. Treat every string as inert text: enforce length caps; strip control characters; neutralize
-   leading formula/command characters (`= + - @` at cell/field start); never evaluate.
+4. Treat every string as inert text: enforce length caps; strip control characters; never
+   evaluate. A leading `= + - @` is kept as typed; the CSV export, which a spreadsheet opens,
+   neutralizes it there with a leading `'`.
 5. No field may trigger code execution, dynamic import, or a network fetch.
 6. On any rejection, surface a clear, non-technical reason; never partially import silently.
 

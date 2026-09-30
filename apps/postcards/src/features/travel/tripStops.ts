@@ -1,8 +1,14 @@
-import type { PlaceRef, TravelMode } from "../../lib/schema/models";
+import type { PlaceRef, TravelMode, Trip } from "../../lib/schema/models";
 
 // Immutable ordered-stops helpers for the trip composer (spec 019). Pure, no I/O —
 // each returns a NEW array so React state updates stay predictable. A reconstructed
 // trip is an ordered chain of stops; `from`/`to` are just its first/last stop.
+
+/** A saved trip's ordered stops: its `stops` when it has them, else `from → to`.
+ *  Leg i runs from stop i to stop i+1, in `legModes[i]` or the trip's `mode`. */
+export function tripChain(trip: Pick<Trip, "from" | "to" | "stops">): PlaceRef[] {
+  return trip.stops && trip.stops.length >= 2 ? trip.stops : [trip.from, trip.to];
+}
 
 /** Append a stop to the end of the chain. */
 export function addStop(stops: PlaceRef[], place: PlaceRef): PlaceRef[] {

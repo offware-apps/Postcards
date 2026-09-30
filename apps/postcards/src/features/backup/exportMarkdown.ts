@@ -3,6 +3,7 @@ import type { ReferenceData } from "../../lib/reference/types";
 import { computeCoverage } from "../stats/computeStats";
 import { travelTotals, tripDistanceKm } from "../travel/distance";
 import { MODE_LABEL } from "../travel/modes";
+import { tripChain } from "../travel/tripStops";
 import { formatDate, formatInt, formatKm, formatPercent } from "../../lib/format/format";
 
 /**
@@ -57,8 +58,12 @@ export function toMarkdown(visits: Visit[], trips: Trip[], ref: ReferenceData): 
     const byDate = [...trips].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
     for (const t of byDate) {
       const km = tripDistanceKm(t, ref);
+      // A multi-stop trip names its intermediate stops and every leg's mode.
+      const via = tripChain(t).slice(1, -1).map((p) => p.name);
+      const to = via.length ? `${t.to.name} (via ${via.join(", ")})` : t.to.name;
+      const modes = new Set(tripChain(t).slice(1).map((_, i) => t.legModes?.[i] ?? t.mode));
       lines.push(
-        `| ${cell(t.from.name)} | ${cell(t.to.name)} | ${MODE_LABEL[t.mode]} | ` +
+        `| ${cell(t.from.name)} | ${cell(to)} | ${[...modes].map((m) => MODE_LABEL[m]).join(", ")} | ` +
           `${cell(formatDate(t.date))} | ${km == null ? "—" : cell(formatKm(km))} |`,
       );
     }

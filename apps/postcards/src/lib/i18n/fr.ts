@@ -1009,6 +1009,7 @@ export const fr: Messages = {
   "publish.toast.buildErr": "Impossible de construire le site. Vos données sont inchangées.",
   "publish.toast.missingFields":
     "Renseignez le propriétaire, le dépôt, la branche et un jeton pour pousser vers GitHub.",
+  "publish.toast.syncRepo": "C’est votre dépôt de synchronisation : y publier mettrait votre fichier de synchronisation privé sur un site public. Choisissez un autre dépôt.",
   "publish.toast.pushed": "Poussé vers {owner}/{repo} — GitHub Pages se mettra à jour sous peu.",
   "publish.toast.pushedLive": "Publié — GitHub Pages est activé et construit votre site.",
   "publish.liveSitePrefix": "Votre site :",
