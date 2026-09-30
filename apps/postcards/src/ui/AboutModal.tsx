@@ -87,7 +87,13 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           {t("about.footPost")}
         </p>
 
-        <button ref={closeRef} className="btn" type="button" onClick={onClose}>
+        <button
+          ref={closeRef}
+          className="btn"
+          type="button"
+          title={t("about.gotIt")}
+          onClick={onClose}
+        >
           {t("about.gotIt")}
         </button>
 

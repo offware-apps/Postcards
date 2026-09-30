@@ -53,7 +53,13 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
             <kbd>Esc</kbd> {t("shortcuts.escape")}
           </li>
         </ul>
-        <button ref={closeRef} className="btn" type="button" onClick={onClose}>
+        <button
+          ref={closeRef}
+          className="btn"
+          type="button"
+          title={t("common.close")}
+          onClick={onClose}
+        >
           {t("common.close")}
         </button>
       </div>

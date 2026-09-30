@@ -4,6 +4,7 @@ import { useSettings } from "../lib/store/useSettings";
 import { useToast } from "../lib/store/useToast";
 import { downloadFullCities, fullCitiesEnabled } from "../lib/reference/referenceData";
 import { useT } from "../lib/i18n";
+import { useFocusHandoff } from "../lib/hooks/useFocusHandoff";
 
 /** An on/off toggle switch — the one control the intro rows use, so every option
  *  reads the same way: flip it to activate, flip it back to deactivate. */
@@ -26,6 +27,7 @@ function Switch({
         checked={on}
         disabled={disabled}
         aria-label={label}
+        title={label}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="intro-switch-track" aria-hidden>
@@ -65,6 +67,9 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
   }, []);
   // The recommendation is "applied" once both smooth-map settings are on.
   const smoothMapOn = reduceMapWork && optimizeMarkers;
+  // Applying hides the recommendation with its button, so focus moves to the next row.
+  const modeRef = useRef<HTMLDivElement>(null);
+  useFocusHandoff(isPhone && !smoothMapOn, null, modeRef);
   function applyPhoneRecommended() {
     setReduceMapWork(true);
     setOptimizeMarkers(true);
@@ -100,7 +105,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title">
-      <button className="intro-skip" type="button" onClick={onClose}>
+      <button className="intro-skip" type="button" title={t("intro.skip")} onClick={onClose}>
         {t("intro.skip")}
       </button>
 
@@ -125,6 +130,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="intro-seg-btn is-on intro-recommend-apply"
+              title={t("intro.recommend.apply")}
               onClick={applyPhoneRecommended}
             >
               {t("intro.recommend.apply")}
@@ -144,7 +150,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
               {offlineMode ? t("intro.mode.offlineDesc") : t("intro.mode.onlineDesc")}
             </span>
           </div>
-          <div className="intro-seg" role="group" aria-label={t("intro.mode.title")}>
+          <div ref={modeRef} className="intro-seg" role="group" aria-label={t("intro.mode.title")}>
             <button
               type="button"
               className={"intro-seg-btn" + (!offlineMode ? " is-on" : "")}
@@ -208,7 +214,13 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
 
       <p className="intro-more">{t("intro.more")}</p>
 
-      <button ref={startRef} className="intro-start" type="button" onClick={onClose}>
+      <button
+        ref={startRef}
+        className="intro-start"
+        type="button"
+        title={t("intro.start")}
+        onClick={onClose}
+      >
         {t("intro.start")}
       </button>
     </div>

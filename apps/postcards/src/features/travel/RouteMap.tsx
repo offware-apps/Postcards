@@ -285,6 +285,7 @@ export function RouteMap({
             type="button"
             aria-pressed={kind === f.key}
             className={kind === f.key ? "seg-on" : ""}
+            title={t(f.label)}
             onClick={() => switchKind(f.key)}
           >
             {t(f.label)}
@@ -303,6 +304,7 @@ export function RouteMap({
               type="button"
               className="myplaces-pick"
               aria-label={t("trip.compose.pickAria", { name: p.name })}
+              title={t("trip.compose.pickAria", { name: p.name })}
               onClick={() => onPick(p.place)}
             >
               <span className="flag" aria-hidden>

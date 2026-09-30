@@ -153,7 +153,9 @@ export default function MovedScreen({
           {status.kind === "ok" && (
             <>
               {" "}
-              <a href={canonical}>{t("moved.open")}</a>
+              <a href={canonical} title={t("moved.open")}>
+                {t("moved.open")}
+              </a>
             </>
           )}
         </p>

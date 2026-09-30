@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import type { Country } from "../../lib/reference/types";
 import { useVisits } from "../../lib/store/useVisits";
@@ -13,6 +13,7 @@ import { ScopeToggle } from "../../ui/ScopeToggle";
 import { renderPoster } from "./poster";
 import { ListPager } from "../../ui/ListPager";
 import { useT } from "../../lib/i18n";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
 
 /** One flag in the passport grid — a button that opens its country's page. */
 function FlagCard({ c, locked }: { c: Country; locked?: boolean }) {
@@ -56,6 +57,9 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
   function closePoster() {
     setPosterUrl(null);
   }
+  // Closing removes the focused Close button, so focus returns to the poster button.
+  const posterButtonRef = useRef<HTMLButtonElement>(null);
+  useFocusHandoff(posterUrl !== null, null, posterButtonRef);
   // The object URL is revoked here — on close, on replace AND on unmount
   // (closing by switching tabs must not leak the rendered PNG).
   useEffect(() => {
@@ -143,7 +147,14 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
           <strong className="flags-count">{formatInt(collectedCount)}</strong>{" "}
           {t("passport.ofFlags", { total: formatInt(collectedCount + missing.length) })}
         </p>
-        <button className="btn" type="button" disabled={rendering} onClick={() => void exportPoster()}>
+        <button
+          ref={posterButtonRef}
+          className="btn"
+          type="button"
+          title={t("passport.worldPoster")}
+          disabled={rendering}
+          onClick={() => void exportPoster()}
+        >
           {rendering ? t("passport.rendering") : `🖼 ${t("passport.worldPoster")}`}
         </button>
       </div>
@@ -177,6 +188,11 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
         className="link"
         type="button"
         aria-expanded={showMissing}
+        title={
+          showMissing
+            ? t("passport.hideToCollect", { count: formatInt(missing.length) })
+            : t("passport.showToCollect", { count: formatInt(missing.length) })
+        }
         onClick={() => setShowMissing((s) => !s)}
       >
         {showMissing
@@ -187,10 +203,21 @@ export function PassportScreen({ embedded }: { embedded?: boolean } = {}) {
         <div className="lightbox" role="dialog" aria-modal="true" aria-label={t("passport.posterAria")} onClick={closePoster}>
           <img className="lightbox-img" src={posterUrl} alt={t("passport.posterAlt")} />
           <div className="lightbox-actions" onClick={(e) => e.stopPropagation()}>
-            <a className="mini-btn" href={posterUrl} download="postcards-world.png">
+            <a
+              className="mini-btn"
+              href={posterUrl}
+              download="postcards-world.png"
+              title={t("passport.downloadPng")}
+            >
               ⬇ {t("passport.downloadPng")}
             </a>
-            <button className="btn-ghost" type="button" autoFocus onClick={closePoster}>
+            <button
+              className="btn-ghost"
+              type="button"
+              title={t("common.close")}
+              autoFocus
+              onClick={closePoster}
+            >
               {t("common.close")}
             </button>
           </div>

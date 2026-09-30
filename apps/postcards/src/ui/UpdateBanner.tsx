@@ -17,13 +17,19 @@ export function UpdateBanner() {
   return (
     <div className="update-banner" role="status" aria-live="polite">
       <span className="update-banner-msg">🆕 {t("update.available")}</span>
-      <button className="update-banner-reload" type="button" onClick={() => apply?.()}>
+      <button
+        className="update-banner-reload"
+        type="button"
+        title={t("update.reload")}
+        onClick={() => apply?.()}
+      >
         {t("update.reload")}
       </button>
       <button
         className="update-banner-dismiss"
         type="button"
         aria-label={t("toast.dismiss")}
+        title={t("toast.dismiss")}
         onClick={dismiss}
       >
         ×

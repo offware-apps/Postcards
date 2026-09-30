@@ -156,6 +156,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
           className="link back-link"
           onClick={onClose}
           aria-label={t("trip.compose.back")}
+          title={t("trip.compose.back")}
         >
           ← {t("trip.compose.back")}
         </button>
@@ -193,6 +194,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                     className="icon-btn"
                     disabled={i === 0}
                     aria-label={t("trip.compose.moveUp", { name: s.name })}
+                    title={t("trip.compose.moveUp", { name: s.name })}
                     onClick={() => move(i, i - 1)}
                   >
                     ↑
@@ -202,6 +204,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                     className="icon-btn"
                     disabled={i === stops.length - 1}
                     aria-label={t("trip.compose.moveDown", { name: s.name })}
+                    title={t("trip.compose.moveDown", { name: s.name })}
                     onClick={() => move(i, i + 1)}
                   >
                     ↓
@@ -210,6 +213,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                     type="button"
                     className="icon-btn"
                     aria-label={t("trip.compose.removeStop", { name: s.name })}
+                    title={t("trip.compose.removeStop", { name: s.name })}
                     onClick={() => applyChain(removeStopAt(chain, i, nextFill()))}
                   >
                     ✕
@@ -228,6 +232,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                   max="9999-12-31"
                   value={isFullDay(stopDates[i] ?? "") ? (stopDates[i] as string) : ""}
                   aria-label={t("trip.compose.stopDateAria", { name: s.name })}
+                  title={t("trip.compose.stopDateAria", { name: s.name })}
                   onChange={(e) => applyChain(setStopDate(chain, i, e.target.value || null))}
                 />
               </label>
@@ -242,6 +247,10 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                     </span>
                     <select
                       className="select"
+                      title={t("trip.compose.legModeAria", {
+                        from: s.name,
+                        to: stops[i + 1]!.name,
+                      })}
                       value={legModes[i] ?? "flight"}
                       onChange={(e) =>
                         applyChain(setLegMode(chain, i, e.target.value as TravelMode))
@@ -278,6 +287,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
         <span className="field-label">{t("trip.compose.nameLabel")}</span>
         <input
           className="search-input"
+          title={t("trip.compose.nameLabel")}
           type="text"
           maxLength={80}
           value={name}
@@ -298,6 +308,7 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
               type="button"
               className="filter-chip-x"
               aria-label={t("trip.compose.clearDate")}
+              title={t("trip.compose.clearDate")}
               onClick={() => setLegacyDate("")}
             >
               ✕
@@ -315,6 +326,9 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
                 <button
                   type="button"
                   className="myplaces-pick"
+                  title={t("journal.editAria", {
+                    title: s.title || primaryPlace(s)?.name || t("journal.untitledEntry"),
+                  })}
                   onClick={() => useUi.getState().openStoryComposer(s.storyId)}
                 >
                   <span className="myplaces-name">
@@ -329,10 +343,16 @@ export function TripComposer({ tripId, onClose }: { tripId: string | null; onClo
       )}
 
       <div className="trip-composer-actions">
-        <button type="button" className="btn-ghost" onClick={onClose}>
+        <button type="button" className="btn-ghost" title={t("common.cancel")} onClick={onClose}>
           {t("common.cancel")}
         </button>
-        <button type="button" className="btn" disabled={!canSave} onClick={() => void save()}>
+        <button
+          type="button"
+          className="btn"
+          title={t("trip.compose.save")}
+          disabled={!canSave}
+          onClick={() => void save()}
+        >
           {t("trip.compose.save")}
         </button>
       </div>

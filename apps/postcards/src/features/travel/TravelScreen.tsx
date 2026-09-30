@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
 import { getReferenceData } from "../../lib/reference/referenceData";
 import { useTrips } from "../../lib/store/useTrips";
 import { useVisits } from "../../lib/store/useVisits";
 import { useToast } from "../../lib/store/useToast";
 import { useUi } from "../../lib/store/useUi";
 import { registerEscape } from "../../lib/store/escapeStack";
+import { useFocusHandoff } from "../../lib/hooks/useFocusHandoff";
+import { scrollBehavior } from "../../lib/hooks/usePrefersReducedMotion";
 import { countryFlag, formatKm } from "../../lib/format/format";
 import { formatTripDate } from "./tripDate";
 import type { PlaceRef, TravelMode, Trip } from "../../lib/schema/models";
@@ -54,11 +56,13 @@ function TripForm({
   editing,
   onSave,
   onCancel,
+  formRef,
 }: {
   initial: TripFields;
   editing: boolean;
   onSave: (fields: TripFields) => void;
   onCancel: () => void;
+  formRef: Ref<HTMLFormElement>;
 }) {
   const t = useT();
   const [from, setFrom] = useState<PlaceRef | null>(initial.from);
@@ -75,13 +79,14 @@ function TripForm({
   }
 
   return (
-    <form className="trip-form" onSubmit={onSubmit}>
+    <form ref={formRef} className="trip-form" onSubmit={onSubmit}>
       {editing && <p className="editing-note">{t("travel.editingNote")}</p>}
       <label className="picker-label" htmlFor="trip-name">
         {t("travel.nameOptional")}
         <input
           id="trip-name"
           className="select"
+          title={t("travel.nameOptional")}
           type="text"
           maxLength={80}
           placeholder={t("travel.namePlaceholder")}
@@ -97,6 +102,7 @@ function TripForm({
           <select
             id="trip-mode"
             className="select"
+            title={t("travel.modeLabel")}
             value={mode}
             onChange={(e) => setMode(e.target.value as TravelMode)}
           >
@@ -112,6 +118,7 @@ function TripForm({
           <input
             id="trip-date"
             className="select"
+            title={t("travel.dateOptional")}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
@@ -123,6 +130,7 @@ function TripForm({
         <input
           id="trip-note"
           className="select"
+          title={t("travel.noteOptional")}
           type="text"
           maxLength={120}
           placeholder={t("travel.notePlaceholder")}
@@ -131,11 +139,16 @@ function TripForm({
         />
       </label>
       <div className="trip-form-actions">
-        <button className="btn" type="submit" disabled={!from || !to}>
+        <button
+          className="btn"
+          type="submit"
+          disabled={!from || !to}
+          title={editing ? t("travel.saveChanges") : t("travel.addTrip")}
+        >
           {editing ? t("travel.saveChanges") : t("travel.addTrip")}
         </button>
         {editing && (
-          <button className="btn-ghost" type="button" onClick={onCancel}>
+          <button className="btn-ghost" type="button" onClick={onCancel} title={t("common.cancel")}>
             {t("common.cancel")}
           </button>
         )}
@@ -167,6 +180,10 @@ export function TravelScreen() {
   // landing (mirrors the Journal composer). "＋ New trip", tapping a trip to edit,
   // or scanning a boarding pass opens it; save/cancel closes it.
   const [addOpen, setAddOpen] = useState(false);
+  // New trip hides itself while the form is open, so focus moves with the form.
+  const newTripRef = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusHandoff(addOpen, formRef, newTripRef);
   // The period filter is shared (via useUi) so the map's trip arcs match it.
   const year = useUi((s) => s.tripYear) as YearFilter;
   const month = useUi((s) => s.tripMonth) as MonthFilter;
@@ -273,7 +290,10 @@ export function TravelScreen() {
       t.tripId,
     );
     setAddOpen(true);
-    document.querySelector(".trip-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // After the render that opens the form, so a closed form is there to scroll to.
+    requestAnimationFrame(() =>
+      formRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: "center" }),
+    );
   }
 
   async function saveTrip({ from, to, mode, date, note, name }: TripFields) {
@@ -424,6 +444,7 @@ export function TravelScreen() {
           type="button"
           onClick={() => startEdit(trip)}
           aria-label={t("travel.editAria", { label })}
+          title={t("travel.editAria", { label })}
         >
           {t("common.edit")}
         </button>
@@ -432,6 +453,7 @@ export function TravelScreen() {
           type="button"
           onClick={() => removeWithUndo(trip, label)}
           aria-label={t("travel.removeAria", { label })}
+          title={t("travel.removeAria", { label })}
         >
           {t("common.remove")}
         </button>
@@ -448,11 +470,18 @@ export function TravelScreen() {
             <button
               type="button"
               className="btn-ghost"
+              title={t("travel.reconstructBtn")}
               onClick={() => useUi.getState().openTripComposer("new")}
             >
               🧵 {t("travel.reconstructBtn")}
             </button>
-            <button type="button" className="btn" onClick={openNewTrip}>
+            <button
+              ref={newTripRef}
+              type="button"
+              className="btn"
+              title={t("travel.newTrip")}
+              onClick={openNewTrip}
+            >
               ＋ {t("travel.newTrip")}
             </button>
           </div>
@@ -466,6 +495,7 @@ export function TravelScreen() {
             <select
               id="trip-filter-year"
               className="select"
+              title={t("travel.year")}
               value={year}
               onChange={(e) => pickYear(e.target.value as YearFilter)}
             >
@@ -483,6 +513,7 @@ export function TravelScreen() {
               <select
                 id="trip-filter-month"
                 className="select"
+                title={t("travel.month")}
                 value={month}
                 onChange={(e) => pickMonth(e.target.value as MonthFilter)}
               >
@@ -540,6 +571,7 @@ export function TravelScreen() {
           key={formKey}
           initial={draft}
           editing={!!editingId}
+          formRef={formRef}
           onSave={(fields) => void saveTrip(fields)}
           onCancel={() => {
             resetForm();
@@ -558,7 +590,12 @@ export function TravelScreen() {
       ) : sorted.length === 0 ? (
         <p className="muted empty">
           {t("travel.noTripsInPeriod", { period: periodLabel(year, month, locale) })}{" "}
-          <button className="link" type="button" onClick={() => pickYear("all")}>
+          <button
+            className="link"
+            type="button"
+            title={t("travel.showAll")}
+            onClick={() => pickYear("all")}
+          >
             {t("travel.showAll")}
           </button>
         </p>
