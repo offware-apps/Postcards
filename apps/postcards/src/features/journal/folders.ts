@@ -1,5 +1,6 @@
 import { placeKey } from "../../lib/schema/helpers";
 import type { PlaceRef, Story, Trip } from "../../lib/schema/models";
+import { tripChain } from "../travel/tripStops";
 
 /**
  * Journal folders — a small, inert grouping label on a story (mirrors a Trip's
@@ -34,8 +35,9 @@ export function storiesInFolder<T extends Pick<Story, "folder">>(stories: T[], f
 function tripInContext(trip: Trip, place: PlaceRef | null | undefined, date: string | undefined): boolean {
   if (place) {
     const k = placeKey(place);
-    if (placeKey(trip.from) === k || placeKey(trip.to) === k) return true;
-    if (trip.from.countryId === place.countryId || trip.to.countryId === place.countryId) return true;
+    for (const stop of tripChain(trip)) {
+      if (placeKey(stop) === k || stop.countryId === place.countryId) return true;
+    }
   }
   if (date && trip.date && trip.date.slice(0, 4) === date.slice(0, 4)) return true;
   return false;
