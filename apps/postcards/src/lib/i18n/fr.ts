@@ -82,7 +82,7 @@ export const fr: Messages = {
   "settings.stations.source.trainline": "Europe — Trainline",
   "settings.stations.source.none": "Aucune",
   "settings.stations.desc.wikidata":
-    "Les gares ferroviaires ouvertes du monde entier, issues de Wikidata (CC0) via le jeu de données partagé Offware places. Chaque gare renvoie à sa fiche Wikidata, que chacun peut corriger.",
+    "Les gares ferroviaires ouvertes du monde entier, issues de Wikidata (CC0) via les données partagées d'Offware. Chaque gare renvoie à sa fiche Wikidata, que chacun peut corriger.",
   "settings.stations.desc.trainline":
     "~44 000 gares européennes issues de la base ouverte de Trainline (ODbL). Choisissez-la pour garder les gares marquées depuis cette liste avant l'arrivée du jeu mondial.",
   "settings.stations.desc.none": "Aucune gare n'est chargée — elles n'apparaîtront ni dans la recherche, ni sur la carte, ni dans les stats.",

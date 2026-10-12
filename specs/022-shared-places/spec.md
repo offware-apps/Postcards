@@ -1,4 +1,4 @@
-# Feature Specification: Worldwide stations and landmarks from the shared places dataset
+# Feature Specification: Worldwide stations and landmarks from Offware's shared data
 
 **Feature Branch**: `022-shared-places`
 
@@ -8,13 +8,13 @@
 
 **Input**: Maintainer: "update Postcards to use that centralized dataset. It uses only European
 trains; make sure it uses worldwide train stations." The dataset is
-[offware-apps/places](https://github.com/offware-apps/places), shared by the Offware apps: towns,
+[offware-apps/data](https://github.com/offware-apps/data), shared by the Offware apps: towns,
 sights and railway stations from Wikidata (CC0), every record keeping its Wikidata id.
 
 ## Overview
 
 Postcards' railway stations come from Trainline's open database, which covers Europe only, and its
-landmarks are a hand-picked seed of ~70. The shared Offware places dataset publishes, every week,
+landmarks are a hand-picked seed of ~70. Offware's shared data publishes, every week,
 open railway stations worldwide and the best-known sights of every town, both from Wikidata. This
 feature makes Postcards read both from it, keeping Constitution I: the app still authors nothing,
 and every record's provenance (its Wikidata item) travels with it.
@@ -43,8 +43,8 @@ from UNESCO's own list, so none is listed twice.
 
 ## Requirements
 
-- **FR-001**: The build fetches `stations.json`, `landmarks.json` and `sources.json` from the
-  places dataset (`scripts/fetch-places.mjs`) and writes `public/reference/railways-wikidata.json`
+- **FR-001**: The build fetches `stations/railways.json`, `places/landmarks.json` and `sources.json` from the
+  shared data (`scripts/fetch-places.mjs`) and writes `public/reference/railways-wikidata.json`
   and `public/reference/landmarks.json`.
 - **FR-002**: A file is written only when it validates: the expected shape, a CC0 licence, and
   enough valid records. Otherwise the existing file stays. The build fails only when no
@@ -54,7 +54,7 @@ from UNESCO's own list, so none is listed twice.
 - **FR-004**: A person who used the app before and never chose keeps Trainline (FR scenario 1.2).
 - **FR-005**: The worldwide station file is runtime-cached (stale-while-revalidate), as it can
   outgrow the precache size limit.
-- **FR-006**: Provenance (Settings and `public/reference/PROVENANCE.md`) names the places dataset,
+- **FR-006**: Provenance (Settings and `public/reference/PROVENANCE.md`) names the shared data,
   Wikidata and CC0 for both files.
 - **FR-007**: Strings in en, fr and ko.
 

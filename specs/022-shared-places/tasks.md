@@ -1,4 +1,4 @@
-# Tasks: Worldwide stations and landmarks from the shared places dataset
+# Tasks: Worldwide stations and landmarks from Offware's shared data
 
 All paths under `apps/postcards/` unless noted.
 

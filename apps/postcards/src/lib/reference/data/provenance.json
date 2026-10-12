@@ -30,10 +30,10 @@
     "url": "https://openflights.org/data.html"
   },
   {
-    "dataset": "Railway stations worldwide — Wikidata via Offware places (default; choosable in Settings)",
+    "dataset": "Railway stations worldwide — Wikidata via Offware shared data (default; choosable in Settings)",
     "license": "CC0-1.0",
     "version": "fetched at build time",
-    "url": "https://github.com/offware-apps/places"
+    "url": "https://github.com/offware-apps/data"
   },
   {
     "dataset": "Railway stations — Trainline EU open stations database (Europe; choosable in Settings)",
@@ -60,10 +60,10 @@
     "url": "https://en.wikivoyage.org"
   },
   {
-    "dataset": "Landmarks — the 10,000 best-known sights (Wikidata, via the Offware places dataset)",
+    "dataset": "Landmarks — the 10,000 best-known sights (Wikidata, via Offware's shared data)",
     "license": "CC0-1.0",
     "version": "fetched at build time",
-    "url": "https://github.com/offware-apps/places"
+    "url": "https://github.com/offware-apps/data"
   },
   {
     "dataset": "UNESCO World Heritage List — all 1,248 sites incl. 47th session (2025)",

@@ -9,7 +9,7 @@ on:
   push:
     branches:
       - main
-  # Weekly, after the places dataset's Monday build, so stations and landmarks stay current.
+  # Weekly, after the shared data's Monday build, so stations and landmarks stay current.
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Fetch the shared places dataset (stations worldwide, landmarks)
+      - name: Fetch Offware's shared data (stations worldwide, landmarks)
         # Never fails the build: an unreachable dataset leaves the committed files as they are.
         run: pnpm --filter postcards places
       - name: Build (GitHub Pages subpath)

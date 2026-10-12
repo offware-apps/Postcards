@@ -88,7 +88,7 @@ export const en = {
   "settings.stations.source.trainline": "Europe — Trainline",
   "settings.stations.source.none": "None",
   "settings.stations.desc.wikidata":
-    "Open railway stations worldwide from Wikidata (CC0), via the shared Offware places dataset. Each station links back to its Wikidata item, where anyone can correct it.",
+    "Open railway stations worldwide from Wikidata (CC0), via Offware's shared data. Each station links back to its Wikidata item, where anyone can correct it.",
   "settings.stations.desc.trainline":
     "~44,000 European stations from Trainline's open database (ODbL). Choose it to keep stations you marked from this list before the worldwide set arrived.",
   "settings.stations.desc.none": "No railway stations are loaded — they won't appear in search, on the map, or in stats.",

@@ -4,7 +4,7 @@
 // user picks which one they load — or "None" to carry none at all.
 //
 // This catalogue is DATA-DRIVEN: the Settings picker lists exactly what's here.
-// The worldwide set comes from the shared Offware places dataset (Wikidata, CC0),
+// The worldwide set comes from Offware's shared data (Wikidata, CC0),
 // fetched at build time by `scripts/fetch-places.mjs`.
 
 const BASE = import.meta.env.BASE_URL;

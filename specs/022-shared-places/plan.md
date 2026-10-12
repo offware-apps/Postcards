@@ -1,4 +1,4 @@
-# Implementation Plan: Worldwide stations and landmarks from the shared places dataset
+# Implementation Plan: Worldwide stations and landmarks from Offware's shared data
 
 **Spec**: `specs/022-shared-places/spec.md`
 

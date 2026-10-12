@@ -82,7 +82,7 @@ export const ko: Messages = {
   "settings.stations.source.trainline": "유럽 — Trainline",
   "settings.stations.source.none": "없음",
   "settings.stations.desc.wikidata":
-    "공유 Offware places 데이터셋을 통해 Wikidata(CC0)에서 가져온 전 세계 운행 중인 기차역. 각 역은 누구나 수정할 수 있는 Wikidata 항목으로 연결됩니다.",
+    "Offware 공유 데이터를 통해 Wikidata(CC0)에서 가져온 전 세계 운행 중인 기차역. 각 역은 누구나 수정할 수 있는 Wikidata 항목으로 연결됩니다.",
   "settings.stations.desc.trainline":
     "Trainline 공개 데이터베이스(ODbL)의 유럽 기차역 약 44,000곳. 전 세계 데이터가 추가되기 전에 이 목록에서 표시한 역을 유지하려면 선택하세요.",
   "settings.stations.desc.none": "기차역을 불러오지 않습니다 — 검색, 지도, 통계에 나타나지 않습니다.",

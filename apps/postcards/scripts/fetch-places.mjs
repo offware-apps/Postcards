@@ -1,4 +1,4 @@
-// Fetch the shared Offware places dataset (https://github.com/offware-apps/places) into
+// Fetch Offware's shared data (https://github.com/offware-apps/data) into
 // the bundled reference files, at build time:
 //
 //   public/reference/railways-wikidata.json   railway stations worldwide (Wikidata, CC0)
@@ -12,13 +12,13 @@
 // leave every new user with no stations.
 //
 //   node scripts/fetch-places.mjs
-//   PLACES_BASE=https://example.org/places/v1 node scripts/fetch-places.mjs
+//   PLACES_BASE=https://example.org/data/v1 node scripts/fetch-places.mjs
 
 import { existsSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-const BASE = process.env.PLACES_BASE ?? "https://offware-apps.github.io/places/v1";
+const BASE = process.env.PLACES_BASE ?? "https://offware-apps.github.io/data/v1";
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "reference");
 const LANDMARK_MAX = 10_000;
 const UA = "Postcards-reference-build/1.0 (https://github.com/offware-apps/Postcards)";
@@ -35,18 +35,18 @@ async function get(path) {
 }
 
 async function stations() {
-  const json = await get("stations.json");
-  if (json?._source?.license !== "CC0-1.0" || !Array.isArray(json.stations)) throw new Error("stations.json: unexpected shape or licence");
+  const json = await get("stations/railways.json");
+  if (json?._source?.license !== "CC0-1.0" || !Array.isArray(json.stations)) throw new Error("stations/railways.json: unexpected shape or licence");
   const list = json.stations.filter(validPoint);
-  if (list.length < 1000) throw new Error(`stations.json: only ${list.length} valid stations`);
+  if (list.length < 1000) throw new Error(`stations/railways.json: only ${list.length} valid stations`);
   writeFileSync(join(OUT, "railways-wikidata.json"), JSON.stringify({ _source: json._source, stations: list }));
   return `${list.length} stations`;
 }
 
 async function landmarks() {
-  const [list, sources] = await Promise.all([get("landmarks.json"), get("sources.json")]);
+  const [list, sources] = await Promise.all([get("places/landmarks.json"), get("sources.json")]);
   const wikidata = sources?.sources?.find((s) => s.id === "wikidata");
-  if (wikidata?.license !== "CC0-1.0" || !Array.isArray(list)) throw new Error("landmarks.json: unexpected shape or licence");
+  if (wikidata?.license !== "CC0-1.0" || !Array.isArray(list)) throw new Error("places/landmarks.json: unexpected shape or licence");
   // The best known LANDMARK_MAX, so the file stays small enough to load at start-up.
   // Postcards' landmarks are one category; the dataset's finer kinds stay out of the app.
   const out = list
@@ -55,7 +55,7 @@ async function landmarks() {
     .slice(0, LANDMARK_MAX)
     .map(({ id, name, countryIso2, lat, lon }) => ({ id, name, countryIso2, lat, lon, category: "landmark" }))
     .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
-  if (out.length < 100) throw new Error(`landmarks.json: only ${out.length} valid landmarks`);
+  if (out.length < 100) throw new Error(`places/landmarks.json: only ${out.length} valid landmarks`);
   writeFileSync(join(OUT, "landmarks.json"), JSON.stringify(out));
   return `${out.length} landmarks`;
 }
