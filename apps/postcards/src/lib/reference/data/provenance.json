@@ -30,9 +30,15 @@
     "url": "https://openflights.org/data.html"
   },
   {
-    "dataset": "Railway stations — Trainline EU open stations database (choosable in Settings)",
+    "dataset": "Railway stations worldwide — Wikidata via Offware places (default; choosable in Settings)",
+    "license": "CC0-1.0",
+    "version": "fetched at build time",
+    "url": "https://github.com/offware-apps/places"
+  },
+  {
+    "dataset": "Railway stations — Trainline EU open stations database (Europe; choosable in Settings)",
     "license": "ODbL-1.0",
-    "version": "trainline · worldwide: --source=wikidata",
+    "version": "trainline",
     "url": "https://github.com/trainline-eu/stations"
   },
   {
@@ -54,10 +60,10 @@
     "url": "https://en.wikivoyage.org"
   },
   {
-    "dataset": "Famous landmarks seed (full set via Wikidata build script)",
-    "license": "CC0 (facts)",
-    "version": "seed",
-    "url": "https://www.wikidata.org"
+    "dataset": "Landmarks — the 10,000 best-known sights (Wikidata, via the Offware places dataset)",
+    "license": "CC0-1.0",
+    "version": "fetched at build time",
+    "url": "https://github.com/offware-apps/places"
   },
   {
     "dataset": "UNESCO World Heritage List — all 1,248 sites incl. 47th session (2025)",

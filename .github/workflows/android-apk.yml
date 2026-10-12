@@ -45,6 +45,9 @@ jobs:
           cache: gradle
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Fetch the shared places dataset (stations worldwide, landmarks)
+        # Never fails the build: an unreachable dataset leaves the committed files as they are.
+        run: pnpm --filter postcards places
       - name: Build the web app
         run: pnpm --filter postcards build
       - name: Sync the Android project

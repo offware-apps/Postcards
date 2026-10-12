@@ -33,3 +33,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Fetched at build time from the Offware places dataset (scripts/fetch-places.mjs)
+apps/postcards/public/reference/railways-wikidata.json
