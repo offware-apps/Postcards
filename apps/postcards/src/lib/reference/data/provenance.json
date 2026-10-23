@@ -82,5 +82,11 @@
     "license": "CC BY-SA 3.0",
     "version": "live",
     "url": "https://en.wikivoyage.org"
+  },
+  {
+    "dataset": "Offware shared data: where the reference files above are built and fetched from",
+    "license": "Each dataset keeps its source's licence",
+    "version": "fetched at build time",
+    "url": "https://github.com/offware-apps/data"
   }
 ]

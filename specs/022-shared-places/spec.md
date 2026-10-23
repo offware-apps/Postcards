@@ -1,4 +1,4 @@
-# Feature Specification: Worldwide stations and landmarks from Offware's shared data
+# Feature Specification: Reference data from Offware's shared data
 
 **Feature Branch**: `022-shared-places`
 
@@ -41,21 +41,32 @@ Museums, monuments, castles, palaces and parks show among sites & landmarks: the
 worldwide (by how many Wikipedia editions cover them), replacing the seed. UNESCO sites keep coming
 from UNESCO's own list, so none is listed twice.
 
+### User Story 3 - All reference data in one shared place (Priority: P2)
+
+Maintainer: "every data we use on every application on a central place, so it can be managed by
+a central application." Cities, regions, airports, UNESCO sites, European stations, countries and
+moments are built in the shared data too, not in Postcards. Postcards fetches them at build time,
+and keeps its committed copies so it always builds and works offline. Nothing a user sees changes:
+the shared files are the same as the ones Postcards built.
+
 ## Requirements
 
-- **FR-001**: The build fetches `stations/railways.json`, `places/landmarks.json` and `sources.json` from the
-  shared data (`scripts/fetch-places.mjs`) and writes `public/reference/railways-wikidata.json`
-  and `public/reference/landmarks.json`.
-- **FR-002**: A file is written only when it validates: the expected shape, a CC0 licence, and
-  enough valid records. Otherwise the existing file stays. The build fails only when no
-  stations file exists at all, since the default source would then be empty.
+- **FR-001**: The build fetches every reference file from the shared data
+  (`scripts/fetch-data.mjs`): worldwide stations and landmarks (Wikidata), and cities, regions,
+  airports, UNESCO sites, European stations, countries and moments.
+- **FR-002**: A file is written only when it validates: the dataset still carries the licence the
+  app's provenance names (`catalog.json`), the file has the expected shape and enough valid
+  records. Otherwise the committed file stays. The build fails only when no worldwide stations
+  file exists at all, since the default source would then be empty.
 - **FR-003**: A "World — Wikidata" station source is the recommended default; Trainline and None
   stay selectable.
 - **FR-004**: A person who used the app before and never chose keeps Trainline (FR scenario 1.2).
 - **FR-005**: The worldwide station file is runtime-cached (stale-while-revalidate), as it can
   outgrow the precache size limit.
-- **FR-006**: Provenance (Settings and `public/reference/PROVENANCE.md`) names the shared data,
-  Wikidata and CC0 for both files.
+- **FR-006**: Provenance (Settings and `public/reference/PROVENANCE.md`) names each original
+  source and licence, and that it comes by way of the shared data.
+- **FR-008**: The scripts that built these files, and their vendored sources, live in the shared
+  data, not in Postcards.
 - **FR-007**: Strings in en, fr and ko.
 
 ## Out of scope
