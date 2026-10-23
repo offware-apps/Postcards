@@ -482,7 +482,7 @@ async function loadExtras(impl: ReferenceDataImpl): Promise<void> {
       .then((r) => (r.ok ? (r.json() as Promise<T>) : empty))
       .catch(() => empty);
   // Railway stations: whichever dataset the user chose in Settings (default
-  // Trainline; "None" loads nothing). A { _source, stations:[…] } wrapper;
+  // Wikidata, worldwide; "None" loads nothing). A { _source, stations:[…] } wrapper;
   // absent file → []. Switching source later re-fetches via setStationData.
   // The biggest file here (5 MB, a long parse on a phone), so it waits for a
   // screen to ask (requestStations): on the map, once the map has loaded, so it

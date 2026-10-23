@@ -76,7 +76,9 @@ export default defineConfig({
         // top-10k core and downloads the full set ON DEMAND (a one-tap Settings
         // action, like a tile pack). Runtime-cached below so it reopens offline
         // once fetched. Never bundled — that would defeat the small-install goal.
-        globIgnores: ["**/reference/cities-all.json"],
+        // The worldwide stations (fetched at build time from the places dataset) can
+        // outgrow the precache limit; they're runtime-cached below instead.
+        globIgnores: ["**/reference/cities-all.json", "**/reference/railways-wikidata.json"],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         // Control the page on the very first visit, so a tile pack or the full
         // city list downloaded in that session reaches the runtime caches below
@@ -96,6 +98,17 @@ export default defineConfig({
             handler: "CacheFirst",
             options: {
               cacheName: "gazetteer-v1",
+              expiration: { maxEntries: 2 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            // Worldwide railway stations: cached when the map first asks for them,
+            // so they reopen offline; refreshed in the background after a release.
+            urlPattern: ({ url }) => url.pathname.endsWith("/reference/railways-wikidata.json"),
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "stations-v1",
               expiration: { maxEntries: 2 },
               cacheableResponse: { statuses: [200] },
             },
