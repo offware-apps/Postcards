@@ -139,8 +139,9 @@ function loadAutoGuides(): boolean {
 // On first run the map is the bundled offline vector basemap — zero outbound
 // requests. Streaming detailed tiles from OpenStreetMap (which discloses your IP
 // and the area you're looking at) waits for a deliberate opt-in: the one-tap
-// "Show detailed map" consent on the map, or this toggle in Settings. Only "1"
-// enables, so a fresh install never reaches the network for a tile.
+// "Show detailed map" consent on the map, this toggle in Settings, or Start on the
+// welcome page with "Detailed map" left on. Only "1" enables, so a fresh install
+// never reaches the network for a tile before one of those.
 function loadOnlineMap(): boolean {
   return readLocal(ONLINE_MAP_KEY) === "1";
 }
