@@ -37,10 +37,26 @@ function Switch({
   );
 }
 
+/** The welcome page has been closed once (App writes this when it closes). */
+const INTRO_KEY = "postcards-intro-seen";
+function introSeen(): boolean {
+  try {
+    return localStorage.getItem(INTRO_KEY) != null;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * First-run welcome — a full page (not a modal) with a live spinning earth,
  * one line about what Postcards is, and a switch per optional feature so a
  * newcomer can flip on what they want on the spot. Skippable; shown once.
+ *
+ * On a first run, "Detailed map" and "Full city list" start switched on, but
+ * nothing reaches the network until the newcomer taps Start with them still on:
+ * that tap, with both switches in view, is the opt-in (Constitution: data leaves
+ * the device only on explicit user action). Skip applies neither. Opened again
+ * later, the switches show and change the current settings directly.
  */
 export function IntroScreen({ onClose }: { onClose: () => void }) {
   const t = useT();
@@ -54,6 +70,10 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
   const setReduceMapWork = useSettings((s) => s.setReduceMapWork);
   const showToast = useToast((s) => s.show);
   const startRef = useRef<HTMLButtonElement>(null);
+  // First run: the two network features wait for Start (see above).
+  const [firstRun] = useState(() => !introSeen());
+  const [wantMap, setWantMap] = useState(true);
+  const [wantCities, setWantCities] = useState(true);
 
   // Detect a phone / slower device (touch + small screen, or touch + few CPU
   // cores) so we can recommend the smooth-map settings up front. A laptop/desktop
@@ -101,6 +121,27 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
     const ok = await downloadFullCities();
     setCities(ok ? "done" : "idle");
     showToast(ok ? t("settings.cities.toast.done") : t("settings.cities.toast.failed"));
+  }
+
+  // Offline mode makes no optional request, so nothing waits for Start there:
+  // flipping the city list on downloads it at once, as it always has.
+  const deferred = firstRun && !offlineMode;
+  const mapOn = deferred ? wantMap : onlineMap;
+  const citiesOn = cities !== "idle" || (deferred && wantCities);
+  function toggleMap(on: boolean) {
+    if (deferred) setWantMap(on);
+    else setOnlineMap(on);
+  }
+  function toggleCities(on: boolean) {
+    if (deferred) setWantCities(on);
+    else if (on) void getCities();
+  }
+  function start() {
+    if (deferred) {
+      setOnlineMap(wantMap);
+      if (wantCities && cities === "idle") void getCities();
+    }
+    onClose();
   }
 
   return (
@@ -178,7 +219,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
               <span className="intro-row-title">🛰️ {t("intro.map.title")}</span>
               <span className="intro-row-desc">{t("intro.map.desc")}</span>
             </div>
-            <Switch on={onlineMap} onChange={setOnlineMap} label={t("intro.map.title")} />
+            <Switch on={mapOn} onChange={toggleMap} label={t("intro.map.title")} />
           </li>
         )}
 
@@ -196,17 +237,17 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
           />
         </li>
 
-        {/* Offline city search — flipping it on downloads the full gazetteer
-            (~17 MB); once saved it stays on. */}
+        {/* Offline city search — on, it downloads the full gazetteer (~17 MB), on a
+            first run once Start is tapped; once saved it stays on. */}
         <li className="intro-row">
           <div className="intro-row-text">
             <span className="intro-row-title">🏙️ {t("intro.cities.title")}</span>
             <span className="intro-row-desc">{t("intro.cities.desc")}</span>
           </div>
           <Switch
-            on={cities !== "idle"}
+            on={citiesOn}
             disabled={cities !== "idle"}
-            onChange={() => void getCities()}
+            onChange={toggleCities}
             label={t("intro.cities.title")}
           />
         </li>
@@ -219,7 +260,7 @@ export function IntroScreen({ onClose }: { onClose: () => void }) {
         className="intro-start"
         type="button"
         title={t("intro.start")}
-        onClick={onClose}
+        onClick={start}
       >
         {t("intro.start")}
       </button>
