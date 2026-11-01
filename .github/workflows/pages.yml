@@ -9,6 +9,9 @@ on:
   push:
     branches:
       - main
+  # Weekly, after the shared data's Monday build, so the reference data stays current.
+  schedule:
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -35,6 +38,10 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Fetch Offware's shared data (stations, cities, sites, countries, moments)
+        # A file that can't be fetched or checked keeps its committed copy. Fails only when
+        # there is no worldwide stations file at all.
+        run: pnpm --filter postcards data
       - name: Build (GitHub Pages subpath)
         run: pnpm --filter postcards build
         env:

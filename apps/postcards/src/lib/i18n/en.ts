@@ -84,10 +84,13 @@ export const en = {
     "Used everywhere a country is counted: totals, the passport, per-continent progress.",
   "settings.stations.title": "Railway stations",
   "settings.stations.recommended": "recommended",
+  "settings.stations.source.wikidata": "World — Wikidata",
   "settings.stations.source.trainline": "Europe — Trainline",
   "settings.stations.source.none": "None",
+  "settings.stations.desc.wikidata":
+    "Open railway stations worldwide from Wikidata (CC0), via Offware's shared data. Each station links back to its Wikidata item, where anyone can correct it.",
   "settings.stations.desc.trainline":
-    "~44,000 European stations from Trainline's open database (ODbL). The only worldwide-open set that loads on this build; a global set (Wikidata/OSM) can be added later.",
+    "~44,000 European stations from Trainline's open database (ODbL). Choose it to keep stations you marked from this list before the worldwide set arrived.",
   "settings.stations.desc.none": "No railway stations are loaded — they won't appear in search, on the map, or in stats.",
   "settings.map.advanced": "More map options & offline packs",
   "settings.optimize.title": "Optimisation",

@@ -3,15 +3,14 @@
 // aggregator, never author) bundled as its own file under public/reference/; the
 // user picks which one they load — or "None" to carry none at all.
 //
-// This catalogue is DATA-DRIVEN: the Settings picker lists exactly what's here, so
-// adding a worldwide build output (e.g. railways-wikidata.json from
-// `node scripts/build-railways.mjs --source=wikidata`) is a one-line addition that
-// automatically shows up as a selectable source — no UI change needed.
+// This catalogue is DATA-DRIVEN: the Settings picker lists exactly what's here.
+// The worldwide set comes from Offware's shared data (Wikidata, CC0),
+// fetched at build time by `scripts/fetch-data.mjs`.
 
 const BASE = import.meta.env.BASE_URL;
 
 /** Stable ids, persisted in localStorage — never renumber. "none" loads nothing. */
-export type StationSourceId = "trainline" | "none";
+export type StationSourceId = "wikidata" | "trainline" | "none";
 
 export interface StationSourceDef {
   id: StationSourceId;
@@ -24,23 +23,34 @@ export interface StationSourceDef {
   recommended: boolean;
 }
 
-// Trainline (ODbL, Europe) is the recommended default — the only full open station
-// set reachable from the build sandbox. A future worldwide file (Wikidata CC0 /
-// OSM ODbL), produced by the build script on an open network, slots in here.
+// Wikidata (CC0, worldwide) is the recommended default. Trainline (ODbL, Europe)
+// stays selectable: its station ids differ, so people who marked stations from it
+// keep it until they choose otherwise (see loadStationSource).
 export const STATION_SOURCES: readonly StationSourceDef[] = [
+  {
+    id: "wikidata",
+    url: `${BASE}reference/railways-wikidata.json`,
+    license: "CC0-1.0",
+    coverage: "worldwide",
+    recommended: true,
+  },
   {
     id: "trainline",
     url: `${BASE}reference/railways.json`,
     license: "ODbL-1.0",
     coverage: "europe",
-    recommended: true,
+    recommended: false,
   },
   { id: "none", url: null, license: "", coverage: "none", recommended: false },
 ];
 
-export const DEFAULT_STATION_SOURCE: StationSourceId = "trainline";
+export const DEFAULT_STATION_SOURCE: StationSourceId = "wikidata";
 
 const STATION_SOURCE_KEY = "postcards-station-source";
+// Set once the app has been opened before (App.tsx). Before the worldwide set,
+// Trainline was everyone's default, so an earlier user who never chose keeps it:
+// their marked stations carry Trainline ids, which the worldwide set doesn't have.
+const RETURNING_USER_KEY = "postcards-intro-seen";
 
 export function isStationSource(v: unknown): v is StationSourceId {
   return STATION_SOURCES.some((s) => s.id === v);
@@ -55,7 +65,12 @@ export function stationSourceById(id: StationSourceId): StationSourceDef {
 export function loadStationSource(): StationSourceId {
   try {
     const v = localStorage.getItem(STATION_SOURCE_KEY);
-    return isStationSource(v) ? v : DEFAULT_STATION_SOURCE;
+    if (isStationSource(v)) return v;
+    // Either way the choice is saved now: a new user's intro flag, set on this
+    // first run, must not turn them into a "returning" Trainline user next time.
+    const choice: StationSourceId = localStorage.getItem(RETURNING_USER_KEY) != null ? "trainline" : DEFAULT_STATION_SOURCE;
+    localStorage.setItem(STATION_SOURCE_KEY, choice);
+    return choice;
   } catch {
     return DEFAULT_STATION_SOURCE;
   }

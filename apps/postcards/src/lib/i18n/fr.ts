@@ -78,10 +78,13 @@ export const fr: Messages = {
     "Utilisé partout où un pays est compté : totaux, passeport, progression par continent.",
   "settings.stations.title": "Gares ferroviaires",
   "settings.stations.recommended": "recommandé",
+  "settings.stations.source.wikidata": "Monde — Wikidata",
   "settings.stations.source.trainline": "Europe — Trainline",
   "settings.stations.source.none": "Aucune",
+  "settings.stations.desc.wikidata":
+    "Les gares ferroviaires ouvertes du monde entier, issues de Wikidata (CC0) via les données partagées d'Offware. Chaque gare renvoie à sa fiche Wikidata, que chacun peut corriger.",
   "settings.stations.desc.trainline":
-    "~44 000 gares européennes issues de la base ouverte de Trainline (ODbL). Le seul jeu ouvert disponible sur cette version ; un jeu mondial (Wikidata/OSM) pourra être ajouté plus tard.",
+    "~44 000 gares européennes issues de la base ouverte de Trainline (ODbL). Choisissez-la pour garder les gares marquées depuis cette liste avant l'arrivée du jeu mondial.",
   "settings.stations.desc.none": "Aucune gare n'est chargée — elles n'apparaîtront ni dans la recherche, ni sur la carte, ni dans les stats.",
   "settings.map.advanced": "Plus d'options de carte et cartes hors ligne",
   "settings.optimize.title": "Optimisation",

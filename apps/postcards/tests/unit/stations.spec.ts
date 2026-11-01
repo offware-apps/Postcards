@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect } from "vitest";
 import { initReferenceDataSync, setStationData } from "../../src/lib/reference/referenceData";
 import type { Station } from "../../src/lib/reference/types";
 import {
   STATION_SOURCES,
   DEFAULT_STATION_SOURCE,
   isStationSource,
+  loadStationSource,
   stationSourceById,
 } from "../../src/lib/reference/stationSources";
 import { PlaceRefSchema } from "../../src/lib/schema/models";
@@ -71,6 +72,11 @@ describe("station data sources (Settings choice)", () => {
     expect(STATION_SOURCES.filter((s) => s.recommended)).toHaveLength(1);
   });
 
+  it("defaults to the worldwide Wikidata set", () => {
+    expect(DEFAULT_STATION_SOURCE).toBe("wikidata");
+    expect(stationSourceById("wikidata")).toMatchObject({ coverage: "worldwide", license: "CC0-1.0" });
+  });
+
   it("rejects unknown source ids", () => {
     expect(isStationSource("osm")).toBe(false);
     expect(isStationSource(null)).toBe(false);
@@ -86,5 +92,26 @@ describe("station data sources (Settings choice)", () => {
     expect(ref.stationsOf("FR")).toEqual([]); // old set gone
     setStationData([]); // "None"
     expect(ref.allStations()).toEqual([]);
+  });
+});
+
+describe("the station source a person starts with", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("gives a new user the worldwide set, and keeps it after the first run", () => {
+    expect(loadStationSource()).toBe("wikidata");
+    localStorage.setItem("postcards-intro-seen", "1"); // set at the end of the first run
+    expect(loadStationSource()).toBe("wikidata");
+  });
+
+  it("keeps an earlier user on Trainline, whose station ids their visits use", () => {
+    localStorage.setItem("postcards-intro-seen", "1");
+    expect(loadStationSource()).toBe("trainline");
+  });
+
+  it("never overrides a choice made in Settings", () => {
+    localStorage.setItem("postcards-intro-seen", "1");
+    localStorage.setItem("postcards-station-source", "wikidata");
+    expect(loadStationSource()).toBe("wikidata");
   });
 });

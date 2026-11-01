@@ -63,7 +63,7 @@ apps/postcards/
 │   │   ├── experiences.json
 │   │   └── PROVENANCE.md
 │   └── icons/                # PWA icons
-├── scripts/build-reference.mjs   # regenerates public/reference/* from npm datasets
+├── scripts/fetch-data.mjs      # fetches public/reference/* from Offware's shared data
 ├── tests/                    # unit (Vitest) + e2e (Playwright)
 ├── vite.config.ts   capacitor.config.ts   package.json
 └── android/  ios/            # Capacitor native projects (both committed)
@@ -206,13 +206,16 @@ from named datasets and shipped as static assets, never invented in app code.
 
 ### The build pipeline
 
-`scripts/build-reference.mjs` (`pnpm reference`) reshapes openly-licensed npm
-datasets into `public/reference/*.json`:
+The reference files are built in [offware-apps/data](https://github.com/offware-apps/data)
+(`src/reference/`), the data every Offware app shares, and fetched at build time by
+`scripts/fetch-data.mjs` (`pnpm data`), which keeps the committed copy of a file when the
+shared data can't be reached or a dataset's licence no longer matches provenance. The
+shared data reshapes openly-licensed datasets:
 
 - **`all-the-cities`** (GeoNames, CC BY 4.0) → cities, plus per-region centroid
   accumulation.
-- **GeoNames `cities500` and `admin1CodesASCII`**, vendored under
-  `scripts/data/` from one retrieval day → each city's current region code and
+- **GeoNames `cities500` and `admin1CodesASCII`**, vendored in the shared data
+  from one retrieval day → each city's current region code and
   each code's name; a city GeoNames no longer lists takes its nearest listed
   city's region, and France's regions keep their French names.
 - **`country-state-city`** (dr5hn, ODbL) → a name, by nearest centroid, only for
@@ -221,6 +224,8 @@ datasets into `public/reference/*.json`:
   whose country can't be resolved are **dropped, never guessed**.
 - `i18n-iso-countries` + `world-countries` supply ISO codes, continents, and
   UN-member vs. territory status.
+- The UNESCO World Heritage List, Trainline's European stations, Wikidata's worldwide
+  stations and landmarks, and the moments list.
 
 Provenance is recorded in machine-readable `src/lib/reference/data/provenance.json`
 (shown in Settings) and mirrored in `public/reference/PROVENANCE.md`. See

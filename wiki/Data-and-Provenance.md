@@ -8,6 +8,12 @@ and version are recorded and shown to you. The app invents none of it.
 This page lists every reference dataset the app ships or fetches, its license,
 and how that provenance is recorded in the repo and surfaced in the app.
 
+Every reference file is built in Offware's shared data,
+[offware-apps/data](https://github.com/offware-apps/data), where each dataset keeps its
+source's licence (`v1/catalog.json`). The app's build fetches them with
+`scripts/fetch-data.mjs` and takes a file only while its dataset still carries the licence
+listed here; otherwise the committed copy stays.
+
 Related: [Architecture → Reference data](Architecture.md#reference-data-pipeline-two-stage-gazetteer-spatial-grid-index)
 (how the data is loaded, indexed, and queried), [Privacy and the Constitution](Privacy-and-Constitution.md)
 (Principle I, the rule itself), [Backup and restore](Features.md#backup-import--reset), and how

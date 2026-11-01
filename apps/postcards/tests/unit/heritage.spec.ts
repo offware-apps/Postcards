@@ -11,7 +11,7 @@ import type { Visit } from "../../src/lib/schema/models";
 
 // The shipped heritage.json is the FULL UNESCO World Heritage List (all ~1,248
 // sites, one entry per country for transnational sites), built by
-// scripts/build-heritage-full.mjs from the official UNESCO data (CC BY-SA 3.0 IGO).
+// Offware's shared data (offware-apps/data) from the official UNESCO data (CC BY-SA 3.0 IGO).
 // The logic tests below still use small injected data so the wiring is verified
 // independently of the shipped file; the bundled file itself is validated at the end.
 const heritage: HeritageSite[] = [

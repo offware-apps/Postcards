@@ -84,17 +84,18 @@ All scripts below live in `apps/postcards/package.json`.
 | `test:e2e` | `playwright test` — end-to-end suite (`tests/e2e/**`). |
 | `schema` | `UPDATE_SCHEMA=1 vitest run tests/unit/schemaArtifact.spec.ts` — regenerate the JSON Schema artifact from the Zod models. |
 | `format` | `prettier --write .` — format (config: `.prettierrc.json`, 100 cols, double quotes, trailing commas). |
-| `reference` | `node scripts/build-reference.mjs` — rebuild bundled reference data from openly-licensed sources (see [Data and Provenance](Data-and-Provenance.md)). |
+| `data` | `node scripts/fetch-data.mjs` — fetch the reference data from [Offware's shared data](https://github.com/offware-apps/data) into `public/reference/` and `src/lib/reference/data/` (see [Data and Provenance](Data-and-Provenance.md)). |
 | `cap:sync` / `cap:copy` | Capacitor sync / copy web assets into native shells. |
 | `cap:add:android` / `cap:add:ios` | Add a native platform. |
 | `cap:open:android` / `cap:open:ios` | Open the native project in Android Studio / Xcode. |
 | `native:android` | `pnpm build && cap sync android && cap open android`. |
 | `native:ios` | `pnpm build && cap sync ios && cap open ios`. |
 
-The `reference` script and its siblings under `scripts/` (`build-heritage-*.mjs`,
-`build-landmarks-seed.mjs`, `build-languages.mjs`, `build-sovereignty.mjs`) are
-**build-time aggregators**: they reshape existing openly-licensed datasets into the
-bundled `public/reference/*.json` files. The app itself never invents reference data.
+The reference data is built in [offware-apps/data](https://github.com/offware-apps/data),
+the data every Offware app shares: it reshapes existing openly-licensed datasets, each
+keeping its licence. `pnpm data` fetches them at build time, checking each dataset's
+licence, shape and record count, and keeps the committed copy of any file that fails, so
+the app always builds. The app itself never invents reference data.
 
 ---
 

@@ -39,7 +39,7 @@ describe("reference data at startup", () => {
 
     // The stations, the biggest file, are not asked for until a screen asks
     // (the map once it has loaded), so they never compete with it.
-    expect(late["railways.json"]).toBeUndefined();
+    expect(late["railways-wikidata.json"]).toBeUndefined();
 
     const gen = gazetteerGeneration();
     const next = () =>
@@ -58,11 +58,11 @@ describe("reference data at startup", () => {
 
     // Not on idle either: only on request.
     await new Promise((r) => setTimeout(r, 1600));
-    expect(late["railways.json"]).toBeUndefined();
+    expect(late["railways-wikidata.json"]).toBeUndefined();
     requestStations();
-    await vi.waitFor(() => expect(late["railways.json"]).toBeDefined(), { timeout: 3000 });
+    await vi.waitFor(() => expect(late["railways-wikidata.json"]).toBeDefined(), { timeout: 3000 });
     landed = next();
-    late["railways.json"]!({
+    late["railways-wikidata.json"]!({
       stations: [{ id: "Q1", name: "Lisboa Oriente", countryIso2: "PT", lat: 38.77, lon: -9.1 }],
     });
     await landed;
@@ -94,9 +94,9 @@ describe("reference data at startup", () => {
     late["languages.json"]!({});
     late["article-names.json"]!({});
     requestStations();
-    await vi.waitFor(() => expect(late["railways.json"]).toBeDefined(), { timeout: 3000 });
+    await vi.waitFor(() => expect(late["railways-wikidata.json"]).toBeDefined(), { timeout: 3000 });
     const landed = new Promise((r) => window.addEventListener(GAZETTEER_UPGRADED_EVENT, r, { once: true }));
-    late["railways.json"]!({
+    late["railways-wikidata.json"]!({
       stations: [{ id: "Q1", name: "Lisboa Oriente", countryIso2: "PT", lat: 38.77, lon: -9.1 }],
     });
     await landed;
