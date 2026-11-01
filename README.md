@@ -4,6 +4,8 @@
 
 -> Android: [download postcards.apk](https://github.com/offware-apps/Postcards/releases/download/android-latest/postcards.apk) (newest build; open it on the phone and allow installing unknown apps)
 
+-> Android updates: add `https://github.com/offware-apps/Postcards` in [Obtainium](https://obtainium.imranr.dev) and turn on *Use release date as version string*, since every build reuses the `android-latest` tag.
+
 <div align="center">
 
 <img src="https://raw.githubusercontent.com/offware-apps/.github/main/profile/logo.png" alt="Offware" width="72">
